@@ -131,57 +131,68 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
     let moved = false;
     let screenScale = 1;
 
+    // 不用 setPointerCapture：一旦捕获，pointerup 之后的 click 会被重定向到
+    // svg 上，节点自己的 click 处理器就永远收不到事件（点击光点毫无反应）。
+    function onMove(event) {
+      if (!dragging) return;
+      const dx = (event.clientX - lastX) / screenScale;
+      const dy = (event.clientY - lastY) / screenScale;
+      lastX = event.clientX;
+      lastY = event.clientY;
+      if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+        if (!moved) {
+          // 只有真正开始移动才挂 is-dragging。
+          // 这个类会把节点的 pointer-events 设为 none，若在 pointerdown 就加上，
+          // pointerup 与 click 会落到地图底图，节点永远收不到点击。
+          moved = true;
+          svg?.classList.add("is-dragging");
+        }
+      }
+      view.x += dx * view.k;
+      view.y += dy * view.k;
+      scheduleView();
+    }
+
+    function onUp() {
+      if (!dragging) return;
+      dragging = false;
+      svg?.classList.remove("is-dragging");
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    }
+
     svg.addEventListener("pointerdown", (event) => {
       if (event.button !== 0) return;
-      // 分析态下拖动 = 退出分析态，避免连线与光点错位
-      if (atlasKey) {
-        exitAtlas();
-        return;
-      }
+      // 分析态下不接管拖动：既不能移动底图（连线会错位），
+      // 也不能在这里退出——否则第二次点击会被 pointerdown 关掉、
+      // 紧接着的 click 又把它打开，看起来就是"点了没反应"。
+      if (atlasKey) return;
+
       dragging = true;
       moved = false;
       lastX = event.clientX;
       lastY = event.clientY;
       const rect = container.getBoundingClientRect();
       screenScale = Math.min(rect.width / VIEW_W, rect.height / VIEW_H) || 1;
-      svg.setPointerCapture(event.pointerId);
-      svg.classList.add("is-dragging");
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointercancel", onUp);
     });
 
-    svg.addEventListener("pointermove", (event) => {
-      if (!dragging) return;
-      const dx = (event.clientX - lastX) / screenScale;
-      const dy = (event.clientY - lastY) / screenScale;
-      lastX = event.clientX;
-      lastY = event.clientY;
-      if (Math.abs(dx) > 1 || Math.abs(dy) > 1) moved = true;
-      view.x += dx * view.k;
-      view.y += dy * view.k;
-      scheduleView();
-    });
-
-    const stop = (event) => {
-      if (!dragging) return;
-      dragging = false;
-      svg.classList.remove("is-dragging");
-      if (svg.hasPointerCapture?.(event.pointerId)) svg.releasePointerCapture(event.pointerId);
-    };
-    svg.addEventListener("pointerup", stop);
-    svg.addEventListener("pointercancel", stop);
-    svg.addEventListener("pointerleave", stop);
-
+    // 捕获阶段先处理：拖动结束时吞掉这次 click，点空白处退出分析态
     svg.addEventListener(
       "click",
       (event) => {
         if (moved) {
           event.stopPropagation();
+          event.preventDefault();
           moved = false;
           return;
         }
-        // 点到空白处：退出分析态
         if (atlasKey && !event.target.closest(".node")) exitAtlas();
       },
-      false
+      true
     );
 
     svg.addEventListener(
@@ -462,6 +473,12 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
 
       // 贴在地面的落影：光点升起时影子放大变淡，悬浮感靠它立起来
       group.append(
+        // 透明热区：光点浮起后原位置会变成空白，补一个热区让第二次点击仍能命中
+        svgEl("circle", {
+          class: "node__hit",
+          r: (node.r * 2.2).toFixed(1),
+          fill: "transparent",
+        }),
         svgEl("ellipse", {
           class: "node__shadow",
           rx: (node.r * 1.6).toFixed(1),

@@ -213,6 +213,12 @@
   transform-box: fill-box;
   transform-origin: center;
   transition: opacity 640ms var(--ease), transform 640ms var(--ease);
+  pointer-events: none;
+}
+
+/* 光点浮起后原位变空，靠这层透明热区接住第二次点击 */
+.node__hit {
+  pointer-events: all;
 }
 
 .map-svg.is-atlas .node__shadow {
@@ -254,6 +260,13 @@
 }
 
 /* —— 光路 —— */
+/* 分析态的连线、光环、脉冲都是装饰层，必须让点击穿透到下面的光点，
+   否则选中点的大光晕会吃掉"再点一次进详情"的点击 */
+.map-atlas,
+.map-links {
+  pointer-events: none;
+}
+
 .atlas-link {
   fill: none;
   stroke-linecap: round;
