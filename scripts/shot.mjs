@@ -18,7 +18,7 @@ const CHROME_CANDIDATES = [
   "/usr/bin/chromium",
 ];
 
-const [url, out, w = "1440", h = "900", scrollY = "0"] = process.argv.slice(2);
+const [url, out, w = "1440", h = "900", scrollY = "0", script = ""] = process.argv.slice(2);
 if (!url || !out) {
   console.error("usage: node scripts/shot.mjs <url> <out.png> [w] [h] [scrollY]");
   process.exit(1);
@@ -110,6 +110,12 @@ try {
   if (y) {
     await send("Runtime.evaluate", { expression: `window.scrollTo(0, ${y})` });
     await sleep(1200);
+  }
+
+  // 截图前可选执行一段脚本，用于截取交互后的状态
+  if (script) {
+    await send("Runtime.evaluate", { expression: script, awaitPromise: true });
+    await sleep(1400);
   }
 
   const { data } = await send("Page.captureScreenshot", { format: "png" });

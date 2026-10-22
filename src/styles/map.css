@@ -168,6 +168,304 @@
   will-change: transform;
 }
 
+/* ============================================================
+   分析态：地图摊平、光点浮起、关联光路
+   浮起高度需与 map.js 里的 LIFT 常量保持一致（20）
+   ============================================================ */
+
+.map-sides,
+.map-shadow {
+  transition: opacity 640ms var(--ease);
+}
+
+.map-svg.is-atlas .map-sides,
+.map-svg.is-atlas .map-shadow {
+  opacity: 0;
+}
+
+.map-svg.is-atlas .map-tops {
+  opacity: 0.5;
+  transition: opacity 640ms var(--ease);
+}
+
+.map-svg.is-atlas .island-line {
+  opacity: 0.4;
+  transition: opacity 640ms var(--ease);
+}
+
+.map-svg.is-atlas {
+  cursor: default;
+}
+
+/* —— 光点浮起 —— */
+.node__body {
+  transition: transform 640ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.map-svg.is-atlas .node__body {
+  transform: translateY(-20px);
+}
+
+/* 落影：常态几乎不可见，升起时放大变淡 */
+.node__shadow {
+  fill: #05010a;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: opacity 640ms var(--ease), transform 640ms var(--ease);
+}
+
+.map-svg.is-atlas .node__shadow {
+  opacity: 0.6;
+  transform: scale(1.55);
+}
+
+.map-svg.is-atlas .node.is-dimmed .node__shadow {
+  opacity: 0.1;
+}
+
+.map-svg.is-atlas .node {
+  transition: opacity 480ms var(--ease);
+}
+
+.map-svg.is-atlas .node.is-dimmed {
+  opacity: 0.16;
+}
+
+.map-svg.is-atlas .node.is-related .node__dot {
+  fill: #f0d48a;
+}
+
+.map-svg.is-atlas .node.is-atlas-target .node__body {
+  transform: translateY(-28px) scale(1.45);
+}
+
+.map-svg.is-atlas .node.is-atlas-target .node__dot {
+  fill: #fffaf0;
+}
+
+.map-svg.is-atlas .node.is-atlas-target .node__halo {
+  transform: scale(1.6);
+}
+
+.map-svg.is-atlas .node.is-atlas-target .node__shadow {
+  opacity: 0.72;
+  transform: scale(2.1);
+}
+
+/* —— 光路 —— */
+.atlas-link {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.atlas-link:not(.atlas-link--flow) {
+  stroke: url(#linkGrad);
+  stroke-width: 2.4;
+  opacity: 0.6;
+}
+
+.atlas-link--flow {
+  stroke: #fbeec4;
+  stroke-width: 1.2;
+  stroke-dasharray: 5 11;
+  opacity: 1;
+  animation: linkflow 1.5s linear infinite;
+}
+
+@keyframes linkflow {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+
+/* —— 关联光点外环 —— */
+.atlas-ring {
+  stroke: rgba(212, 175, 55, 0.38);
+  stroke-width: 0.8;
+  stroke-dasharray: 2 4;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ringin 620ms var(--ease) both;
+}
+
+@keyframes ringin {
+  from {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+}
+
+/* —— 选中点脉冲与光晕 —— */
+.atlas-pulse {
+  stroke: rgba(212, 175, 55, 0.7);
+  stroke-width: 1;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: atlaspulse 2.6s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
+}
+
+@keyframes atlaspulse {
+  0% {
+    transform: scale(0.45);
+    opacity: 0.95;
+  }
+  70% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+.atlas-halo {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: haloin 760ms var(--ease) both;
+}
+
+@keyframes haloin {
+  from {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atlas-pulse,
+  .atlas-link--flow {
+    animation: none;
+  }
+  .atlas-pulse {
+    opacity: 0.5;
+  }
+}
+
+/* —— 悬浮案例卡 —— */
+.map-focus-card {
+  position: absolute;
+  z-index: 12;
+  width: 320px;
+  max-width: calc(100vw - 48px);
+  padding: 20px 22px 18px 24px;
+  background: var(--paper);
+  border: 1px solid rgba(196, 162, 101, 0.42);
+  border-radius: var(--radius);
+  box-shadow: 0 22px 64px rgba(8, 4, 10, 0.55), 0 2px 0 rgba(253, 248, 240, 0.06) inset;
+  opacity: 0;
+  transform: translateY(10px) scale(0.97);
+  transform-origin: center;
+  transition: opacity 320ms var(--ease), transform 320ms var(--ease);
+  pointer-events: none;
+}
+
+.map-focus-card.is-open {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.map-focus-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 18px;
+  bottom: 18px;
+  width: 2px;
+  background: linear-gradient(
+    to bottom,
+    rgba(212, 175, 55, 0) 0%,
+    rgba(212, 175, 55, 0.9) 22%,
+    rgba(212, 175, 55, 0.9) 78%,
+    rgba(212, 175, 55, 0) 100%
+  );
+}
+
+.map-focus-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.map-focus-card__place {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--plum);
+}
+
+.map-focus-card__close {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 2px;
+  color: var(--ink-3);
+  transition: color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+
+.map-focus-card__close:hover {
+  color: var(--plum);
+  background: rgba(126, 12, 110, 0.07);
+}
+
+.map-focus-card__title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--ink);
+  margin: 0 0 10px;
+}
+
+.map-focus-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.map-focus-card__related {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink-3);
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.map-focus-card__related b {
+  font-weight: 500;
+  color: var(--gold);
+  font-family: var(--font-mono);
+}
+
+.map-focus-card__go {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--plum);
+  transition: gap var(--dur-fast) var(--ease);
+}
+
+.map-focus-card:hover .map-focus-card__go {
+  gap: 10px;
+}
+
+.map-focus-card__go svg {
+  width: 12px;
+  height: 8px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.2;
+}
+
 /* 拖动期间关掉所有过渡与滤镜，并屏蔽省份/节点的悬停，
    否则鼠标扫过时不停切换描边与填充色，等于每帧都在重绘 */
 .map-svg.is-dragging .prov__top,
@@ -554,6 +852,33 @@
   }
   .atlas::after {
     height: 72px;
+  }
+
+  /* 分析态：地图缩到上方便于看清光路，卡片改为贴底 */
+  .map-svg.is-atlas {
+    transform: scale(0.72) translateY(-16%);
+    transform-origin: 50% 0;
+    transition: transform 640ms var(--ease), opacity 640ms var(--ease);
+  }
+
+  .map-focus-card {
+    left: 12px !important;
+    right: 12px;
+    top: auto !important;
+    bottom: 16px;
+    width: auto;
+    max-width: none;
+    transform: translateY(14px);
+  }
+
+  .map-focus-card.is-open {
+    transform: none;
+  }
+
+  /* 分析态下缩放按钮无意义，让位给卡片 */
+  .atlas__stage:has(.map-svg.is-atlas) .atlas__controls {
+    opacity: 0;
+    pointer-events: none;
   }
 }
 

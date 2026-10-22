@@ -58,11 +58,12 @@ export function atlasSection() {
           </button>
         </div>
 
-        <div class="atlas__hint">
+        <div class="atlas__hint" data-atlas-hint>
           <span>拖动旋转 · 滚轮缩放 · 点击光点查看案例</span>
           ${ICONS.arrowDown}
         </div>
 
+        <div class="map-focus-card" data-focus-card hidden></div>
         <div class="atlas__drawer" hidden></div>
       </div>
     </section>
@@ -75,6 +76,11 @@ export async function mountAtlas(root) {
 
   const canvasHost = qs(".map-canvas", section);
   const drawer = qs(".atlas__drawer", section);
+  const focusCard = qs("[data-focus-card]", section);
+  const hint = qs("[data-atlas-hint]", section);
+  const defaultHint = hint?.innerHTML || "";
+
+  let focusNode = null;
 
   const map = createMap(canvasHost, {
     onSelect: (item, extra) => {
@@ -84,9 +90,101 @@ export async function mountAtlas(root) {
       }
       if (item?.id) navigate(`/case/${item.id}`);
     },
+    onFocus: (node, info) => {
+      focusNode = node;
+      if (!node || !info) {
+        closeFocusCard();
+        return;
+      }
+      showFocusCard(node, info);
+    },
+  });
+
+  function closeFocusCard() {
+    focusCard.classList.remove("is-open");
+    focusCard.hidden = true;
+    if (hint) hint.innerHTML = defaultHint;
+  }
+
+  function showFocusCard(node, info) {
+    const related = info.related || [];
+    const tags = (node.domains || [])
+      .slice(0, 3)
+      .map((d) => `<span class="tag tag--quiet">${esc(d)}</span>`)
+      .join("");
+
+    focusCard.innerHTML = `
+      <div class="map-focus-card__top">
+        <span class="map-focus-card__place">${esc(node.province)}${
+      node.city ? ` · ${esc(node.city)}` : ""
+    }</span>
+        <button class="map-focus-card__close" data-focus-close aria-label="关闭">
+          <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.3">
+            <path d="M1 1l8 8M9 1L1 9" stroke-linecap="round" />
+          </svg>
+        </button>
+      </div>
+      <h3 class="map-focus-card__title">${esc(node.title)}</h3>
+      ${tags ? `<div class="map-focus-card__tags">${tags}</div>` : ""}
+      ${
+        related.length
+          ? `<div class="map-focus-card__related">同领域另有 <b>${related.length}</b> 个案例在这张图里${
+              related.length > 3
+                ? `，如 ${related.slice(0, 2).map((r) => esc(r.city || r.province)).join("、")} 等`
+                : related.map((r) => ` · ${esc(r.city || r.province)}`).join("")
+            }</div>`
+          : `<div class="map-focus-card__related">暂无同领域的其他案例</div>`
+      }
+      <button class="map-focus-card__go" data-focus-go>
+        ${node.count > 1 ? `查看这 ${node.count} 个案例` : "阅读完整案例"}
+        <svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1 4h10M8 1l3 3-3 3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    `;
+
+    focusCard.hidden = false;
+
+    // 先量出真实尺寸再定位，避免贴边溢出
+    const cardW = focusCard.offsetWidth || 320;
+    const cardH = focusCard.offsetHeight || 200;
+    const stageW = info.rect.width;
+    const stageH = info.rect.height;
+
+    let left = info.x + 52;
+    if (left + cardW > stageW - 16) left = info.x - cardW - 52;
+    if (left < 16) left = Math.min(16, stageW - cardW - 16);
+
+    let top = info.y - cardH / 2;
+    top = Math.max(16, Math.min(top, stageH - cardH - 16));
+
+    focusCard.style.left = `${Math.round(left)}px`;
+    focusCard.style.top = `${Math.round(top)}px`;
+
+    // 下一帧再加 is-open，让过渡动画生效
+    requestAnimationFrame(() => focusCard.classList.add("is-open"));
+
+    if (hint) {
+      hint.innerHTML = `<span>再点光点或下方按钮进入案例 · 按 Esc 返回</span>`;
+    }
+  }
+
+  focusCard.addEventListener("click", (event) => {
+    if (event.target.closest("[data-focus-close]")) {
+      map.exitAtlas();
+      return;
+    }
+    if (!focusNode) return;
+    if (focusNode.count > 1) {
+      openDrawer(focusNode.items, focusNode);
+      return;
+    }
+    if (focusNode.primary?.id) navigate(`/case/${focusNode.primary.id}`);
   });
 
   function openDrawer(list, node) {
+    // 抽屉与悬浮卡都在右侧，先退出分析态免得叠在一起
+    map?.exitAtlas();
+    closeFocusCard();
+
     drawer.innerHTML = `
       <div class="drawer__head">
         <span class="drawer__place">${esc(node.province)}${

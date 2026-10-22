@@ -1,14 +1,17 @@
 /**
- * 中国地图 —— SVG 浮雕
- * Albers 等积投影 + 少量偏移层模拟厚度，无 WebGL 依赖。
+ * 中国地图 —— SVG 浮雕 + 图谱分析态
  *
- * 性能要点（改动前请先看这里）：
- * 1. path 用 digits(1) 降精度，d 体积约减半，1px 精度下视觉无差别；
- * 2. 侧壁层数刻意压到 4 层，每层仍完整复制轮廓，层数即数据量倍数；
- * 3. 不用 feGaussianBlur 做投影 —— 每帧重算模糊是拖动卡顿的主因，
- *    改为两层无滤镜的半透明偏移；
- * 4. 平移/缩放用 requestAnimationFrame 合并，拖动期间挂 .is-dragging
- *    关掉所有 transition。
+ * 两个状态：
+ *   explore  常规态。省份带侧壁厚度与投影，光点贴在地面上。
+ *   atlas    分析态。点击光点后进入：侧壁与投影淡出、地图摊平成平面，
+ *            所有光点升起并放大，与选中点共享领域标签的案例连出流动光路，
+ *            再点一次进详情，点空白或按 Esc 返回。
+ *
+ * 性能要点（改动前先看这里）：
+ * 1. path 用 digits(1) 降精度，d 体积约减半；
+ * 2. 侧壁层数压到 4，每层都完整复制轮廓，层数即数据量倍数；
+ * 3. 不用 feGaussianBlur —— 每帧重算模糊是拖动卡顿主因；
+ * 4. 平移缩放用 rAF 合并，拖动期间挂 .is-dragging 关过渡并屏蔽悬停。
  */
 import { geoConicEqualArea, geoPath } from "d3-geo";
 import { esc } from "../lib/dom.js";
@@ -17,9 +20,10 @@ const NS = "http://www.w3.org/2000/svg";
 const VIEW_W = 1000;
 const VIEW_H = 720;
 
-// 侧壁：层数 × 每层下移量决定厚度。层数直接乘到路径数据量上，别随意调大
 const DEPTH = 4;
 const SIDE_STEP = 5;
+// 分析态下光点浮起的高度（用户单位）
+const LIFT = 20;
 
 const SIDE_COLORS = ["#0c070c", "#150b14", "#1f101d", "#2b1426"];
 
@@ -27,7 +31,6 @@ const PAD_X = 34;
 const PAD_TOP = 14;
 const PAD_BOTTOM = 46;
 
-/** 创建 SVG 元素（必须走命名空间，否则渐变与图形不生效） */
 function svgEl(tag, attrs = {}, children = []) {
   const node = document.createElementNS(NS, tag);
   for (const [key, value] of Object.entries(attrs)) {
@@ -41,18 +44,28 @@ function svgEl(tag, attrs = {}, children = []) {
   return node;
 }
 
-export function createMap(container, { onSelect, onHover } = {}) {
+export function createMap(container, { onSelect, onHover, onFocus } = {}) {
   let svg = null;
   let gRoot = null;
   let gNodes = null;
+  let gLinks = null;
+  let gFocus = null;
+  let gAtlas = null;
   let projection = null;
   let pathGen = null;
   let cases = [];
+  let lastNodes = [];
   let tooltip = null;
   let destroyed = false;
 
+  /** 当前分析态选中的节点 key；空串表示处于 explore 态 */
+  let atlasKey = "";
+  let atlasNode = null;
+
   const view = { x: 0, y: 0, k: 1 };
   let viewRaf = 0;
+
+  const nodeKey = (node) => `${node.province}|${node.city}|${node.count}`;
 
   /* ————————— 视角 ————————— */
 
@@ -64,7 +77,6 @@ export function createMap(container, { onSelect, onHover } = {}) {
     );
   }
 
-  /** 合并同一帧内的多次视角变化 */
   function scheduleView() {
     if (viewRaf) return;
     viewRaf = requestAnimationFrame(() => {
@@ -90,9 +102,6 @@ export function createMap(container, { onSelect, onHover } = {}) {
     scheduleView();
   }
 
-  /** viewBox 到屏幕的缩放比例；只在拖动开始时取一次，避免每帧强制布局 */
-  let screenScale = 1;
-
   function clientToSvg(clientX, clientY) {
     const rect = container.getBoundingClientRect();
     const scale = Math.min(rect.width / VIEW_W, rect.height / VIEW_H);
@@ -101,19 +110,38 @@ export function createMap(container, { onSelect, onHover } = {}) {
     return [(clientX - rect.left - offsetX) / scale, (clientY - rect.top - offsetY) / scale];
   }
 
+  /** 把 SVG 用户坐标换算成容器内的像素坐标（含当前视角变换） */
+  function toScreen(x, y) {
+    const rect = container.getBoundingClientRect();
+    const scale = Math.min(rect.width / VIEW_W, rect.height / VIEW_H) || 1;
+    const offsetX = (rect.width - VIEW_W * scale) / 2;
+    const offsetY = (rect.height - VIEW_H * scale) / 2;
+    return {
+      x: offsetX + (view.x + x * view.k) * scale,
+      y: offsetY + (view.y + y * view.k) * scale,
+      scale: scale * view.k,
+      rect,
+    };
+  }
+
   function bindPanZoom() {
     let dragging = false;
     let lastX = 0;
     let lastY = 0;
     let moved = false;
+    let screenScale = 1;
 
     svg.addEventListener("pointerdown", (event) => {
       if (event.button !== 0) return;
+      // 分析态下拖动 = 退出分析态，避免连线与光点错位
+      if (atlasKey) {
+        exitAtlas();
+        return;
+      }
       dragging = true;
       moved = false;
       lastX = event.clientX;
       lastY = event.clientY;
-      // 取一次就缓存：pointermove 里再调 getBoundingClientRect 会强制重排
       const rect = container.getBoundingClientRect();
       screenScale = Math.min(rect.width / VIEW_W, rect.height / VIEW_H) || 1;
       svg.setPointerCapture(event.pointerId);
@@ -122,7 +150,6 @@ export function createMap(container, { onSelect, onHover } = {}) {
 
     svg.addEventListener("pointermove", (event) => {
       if (!dragging) return;
-      // 直接用屏幕坐标算位移，省掉逐帧坐标反投影
       const dx = (event.clientX - lastX) / screenScale;
       const dy = (event.clientY - lastY) / screenScale;
       lastX = event.clientX;
@@ -143,22 +170,25 @@ export function createMap(container, { onSelect, onHover } = {}) {
     svg.addEventListener("pointercancel", stop);
     svg.addEventListener("pointerleave", stop);
 
-    // 拖动结束后吞掉那次 click，避免误跳详情
     svg.addEventListener(
       "click",
       (event) => {
-        if (!moved) return;
-        event.stopPropagation();
-        moved = false;
+        if (moved) {
+          event.stopPropagation();
+          moved = false;
+          return;
+        }
+        // 点到空白处：退出分析态
+        if (atlasKey && !event.target.closest(".node")) exitAtlas();
       },
-      true
+      false
     );
 
-    // 滚轮缩放同样走 rAF，高频 wheel 事件只在下一帧应用一次
     svg.addEventListener(
       "wheel",
       (event) => {
         event.preventDefault();
+        if (atlasKey) return;
         const [x, y] = clientToSvg(event.clientX, event.clientY);
         zoomAt(x, y, event.deltaY < 0 ? 1.14 : 0.877);
       },
@@ -193,9 +223,23 @@ export function createMap(container, { onSelect, onHover } = {}) {
           ["100%", "#7a1169", 0.86],
         ])
       ),
+      svgEl(
+        "linearGradient",
+        { id: "linkGrad", x1: "0", y1: "0", x2: "1", y2: "0" },
+        stops([
+          ["0%", "#D4AF37", 0.1],
+          ["50%", "#F0D48A", 0.75],
+          ["100%", "#D4AF37", 0.1],
+        ])
+      ),
       svgEl("radialGradient", { id: "nodeGlow" }, [
         svgEl("stop", { offset: "0%", "stop-color": "#D4AF37", "stop-opacity": 0.5 }),
         svgEl("stop", { offset: "55%", "stop-color": "#D4AF37", "stop-opacity": 0.14 }),
+        svgEl("stop", { offset: "100%", "stop-color": "#D4AF37", "stop-opacity": 0 }),
+      ]),
+      svgEl("radialGradient", { id: "nodeGlowStrong" }, [
+        svgEl("stop", { offset: "0%", "stop-color": "#FFE9A8", "stop-opacity": 0.85 }),
+        svgEl("stop", { offset: "45%", "stop-color": "#D4AF37", "stop-opacity": 0.3 }),
         svgEl("stop", { offset: "100%", "stop-color": "#D4AF37", "stop-opacity": 0 }),
       ]),
     ]);
@@ -260,10 +304,8 @@ export function createMap(container, { onSelect, onHover } = {}) {
 
     const base = geoConicEqualArea().parallels([25, 47]).rotate([-105, 0]);
     projection = fitProjection(base, land);
-    // digits(1)：坐标保留一位小数，路径数据减半，1px 精度肉眼无差
     pathGen = geoPath(projection).digits(1);
 
-    // 纵向排序：南侧省份后画，侧壁才会压在北侧之上
     const shapes = land
       .map((feature) => {
         const c = pathGen.centroid(feature);
@@ -283,7 +325,7 @@ export function createMap(container, { onSelect, onHover } = {}) {
       if (d) drawn.push({ d, name });
     }
 
-    // 投影：两层无滤镜的偏移色块模拟柔和阴影（feGaussianBlur 每帧重算太贵）
+    // 投影：两层无滤镜偏移色块（feGaussianBlur 每帧重算太贵）
     if (drawn.length) {
       const merged = drawn.map((x) => x.d).join(" ");
       gShadow.append(
@@ -302,8 +344,6 @@ export function createMap(container, { onSelect, onHover } = {}) {
       );
     }
 
-    // 先把所有侧壁画完，再统一画顶面：
-    // 否则相邻省份的侧壁会压住邻省的顶面，缝隙看起来像碎块拼图
     for (const { d, name } of drawn) {
       for (let i = DEPTH; i >= 1; i -= 1) {
         gSides.append(
@@ -323,6 +363,7 @@ export function createMap(container, { onSelect, onHover } = {}) {
       top.setAttribute("data-name", name);
 
       top.addEventListener("pointerenter", () => {
+        if (atlasKey) return;
         top.classList.add("is-hover");
         top.setAttribute("fill", "url(#provFillHover)");
       });
@@ -340,9 +381,13 @@ export function createMap(container, { onSelect, onHover } = {}) {
       if (d) gIslands.append(svgEl("path", { d, class: "island-line" }));
     }
 
+    gLinks = svgEl("g", { class: "map-links" });
     gNodes = svgEl("g", { class: "map-nodes" });
+    gFocus = svgEl("g", { class: "map-focus" });
+    gAtlas = svgEl("g", { class: "map-atlas" });
+
     gLand.append(gShadow, gSides, gTops);
-    gRoot.append(gLand, gIslands, gNodes);
+    gRoot.append(gLand, gIslands, gLinks, gNodes, gAtlas, gFocus);
   }
 
   /* ————————— 节点 ————————— */
@@ -381,21 +426,27 @@ export function createMap(container, { onSelect, onHover } = {}) {
   function renderNodes() {
     if (!gNodes || !projection) return;
     gNodes.replaceChildren();
+    lastNodes = aggregate(cases);
 
-    for (const node of aggregate(cases)) {
+    for (const node of lastNodes) {
       const point = projection([node.lng, node.lat]);
       if (!point || !Number.isFinite(point[0]) || !Number.isFinite(point[1])) continue;
       const [x, y] = point;
+      node.x = x;
+      node.y = y - DEPTH * SIDE_STEP;
 
       const group = svgEl("g", {
         class: "node",
-        transform: `translate(${x.toFixed(1)} ${(y - DEPTH * SIDE_STEP).toFixed(1)})`,
+        transform: `translate(${node.x.toFixed(1)} ${node.y.toFixed(1)})`,
         tabindex: "0",
         role: "button",
+        "data-key": nodeKey(node),
         "aria-label": `${node.province}${node.city ? " " + node.city : ""}：${node.title}`,
       });
 
-      group.append(
+      // 内层承担浮起动画，外层保持定位，两者互不干扰
+      const body = svgEl("g", { class: "node__body" });
+      body.append(
         svgEl("circle", {
           class: "node__halo",
           r: (node.r * 2.8).toFixed(1),
@@ -409,6 +460,17 @@ export function createMap(container, { onSelect, onHover } = {}) {
         })
       );
 
+      // 贴在地面的落影：光点升起时影子放大变淡，悬浮感靠它立起来
+      group.append(
+        svgEl("ellipse", {
+          class: "node__shadow",
+          rx: (node.r * 1.6).toFixed(1),
+          ry: (node.r * 0.62).toFixed(1),
+          cy: "1",
+        }),
+        body
+      );
+
       const select = () => {
         if (node.count === 1) onSelect?.(node.primary);
         else onSelect?.(node.primary, { list: node.items, node });
@@ -416,20 +478,29 @@ export function createMap(container, { onSelect, onHover } = {}) {
 
       group.addEventListener("click", (event) => {
         event.stopPropagation();
-        select();
+        if (atlasKey) {
+          // 分析态下的第二次点击：进详情（聚合点先弹列表）
+          select();
+          return;
+        }
+        enterAtlas(node);
       });
       group.addEventListener("keydown", (event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          select();
-        }
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        if (atlasKey) select();
+        else enterAtlas(node);
       });
       group.addEventListener("pointerenter", (event) => {
+        if (atlasKey) return;
         group.classList.add("is-hover");
         showTip(node, event);
         onHover?.(node);
       });
-      group.addEventListener("pointermove", (event) => positionTip(event));
+      group.addEventListener("pointermove", (event) => {
+        if (atlasKey) return;
+        positionTip(event);
+      });
       group.addEventListener("pointerleave", () => {
         group.classList.remove("is-hover");
         hideTip();
@@ -438,6 +509,116 @@ export function createMap(container, { onSelect, onHover } = {}) {
 
       gNodes.append(group);
     }
+  }
+
+  /* ————————— 分析态 ————————— */
+
+  function relatedOf(target) {
+    return lastNodes
+      .filter((n) => nodeKey(n) !== nodeKey(target))
+      .map((n) => ({
+        node: n,
+        shared: n.domains.filter((d) => target.domains.includes(d)),
+      }))
+      .filter((x) => x.shared.length > 0)
+      .sort((a, b) => b.shared.length - a.shared.length);
+  }
+
+  function enterAtlas(node) {
+    if (!gAtlas || !node) return;
+    atlasKey = nodeKey(node);
+    atlasNode = node;
+
+    hideTip();
+    svg.classList.add("is-atlas");
+    gAtlas.replaceChildren();
+
+    const related = relatedOf(node);
+    const relatedKeys = new Set(related.map((r) => nodeKey(r.node)));
+
+    // 光路：从选中点连向共享领域的光点，二次曲线避免直线穿过地图中央
+    const linkGroup = svgEl("g", { class: "atlas-links" });
+    for (const { node: other, shared } of related) {
+      if (!Number.isFinite(other.x) || !Number.isFinite(other.y)) continue;
+      const fx = node.x;
+      const fy = node.y - LIFT;
+      const tx = other.x;
+      const ty = other.y - LIFT;
+      const mx = (fx + tx) / 2 + (ty - fy) * 0.12;
+      const my = (fy + ty) / 2 - (tx - fx) * 0.12;
+      const d = `M${fx.toFixed(1)},${fy.toFixed(1)} Q${mx.toFixed(1)},${my.toFixed(
+        1
+      )} ${tx.toFixed(1)},${ty.toFixed(1)}`;
+
+      linkGroup.append(
+        svgEl("path", { d, class: "atlas-link", stroke: "url(#linkGrad)" }),
+        svgEl("path", {
+          d,
+          class: "atlas-link atlas-link--flow",
+          "stroke-width": shared.length > 1 ? 1.4 : 0.9,
+        })
+      );
+    }
+    gAtlas.append(linkGroup);
+
+    // 关联光点标记：加一圈细环，说明它们被选中点拉进了同一张图
+    const ringGroup = svgEl("g", { class: "atlas-rings" });
+    for (const { node: other } of related) {
+      if (!Number.isFinite(other.x) || !Number.isFinite(other.y)) continue;
+      ringGroup.append(
+        svgEl("circle", {
+          class: "atlas-ring",
+          cx: other.x.toFixed(1),
+          cy: (other.y - LIFT).toFixed(1),
+          r: (other.r * 2.2).toFixed(1),
+          fill: "none",
+        })
+      );
+    }
+    gAtlas.append(ringGroup);
+
+    // 选中点：多层光环 + 扩散脉冲
+    const px = node.x;
+    const py = node.y - LIFT;
+    gAtlas.append(
+      svgEl("circle", {
+        class: "atlas-pulse",
+        cx: px.toFixed(1),
+        cy: py.toFixed(1),
+        r: (node.r * 2).toFixed(1),
+        fill: "none",
+      }),
+      svgEl("circle", {
+        class: "atlas-halo",
+        cx: px.toFixed(1),
+        cy: py.toFixed(1),
+        r: (node.r * 5).toFixed(1),
+        fill: "url(#nodeGlowStrong)",
+      })
+    );
+
+    // DOM 图层同步状态：非关联点压暗
+    gNodes.querySelectorAll(".node").forEach((el) => {
+      const key = el.getAttribute("data-key");
+      el.classList.toggle("is-dimmed", key !== atlasKey && !relatedKeys.has(key));
+      el.classList.toggle("is-related", relatedKeys.has(key));
+      el.classList.toggle("is-atlas-target", key === atlasKey);
+    });
+
+    const screen = toScreen(px, py);
+    onFocus?.(node, { ...screen, related: related.map((r) => r.node) });
+  }
+
+  function exitAtlas() {
+    if (!atlasKey) return;
+    atlasKey = "";
+    atlasNode = null;
+    svg?.classList.remove("is-atlas");
+    gAtlas?.replaceChildren();
+    gNodes?.querySelectorAll(".node").forEach((el) => {
+      el.classList.remove("is-dimmed", "is-related", "is-atlas-target");
+    });
+    onFocus?.(null);
   }
 
   /* ————————— 浮层 ————————— */
@@ -459,7 +640,7 @@ export function createMap(container, { onSelect, onHover } = {}) {
       <div class="map-tip__title">${esc(node.title)}</div>
       ${tags ? `<div class="map-tip__tags">${tags}</div>` : ""}
       <div class="map-tip__meta">${
-        node.count > 1 ? `点击查看 ${node.count} 个案例` : esc(node.author || "同学作品")
+        node.count > 1 ? `点击展开 ${node.count} 个案例` : esc(node.author || "同学作品")
       }</div>
     `;
     container.append(tooltip);
@@ -508,6 +689,12 @@ export function createMap(container, { onSelect, onHover } = {}) {
     bindPanZoom();
     applyView();
 
+    const onKey = (event) => {
+      if (event.key === "Escape" && atlasKey) exitAtlas();
+    };
+    document.addEventListener("keydown", onKey);
+    container._keyHandler = onKey;
+
     container.dataset.ready = "1";
     requestAnimationFrame(() => svg?.classList.add("is-in"));
   }
@@ -516,23 +703,40 @@ export function createMap(container, { onSelect, onHover } = {}) {
     init,
     setData(list) {
       cases = Array.isArray(list) ? list : [];
+      if (atlasKey) exitAtlas();
       renderNodes();
     },
     resetView,
     zoomIn() {
+      if (atlasKey) exitAtlas();
       zoomAt(VIEW_W / 2, VIEW_H / 2, 1.2);
     },
     zoomOut() {
+      if (atlasKey) exitAtlas();
       zoomAt(VIEW_W / 2, VIEW_H / 2, 0.833);
+    },
+    exitAtlas,
+    get atlasActive() {
+      return Boolean(atlasKey);
     },
     destroy() {
       destroyed = true;
       if (viewRaf) cancelAnimationFrame(viewRaf);
+      if (container._keyHandler) {
+        document.removeEventListener("keydown", container._keyHandler);
+        container._keyHandler = null;
+      }
       hideTip();
       svg?.remove();
       svg = null;
       gRoot = null;
       gNodes = null;
+      gLinks = null;
+      gFocus = null;
+      gAtlas = null;
+      lastNodes = [];
+      atlasKey = "";
+      atlasNode = null;
     },
   };
 }
