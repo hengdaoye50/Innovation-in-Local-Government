@@ -36,19 +36,21 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           FIREWORKS_API_KEY: ${{ secrets.FIREWORKS_API_KEY }}
+          LLM_PROVIDER: ${{ vars.LLM_PROVIDER }}
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
           SEARCH_API_KEY: ${{ secrets.SEARCH_API_KEY }}
           SEARCH_PROVIDER: ${{ vars.SEARCH_PROVIDER }}
         run: |
           set -e
           put() { if [ -n "$2" ]; then echo "$2" | npx wrangler pages secret put "$1" --project-name=innovation-localgov; fi; }
+          put DEEPSEEK_API_KEY "$DEEPSEEK_API_KEY"
           put FIREWORKS_API_KEY "$FIREWORKS_API_KEY"
           put AUTH_SECRET "$AUTH_SECRET"
           put SEARCH_API_KEY "$SEARCH_API_KEY"
-          if [ -n "$SEARCH_PROVIDER" ]; then
-            echo "$SEARCH_PROVIDER" | npx wrangler pages secret put SEARCH_PROVIDER --project-name=innovation-localgov
-          fi
+          put LLM_PROVIDER "$LLM_PROVIDER"
+          put SEARCH_PROVIDER "$SEARCH_PROVIDER"
           echo "secrets synced"
 
       - name: Deploy to Cloudflare Pages

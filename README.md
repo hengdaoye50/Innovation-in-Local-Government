@@ -76,9 +76,13 @@ npx wrangler pages project create innovation-localgov --production-branch=main
 | --- | --- | --- |
 | `CLOUDFLARE_API_TOKEN` | 具备 Pages 与 D1 编辑权限的 Token | 是 |
 | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare 账户 ID | 是 |
-| `FIREWORKS_API_KEY` | 模型推理密钥 | 是 |
+| `DEEPSEEK_API_KEY` | DeepSeek 官方 API 密钥 | 是 |
+| `FIREWORKS_API_KEY` | 备用模型通道（可选，与 DeepSeek 二选一） | 否 |
 | `SEARCH_API_KEY` | 检索服务密钥 | 否，缺省时对话不带检索 |
 | `AUTH_SECRET` | 预留 | 否 |
+
+模型默认走 DeepSeek 官方 API（`deepseek-chat`）。想换成 Fireworks 或任何 OpenAI 兼容端点，
+设置变量 `LLM_PROVIDER=fireworks`，或用 `LLM_BASE` / `LLM_MODEL` 直接指定，代码无需改动。
 
 检索服务通过变量 `SEARCH_PROVIDER` 切换：`tavily` / `serper` / `brave` / `none`（默认）。
 未配置时对话仍可用，界面会明示「当前未接入检索」，模型不会编造来源。

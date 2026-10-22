@@ -15,7 +15,8 @@
 - 前端：Vite + 原生 ES 模块（不引入 React/Vue），d3-geo 投影 + 手写 SVG 浮雕中国地图
 - 后端：Cloudflare Pages Functions（`functions/api/**`）
 - 数据：Cloudflare D1（结构化数据）+ KV（会话）
-- 模型：Fireworks（`deepseek-v4p1-flash`），密钥 `FIREWORKS_API_KEY`
+- 模型：DeepSeek 官方 API（`deepseek-chat`），密钥 `DEEPSEEK_API_KEY`；
+  兼容 Fireworks，用 `LLM_PROVIDER` 切换，`LLM_BASE` / `LLM_MODEL` 可覆盖默认值
 - 部署：GitHub Actions → `wrangler pages deploy`
 
 ### 为什么地图不用 echarts-gl
@@ -28,8 +29,8 @@
 
 1. 修改前先读本文件、`DESIGN.md`、`git status` 和相关文件引用关系。
 2. 不提交 `node_modules/`、`dist/`、`.wrangler/`、`.dev.vars`、编辑器配置。
-3. 不把密钥、token、密码写入代码、提交或日志。`FIREWORKS_API_KEY`、`SEARCH_API_KEY`、
-   `AUTH_SECRET`、`GITHUB_TOKEN` 只存在于部署平台 Secrets。
+3. 不把密钥、token、密码写入代码、提交或日志。`DEEPSEEK_API_KEY`、`SEARCH_API_KEY`、
+   `AUTH_SECRET`、`CLOUDFLARE_API_TOKEN` 只存在于部署平台 Secrets。
 4. 删除文件、修改 CI/CD、安装全局依赖、部署生产、`git push` 前必须取得用户明确确认。
 5. 改完至少跑 `npm run build`；涉及 UI 时在本地起服务做页面检查；涉及 API 时验证方法、
    错误响应和鉴权边界。
