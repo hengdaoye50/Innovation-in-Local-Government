@@ -150,6 +150,7 @@
   transition: opacity 620ms var(--ease), transform 620ms var(--ease);
   touch-action: none;
   overflow: visible;
+  contain: layout paint;
 }
 
 .map-svg.is-in {
@@ -157,13 +158,32 @@
   transform: none;
 }
 
-.map-svg.is-grabbing {
+.map-svg.is-grabbing,
+.map-svg.is-dragging {
   cursor: grabbing;
+}
+
+/* 地图整体在拖动时只做变换，提示浏览器提前提升为合成层 */
+.map-root {
+  will-change: transform;
+}
+
+/* 拖动期间关掉所有过渡与滤镜，并屏蔽省份/节点的悬停，
+   否则鼠标扫过时不停切换描边与填充色，等于每帧都在重绘 */
+.map-svg.is-dragging .prov__top,
+.map-svg.is-dragging .node__halo,
+.map-svg.is-dragging .node__dot,
+.map-svg.is-dragging .node__core {
+  transition: none;
+}
+
+.map-svg.is-dragging .prov__top,
+.map-svg.is-dragging .node {
+  pointer-events: none;
 }
 
 .prov__side {
   stroke: none;
-  opacity: 0.96;
 }
 
 /* fill 由 JS 写入 SVG 属性：外部 CSS 里 url(#id) 会相对样式表路径解析而失效 */
@@ -197,23 +217,22 @@
 }
 
 .node__halo {
-  transition: transform 220ms var(--ease);
+  transition: transform 200ms var(--ease);
   transform-box: fill-box;
   transform-origin: center;
 }
 
 .node__dot {
-  stroke: rgba(30, 18, 28, 0.5);
+  stroke: rgba(30, 18, 28, 0.45);
   stroke-width: 0.6;
-  filter: drop-shadow(0 0 4px rgba(212, 175, 55, 0.85));
-  transition: transform 220ms var(--ease), fill 220ms var(--ease);
+  transition: transform 200ms var(--ease), fill 200ms var(--ease);
   transform-box: fill-box;
   transform-origin: center;
 }
 
 .node__core {
-  opacity: 0.9;
-  transition: transform 220ms var(--ease);
+  opacity: 0.92;
+  transition: transform 200ms var(--ease);
   transform-box: fill-box;
   transform-origin: center;
 }

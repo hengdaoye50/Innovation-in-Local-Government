@@ -9,11 +9,11 @@ pages_build_output_dir = "dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "innovation-localgov"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "e2d2dffd-33f5-4c0f-b03f-917bbc234f8f"
 
 [[kv_namespaces]]
 binding = "SESSIONS"
-id = "00000000000000000000000000000000"
+id = "5d5ae80ea4944ab7b54988ebf1cc850f"
 
 [vars]
 SITE_ORIGIN = "https://innovation.jinhuazhang.top"

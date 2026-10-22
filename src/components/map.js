@@ -1,7 +1,14 @@
 /**
  * 中国地图 —— SVG 浮雕
- * Albers 等积投影 + 多层偏移模拟厚度，无 WebGL 依赖。
- * 平移、缩放、悬停、键盘操作均自行实现。
+ * Albers 等积投影 + 少量偏移层模拟厚度，无 WebGL 依赖。
+ *
+ * 性能要点（改动前请先看这里）：
+ * 1. path 用 digits(1) 降精度，d 体积约减半，1px 精度下视觉无差别；
+ * 2. 侧壁层数刻意压到 4 层，每层仍完整复制轮廓，层数即数据量倍数；
+ * 3. 不用 feGaussianBlur 做投影 —— 每帧重算模糊是拖动卡顿的主因，
+ *    改为两层无滤镜的半透明偏移；
+ * 4. 平移/缩放用 requestAnimationFrame 合并，拖动期间挂 .is-dragging
+ *    关掉所有 transition。
  */
 import { geoConicEqualArea, geoPath } from "d3-geo";
 import { esc } from "../lib/dom.js";
@@ -10,24 +17,11 @@ const NS = "http://www.w3.org/2000/svg";
 const VIEW_W = 1000;
 const VIEW_H = 720;
 
-// 侧壁：层数与每层下移量共同决定浮雕厚度
-const DEPTH = 11;
-const SIDE_STEP = 2;
+// 侧壁：层数 × 每层下移量决定厚度。层数直接乘到路径数据量上，别随意调大
+const DEPTH = 4;
+const SIDE_STEP = 5;
 
-// 由底至顶渐亮，紧贴顶面的一层最亮，形成厚度高光
-const SIDE_COLORS = [
-  "#0b060b",
-  "#0e080e",
-  "#120a12",
-  "#160c15",
-  "#1a0e19",
-  "#1f101d",
-  "#241221",
-  "#2a1425",
-  "#30162a",
-  "#37182f",
-  "#3e1a34",
-];
+const SIDE_COLORS = ["#0c070c", "#150b14", "#1f101d", "#2b1426"];
 
 const PAD_X = 34;
 const PAD_TOP = 14;
@@ -58,6 +52,7 @@ export function createMap(container, { onSelect, onHover } = {}) {
   let destroyed = false;
 
   const view = { x: 0, y: 0, k: 1 };
+  let viewRaf = 0;
 
   /* ————————— 视角 ————————— */
 
@@ -65,8 +60,17 @@ export function createMap(container, { onSelect, onHover } = {}) {
     if (!gRoot) return;
     gRoot.setAttribute(
       "transform",
-      `translate(${view.x.toFixed(2)} ${view.y.toFixed(2)}) scale(${view.k.toFixed(3)})`
+      `translate(${view.x.toFixed(1)} ${view.y.toFixed(1)}) scale(${view.k.toFixed(3)})`
     );
+  }
+
+  /** 合并同一帧内的多次视角变化 */
+  function scheduleView() {
+    if (viewRaf) return;
+    viewRaf = requestAnimationFrame(() => {
+      viewRaf = 0;
+      applyView();
+    });
   }
 
   function resetView() {
@@ -83,11 +87,14 @@ export function createMap(container, { onSelect, onHover } = {}) {
     view.x = svgX - (svgX - view.x) * ratio;
     view.y = svgY - (svgY - view.y) * ratio;
     view.k = next;
-    applyView();
+    scheduleView();
   }
 
+  /** viewBox 到屏幕的缩放比例；只在拖动开始时取一次，避免每帧强制布局 */
+  let screenScale = 1;
+
   function clientToSvg(clientX, clientY) {
-    const rect = svg.getBoundingClientRect();
+    const rect = container.getBoundingClientRect();
     const scale = Math.min(rect.width / VIEW_W, rect.height / VIEW_H);
     const offsetX = (rect.width - VIEW_W * scale) / 2;
     const offsetY = (rect.height - VIEW_H * scale) / 2;
@@ -96,35 +103,40 @@ export function createMap(container, { onSelect, onHover } = {}) {
 
   function bindPanZoom() {
     let dragging = false;
-    let last = null;
+    let lastX = 0;
+    let lastY = 0;
     let moved = false;
 
     svg.addEventListener("pointerdown", (event) => {
       if (event.button !== 0) return;
       dragging = true;
       moved = false;
-      last = clientToSvg(event.clientX, event.clientY);
+      lastX = event.clientX;
+      lastY = event.clientY;
+      // 取一次就缓存：pointermove 里再调 getBoundingClientRect 会强制重排
+      const rect = container.getBoundingClientRect();
+      screenScale = Math.min(rect.width / VIEW_W, rect.height / VIEW_H) || 1;
       svg.setPointerCapture(event.pointerId);
-      svg.classList.add("is-grabbing");
+      svg.classList.add("is-dragging");
     });
 
     svg.addEventListener("pointermove", (event) => {
-      if (!dragging || !last) return;
-      const now = clientToSvg(event.clientX, event.clientY);
-      const dx = now[0] - last[0];
-      const dy = now[1] - last[1];
-      if (Math.abs(dx) > 1.2 || Math.abs(dy) > 1.2) moved = true;
+      if (!dragging) return;
+      // 直接用屏幕坐标算位移，省掉逐帧坐标反投影
+      const dx = (event.clientX - lastX) / screenScale;
+      const dy = (event.clientY - lastY) / screenScale;
+      lastX = event.clientX;
+      lastY = event.clientY;
+      if (Math.abs(dx) > 1 || Math.abs(dy) > 1) moved = true;
       view.x += dx * view.k;
       view.y += dy * view.k;
-      applyView();
-      last = now;
+      scheduleView();
     });
 
     const stop = (event) => {
       if (!dragging) return;
       dragging = false;
-      last = null;
-      svg.classList.remove("is-grabbing");
+      svg.classList.remove("is-dragging");
       if (svg.hasPointerCapture?.(event.pointerId)) svg.releasePointerCapture(event.pointerId);
     };
     svg.addEventListener("pointerup", stop);
@@ -142,6 +154,7 @@ export function createMap(container, { onSelect, onHover } = {}) {
       true
     );
 
+    // 滚轮缩放同样走 rAF，高频 wheel 事件只在下一帧应用一次
     svg.addEventListener(
       "wheel",
       (event) => {
@@ -162,7 +175,6 @@ export function createMap(container, { onSelect, onHover } = {}) {
       );
 
     return svgEl("defs", {}, [
-      // 省份顶面：斜向紫渐变，上缘略亮
       svgEl(
         "linearGradient",
         { id: "provFill", x1: "0.15", y1: "0", x2: "0.6", y2: "1" },
@@ -186,11 +198,6 @@ export function createMap(container, { onSelect, onHover } = {}) {
         svgEl("stop", { offset: "55%", "stop-color": "#D4AF37", "stop-opacity": 0.14 }),
         svgEl("stop", { offset: "100%", "stop-color": "#D4AF37", "stop-opacity": 0 }),
       ]),
-      svgEl(
-        "filter",
-        { id: "blurShadow", x: "-15%", y: "-15%", width: "140%", height: "150%" },
-        [svgEl("feGaussianBlur", { stdDeviation: "16" })]
-      ),
     ]);
   }
 
@@ -253,7 +260,8 @@ export function createMap(container, { onSelect, onHover } = {}) {
 
     const base = geoConicEqualArea().parallels([25, 47]).rotate([-105, 0]);
     projection = fitProjection(base, land);
-    pathGen = geoPath(projection);
+    // digits(1)：坐标保留一位小数，路径数据减半，1px 精度肉眼无差
+    pathGen = geoPath(projection).digits(1);
 
     // 纵向排序：南侧省份后画，侧壁才会压在北侧之上
     const shapes = land
@@ -275,15 +283,21 @@ export function createMap(container, { onSelect, onHover } = {}) {
       if (d) drawn.push({ d, name });
     }
 
-    // 整体投影：合并所有轮廓后下移模糊，让整块地图浮起来
+    // 投影：两层无滤镜的偏移色块模拟柔和阴影（feGaussianBlur 每帧重算太贵）
     if (drawn.length) {
+      const merged = drawn.map((x) => x.d).join(" ");
       gShadow.append(
         svgEl("path", {
-          d: drawn.map((x) => x.d).join(" "),
-          fill: "#080409",
-          opacity: "0.62",
-          transform: "translate(0 30)",
-          filter: "url(#blurShadow)",
+          d: merged,
+          fill: "#0a050a",
+          opacity: "0.28",
+          transform: "translate(0 34)",
+        }),
+        svgEl("path", {
+          d: merged,
+          fill: "#0a050a",
+          opacity: "0.3",
+          transform: "translate(0 24)",
         })
       );
     }
@@ -296,7 +310,7 @@ export function createMap(container, { onSelect, onHover } = {}) {
           svgEl("path", {
             d,
             class: "prov__side",
-            fill: SIDE_COLORS[Math.min(SIDE_COLORS.length - 1, i - 1)],
+            fill: SIDE_COLORS[DEPTH - i] || SIDE_COLORS[0],
             transform: `translate(0 ${i * SIDE_STEP})`,
           })
         );
@@ -311,37 +325,23 @@ export function createMap(container, { onSelect, onHover } = {}) {
       top.addEventListener("pointerenter", () => {
         top.classList.add("is-hover");
         top.setAttribute("fill", "url(#provFillHover)");
-        gSides.classList.add("has-hover");
       });
       top.addEventListener("pointerleave", () => {
         top.classList.remove("is-hover");
         top.setAttribute("fill", "url(#provFill)");
-        gSides.classList.remove("has-hover");
       });
 
       gTops.append(top);
     }
 
-    gLand.append(gShadow, gSides, gTops);
-
     const gIslands = svgEl("g", { class: "map-islands" });
     for (const feature of islands) {
       const d = pathGen(feature);
-      if (!d) continue;
-      // 九段线：同样给一点厚度，避免看起来像浮在海面上的细线
-      for (let i = 3; i >= 1; i -= 1) {
-        gIslands.append(
-          svgEl("path", {
-            d,
-            class: "island-line island-line--side",
-            transform: `translate(0 ${i * 2})`,
-          })
-        );
-      }
-      gIslands.append(svgEl("path", { d, class: "island-line" }));
+      if (d) gIslands.append(svgEl("path", { d, class: "island-line" }));
     }
 
     gNodes = svgEl("g", { class: "map-nodes" });
+    gLand.append(gShadow, gSides, gTops);
     gRoot.append(gLand, gIslands, gNodes);
   }
 
@@ -389,7 +389,7 @@ export function createMap(container, { onSelect, onHover } = {}) {
 
       const group = svgEl("g", {
         class: "node",
-        transform: `translate(${x.toFixed(2)} ${(y - DEPTH * SIDE_STEP).toFixed(2)})`,
+        transform: `translate(${x.toFixed(1)} ${(y - DEPTH * SIDE_STEP).toFixed(1)})`,
         tabindex: "0",
         role: "button",
         "aria-label": `${node.province}${node.city ? " " + node.city : ""}：${node.title}`,
@@ -527,6 +527,7 @@ export function createMap(container, { onSelect, onHover } = {}) {
     },
     destroy() {
       destroyed = true;
+      if (viewRaf) cancelAnimationFrame(viewRaf);
       hideTip();
       svg?.remove();
       svg = null;
