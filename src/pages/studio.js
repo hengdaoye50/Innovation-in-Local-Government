@@ -77,9 +77,21 @@ export function studioSection() {
                 <div class="eyebrow">Draft</div>
                 <h3 class="h3">案例梗概</h3>
               </div>
-              <button class="btn btn--gold btn--sm" data-draft-generate type="button">
-                从对话生成
-              </button>
+              <div class="draft__head-actions">
+                <label class="btn btn--quiet btn--sm" for="draft-file">
+                  导入文件
+                  <input
+                    id="draft-file"
+                    type="file"
+                    accept=".md,.markdown,.txt,.docx"
+                    data-file-input
+                    hidden
+                  />
+                </label>
+                <button class="btn btn--gold btn--sm" data-draft-generate type="button">
+                  从对话生成
+                </button>
+              </div>
             </header>
 
             <div class="draft__body">
@@ -419,6 +431,69 @@ export function mountStudio(root) {
     }
     draft.sources.push({ url: "" });
     renderSources();
+  });
+
+  /* —————————— 文件导入 —————————— */
+
+  const fileInput = qs("[data-file-input]", section);
+
+  fileInput.addEventListener("change", async () => {
+    const file = fileInput.files?.[0];
+    fileInput.value = "";
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast("文件超过 5MB，请先在本地精简", { type: "error" });
+      return;
+    }
+
+    const name = file.name.toLowerCase();
+    const stem = file.name.replace(/\.[^.]+$/, "");
+    statusText.textContent = "正在读取文件…";
+    statusText.dataset.state = "";
+
+    try {
+      let text = "";
+      if (name.endsWith(".docx")) {
+        // 按需加载，只有导入 Word 时才把这部分代码取下来
+        const mammoth = (await import("mammoth")).default;
+        const buffer = await file.arrayBuffer();
+        const result = await mammoth.convertToMarkdown({ arrayBuffer: buffer });
+        text = result.value || "";
+      } else if (name.endsWith(".md") || name.endsWith(".markdown") || name.endsWith(".txt")) {
+        text = await file.text();
+      } else {
+        throw new Error("只支持 .md / .markdown / .txt / .docx");
+      }
+
+      text = text.replace(/\r\n/g, "\n").trim();
+      if (!text) throw new Error("文件里没有可读取的文字");
+
+      // 正文已有内容时追问，避免默默覆盖
+      if (zhLength(bodyInput.value) > 60) {
+        const ok = window.confirm("编辑器里已有正文，导入会覆盖它。继续吗？");
+        if (!ok) {
+          statusText.textContent = "";
+          return;
+        }
+      }
+
+      bodyInput.value = text;
+      if (!titleInput.value.trim() && stem) titleInput.value = stem.slice(0, 60);
+
+      // 文首若是 Markdown 一级标题，顺手提为标题
+      const heading = text.match(/^#\s+(.+)$/m);
+      if (heading && !titleInput.value.trim()) titleInput.value = heading[1].slice(0, 60);
+
+      updateWords();
+      statusText.textContent = `已导入 ${zhLength(text)} 字，请检查段落与来源`;
+      statusText.dataset.state = zhLength(text) >= WORD_MIN ? "ok" : "";
+      toast("文件已导入");
+    } catch (err) {
+      statusText.textContent = err.message || "读取失败";
+      statusText.dataset.state = "err";
+      toast(err.message || "文件读取失败", { type: "error" });
+    }
   });
 
   // 从对话里提取链接，自动补进来源

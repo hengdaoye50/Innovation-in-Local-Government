@@ -276,6 +276,19 @@
   margin-top: 4px;
 }
 
+.draft__head-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* label 当按钮用时需要指针与键盘可达 */
+label.btn {
+  cursor: pointer;
+}
+
 .draft__body {
   padding: 20px 22px 22px;
   display: flex;
