@@ -17,7 +17,9 @@ import { geoConicEqualArea, geoPath } from "d3-geo";
 import { esc } from "../lib/dom.js";
 
 const NS = "http://www.w3.org/2000/svg";
-const VIEW_W = 1000;
+// viewBox 宽度贴近地图实际宽高比：留太宽会让 SVG 按宽度适配时
+// 地图只占中间一小块（移动端尤其明显，两侧全是空白）
+const VIEW_W = 680;
 const VIEW_H = 720;
 
 const DEPTH = 4;
@@ -27,9 +29,9 @@ const LIFT = 20;
 
 const SIDE_COLORS = ["#0c070c", "#150b14", "#1f101d", "#2b1426"];
 
-const PAD_X = 34;
-const PAD_TOP = 14;
-const PAD_BOTTOM = 46;
+const PAD_X = 24;
+const PAD_TOP = 8;
+const PAD_BOTTOM = 30;
 
 function svgEl(tag, attrs = {}, children = []) {
   const node = document.createElementNS(NS, tag);
@@ -164,6 +166,9 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
 
     svg.addEventListener("pointerdown", (event) => {
       if (event.button !== 0) return;
+      // 触屏单指留给页面滚动（配合 CSS 的 touch-action: pan-y），
+      // 否则手指一碰地图就滑不动页面
+      if (event.pointerType !== "mouse") return;
       // 分析态下不接管拖动：既不能移动底图（连线会错位），
       // 也不能在这里退出——否则第二次点击会被 pointerdown 关掉、
       // 紧接着的 click 又把它打开，看起来就是"点了没反应"。
@@ -195,9 +200,12 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
       true
     );
 
+    // 滚轮默认交给页面滚动；按住 Ctrl / ⌘ 才缩放地图。
+    // 无条件 preventDefault 会让鼠标停在地图上时整页滚不动。
     svg.addEventListener(
       "wheel",
       (event) => {
+        if (!event.ctrlKey && !event.metaKey) return;
         event.preventDefault();
         if (atlasKey) return;
         const [x, y] = clientToSvg(event.clientX, event.clientY);

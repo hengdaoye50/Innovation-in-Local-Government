@@ -17,8 +17,7 @@ export function atlasSection() {
             地方创变，<em>落在地图上</em>
           </h1>
           <p class="atlas__sub">
-            每一枚光点都是一位同学从公开新闻出发、与大模型协同检索后写下的案例梗概。
-            点开它，看到的不只是做法，还有它发生在哪里、由谁推动、留下了什么问题。
+            每一枚光点，都是一位同学从公开新闻出发、与模型协同检索后写下的案例梗概。
           </p>
         </div>
         <div class="atlas__stats" aria-label="案例统计">
@@ -28,7 +27,7 @@ export function atlasSection() {
           </div>
           <div class="stat">
             <div class="stat__num" data-count="0" data-count-node="provinces">0</div>
-            <div class="stat__label">覆盖省级行政区</div>
+            <div class="stat__label">省级行政区</div>
           </div>
           <div class="stat">
             <div class="stat__num" data-count="0" data-count-node="authors">0</div>
@@ -59,7 +58,7 @@ export function atlasSection() {
         </div>
 
         <div class="atlas__hint" data-atlas-hint>
-          <span>拖动旋转 · 滚轮缩放 · 点击光点查看案例</span>
+          <span>拖动移动 · Ctrl + 滚轮缩放 · 点击光点展开关联</span>
           ${ICONS.arrowDown}
         </div>
 
