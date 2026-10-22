@@ -1,0 +1,212 @@
+/* ============================================================
+   展示板 + 阅读
+   ============================================================ */
+
+.boards {
+  background: var(--paper);
+}
+
+/* —— PPT 展位 —— */
+.slides-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(288px, 1fr));
+  gap: 24px;
+}
+
+.slide-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+
+.slide-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--line-gold);
+}
+
+.slide-card__cover {
+  position: relative;
+  height: 96px;
+  padding: 16px 18px;
+  background: linear-gradient(135deg, #2a1020 0%, #3d1330 58%, #4a1a3a 100%);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  overflow: hidden;
+}
+
+.slide-card__cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(rgba(196, 162, 101, 0.08) 1px, transparent 1px);
+  background-size: 100% 14px;
+  opacity: 0.7;
+}
+
+.slide-card__no {
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 1;
+  color: rgba(196, 162, 101, 0.82);
+  position: relative;
+  z-index: 1;
+}
+
+.slide-card__pages {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: rgba(253, 248, 240, 0.5);
+  position: relative;
+  z-index: 1;
+}
+
+.slide-card__cover-rule {
+  position: absolute;
+  left: 18px;
+  bottom: 16px;
+  width: 28px;
+  height: 1px;
+  background: var(--gold);
+  z-index: 1;
+}
+
+.slide-card__body {
+  padding: 18px;
+  flex: 1;
+}
+
+.slide-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.slide-card__title {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+
+.slide-card__desc {
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--ink-2);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.slide-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-top: 1px solid var(--line);
+  background: rgba(245, 237, 224, 0.5);
+}
+
+.slide-card__score {
+  font-size: 12px;
+  color: var(--plum);
+  letter-spacing: 0.04em;
+}
+
+/* —— 阅读 —— */
+.blog {
+  background: var(--paper);
+  padding-bottom: clamp(80px, 10vw, 140px);
+}
+
+.blog-list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--line);
+}
+
+.blog-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 120px;
+  gap: 24px;
+  align-items: start;
+  padding: 28px 8px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), padding-left var(--dur) var(--ease);
+}
+
+.blog-row:hover {
+  background: rgba(126, 12, 110, 0.025);
+  padding-left: 16px;
+}
+
+.blog-row__index {
+  font-family: var(--font-display);
+  font-size: 20px;
+  line-height: 1.4;
+  color: var(--gold);
+  letter-spacing: 0.06em;
+}
+
+.blog-row__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.blog-row__title {
+  font-family: var(--font-display);
+  font-size: clamp(18px, 1.9vw, 22px);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--ink);
+  margin: 0 0 8px;
+  transition: color var(--dur-fast) var(--ease);
+}
+
+.blog-row:hover .blog-row__title {
+  color: var(--plum);
+}
+
+.blog-row__excerpt {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--ink-2);
+  max-width: 56em;
+}
+
+.blog-row__author {
+  text-align: right;
+  padding-top: 6px;
+}
+
+@media (max-width: 760px) {
+  .blog-row {
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 14px;
+    padding: 22px 0;
+  }
+  .blog-row__author {
+    display: none;
+  }
+  .blog-row:hover {
+    padding-left: 0;
+  }
+  .slides-grid {
+    grid-template-columns: 1fr;
+  }
+}

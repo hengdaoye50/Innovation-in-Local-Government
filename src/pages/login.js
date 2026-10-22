@@ -1,0 +1,152 @@
+/** 登录 / 邀请码注册 */
+import { el, qs, toast } from "../lib/dom.js";
+import { auth as authApi } from "../lib/api.js";
+import { setState } from "../lib/store.js";
+import { SITE } from "../components/chrome.js";
+
+export function mountAuth(root) {
+  root.innerHTML = `
+    <div class="auth">
+      <div class="auth__panel">
+        <a class="auth__brand" href="#/">
+          <span class="auth__brand-mark">${SITE.name}</span>
+          <span class="auth__brand-sub">${SITE.course}</span>
+        </a>
+
+        <div class="auth__tabs" role="tablist">
+          <button class="auth__tab is-on" data-tab="login" role="tab" aria-selected="true">登录</button>
+          <button class="auth__tab" data-tab="register" role="tab" aria-selected="false">用邀请码注册</button>
+        </div>
+
+        <form class="auth__form" data-form="login">
+          <label class="field">
+            <span class="field__label">用户名</span>
+            <input class="input" name="username" autocomplete="username" placeholder="学号或自定用户名" />
+          </label>
+          <label class="field">
+            <span class="field__label">密码</span>
+            <input class="input" name="password" type="password" autocomplete="current-password" placeholder="请输入密码" />
+          </label>
+          <button class="btn btn--primary btn--lg" type="submit">登录</button>
+          <p class="field__hint">忘记密码请联系课程助教重置，本站不提供自助找回。</p>
+        </form>
+
+        <form class="auth__form" data-form="register" hidden>
+          <label class="field">
+            <span class="field__label">邀请码</span>
+            <input class="input" name="invite" placeholder="形式如 INV-XXXX-XXXX" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span class="field__label">用户名</span>
+            <input class="input" name="username" autocomplete="username" placeholder="字母或数字，至少 6 位" />
+          </label>
+          <label class="field">
+            <span class="field__label">密码</span>
+            <input class="input" name="password" type="password" autocomplete="new-password" placeholder="8–18 位，含大写、小写与数字" />
+          </label>
+          <button class="btn btn--primary btn--lg" type="submit">注册并登录</button>
+        </form>
+
+        <p class="auth__foot">
+          本站为课程内部平台，账号由任课教师发放邀请码开通。
+        </p>
+      </div>
+
+      <aside class="auth__aside">
+        <div class="auth__quote">
+          <p>「案例写作的第一步不是找答案，<br />而是把问题问准。」</p>
+          <div class="auth__quote-rule"></div>
+          <span class="meta">公共政策分析 · 课堂讲义</span>
+        </div>
+      </aside>
+    </div>
+  `;
+
+  const forms = {
+    login: qs('[data-form="login"]', root),
+    register: qs('[data-form="register"]', root),
+  };
+
+  root.querySelectorAll("[data-tab]").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      root.querySelectorAll("[data-tab]").forEach((t) => {
+        t.classList.toggle("is-on", t === tab);
+        t.setAttribute("aria-selected", String(t === tab));
+      });
+      Object.entries(forms).forEach(([key, form]) => {
+        form.hidden = key !== tab.dataset.tab;
+      });
+    });
+  });
+
+  function fillError(form, message) {
+    let node = form.querySelector(".auth__error");
+    if (!node) {
+      node = el("p", { class: "auth__error" });
+      form.querySelector('button[type="submit"]').before(node);
+    }
+    node.textContent = message;
+  }
+
+  function clearError(form) {
+    form.querySelector(".auth__error")?.remove();
+  }
+
+  forms.login.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    clearError(forms.login);
+    const data = new FormData(forms.login);
+    const username = String(data.get("username") || "").trim();
+    const password = String(data.get("password") || "");
+    if (!username || !password) {
+      fillError(forms.login, "请填写用户名与密码");
+      return;
+    }
+    const btn = forms.login.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = "登录中…";
+    try {
+      const res = await authApi.login(username, password);
+      setState({ user: res?.user || res || { username }, authChecked: true });
+      toast("登录成功");
+      window.location.hash = "/";
+    } catch (err) {
+      fillError(forms.login, err.message || "登录失败");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "登录";
+    }
+  });
+
+  forms.register.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    clearError(forms.register);
+    const data = new FormData(forms.register);
+    const invite = String(data.get("invite") || "").trim();
+    const username = String(data.get("username") || "").trim();
+    const password = String(data.get("password") || "");
+
+    if (!invite) return fillError(forms.register, "请填写邀请码");
+    if (!/^[A-Za-z0-9]{6,}$/.test(username))
+      return fillError(forms.register, "用户名需为字母或数字，至少 6 位");
+    if (password.length < 8 || password.length > 18)
+      return fillError(forms.register, "密码长度需为 8–18 位");
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password))
+      return fillError(forms.register, "密码需同时包含大写字母、小写字母与数字");
+
+    const btn = forms.register.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = "注册中…";
+    try {
+      const res = await authApi.register(username, password, invite);
+      setState({ user: res?.user || res || { username }, authChecked: true });
+      toast("注册成功，欢迎加入");
+      window.location.hash = "/";
+    } catch (err) {
+      fillError(forms.register, err.message || "注册失败");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "注册并登录";
+    }
+  });
+}

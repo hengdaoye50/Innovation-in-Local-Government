@@ -1,0 +1,609 @@
+/* ============================================================
+   详情页 · 阅读态排版
+   ============================================================ */
+
+.detail-page {
+  padding-top: 64px;
+  min-height: 100vh;
+}
+
+.detail {
+  padding: clamp(40px, 6vw, 80px) 0 clamp(64px, 8vw, 120px);
+}
+
+.detail__loading,
+.detail__empty {
+  padding: 120px 24px 160px;
+}
+
+.detail__empty .btn {
+  margin-top: 24px;
+}
+
+.detail__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink-2);
+  margin-bottom: 32px;
+  transition: color var(--dur-fast) var(--ease);
+}
+
+.detail__back:hover {
+  color: var(--plum);
+}
+
+.detail__head {
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 40px;
+}
+
+.detail__place {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--plum);
+  margin-bottom: 16px;
+}
+
+.detail__place-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gold-bright);
+  box-shadow: 0 0 0 3px rgba(196, 162, 101, 0.16);
+}
+
+.detail__title {
+  font-family: var(--font-display);
+  font-size: clamp(26px, 3.6vw, 40px);
+  font-weight: 500;
+  line-height: 1.28;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0 0 20px;
+}
+
+.detail__meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.detail__body {
+  font-size: 17px;
+  line-height: 1.92;
+  color: var(--ink);
+}
+
+/* —— Markdown 正文 —— */
+.md > * + * {
+  margin-top: 1.35em;
+}
+
+.md h2 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.45;
+  margin-top: 2em;
+  color: var(--ink);
+  position: relative;
+  padding-left: 20px;
+}
+
+.md h2::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.72em;
+  width: 10px;
+  height: 1px;
+  background: var(--gold);
+}
+
+.md h3 {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 600;
+  margin-top: 1.8em;
+  color: var(--ink);
+}
+
+.md p {
+  margin: 0;
+}
+
+.md strong {
+  font-weight: 600;
+  color: var(--plum-deep);
+}
+
+.md a {
+  color: var(--plum);
+  border-bottom: 1px solid rgba(126, 12, 110, 0.24);
+  padding-bottom: 1px;
+}
+
+.md a:hover {
+  border-bottom-color: var(--plum);
+}
+
+.md blockquote {
+  margin: 1.8em 0;
+  padding: 4px 0 4px 20px;
+  border-left: 2px solid var(--gold);
+  color: var(--ink-2);
+  font-family: var(--font-display);
+  font-size: 17px;
+}
+
+.md ul,
+.md ol {
+  padding-left: 1.4em;
+  margin: 0;
+}
+
+.md li + li {
+  margin-top: 0.5em;
+}
+
+.md code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: var(--paper-3);
+  padding: 0.15em 0.4em;
+  border-radius: 2px;
+  color: var(--plum-deep);
+}
+
+.md pre {
+  background: var(--paper-3);
+  padding: 16px 18px;
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+
+.md pre code {
+  background: none;
+  padding: 0;
+  color: var(--ink);
+}
+
+.md hr {
+  border: 0;
+  height: 1px;
+  background: var(--line);
+  margin: 2.4em 0;
+}
+
+.md img {
+  border-radius: var(--radius-sm);
+  margin: 1.6em auto;
+}
+
+.md table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14.5px;
+}
+
+.md th,
+.md td {
+  border-bottom: 1px solid var(--line);
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.md th {
+  font-weight: 600;
+  color: var(--ink-2);
+  border-bottom-color: var(--line-2);
+}
+
+/* —— 来源 —— */
+.detail__sources {
+  margin-top: 56px;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+}
+
+.source-list {
+  margin: 16px 0 0;
+  padding-left: 0;
+  list-style: none;
+  counter-reset: src;
+}
+
+.source-list li {
+  counter-increment: src;
+  position: relative;
+  padding: 10px 0 10px 34px;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+  line-height: 1.6;
+  word-break: break-all;
+}
+
+.source-list li::before {
+  content: counter(src, decimal-leading-zero);
+  position: absolute;
+  left: 0;
+  top: 11px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--gold);
+}
+
+/* —— 相关案例 —— */
+.detail__related {
+  margin-top: 64px;
+  padding-top: 32px;
+  border-top: 1px solid var(--line);
+}
+
+.related-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.related-card {
+  display: block;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper-2);
+  transition: border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+
+.related-card:hover {
+  border-color: var(--line-gold);
+  transform: translateY(-2px);
+}
+
+.related-card__place {
+  margin-bottom: 8px;
+}
+
+.related-card__title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+/* —— 评论区 —— */
+.comments {
+  margin-top: 64px;
+  padding-top: 32px;
+  border-top: 1px solid var(--line);
+}
+
+.comments__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.comments__list {
+  display: flex;
+  flex-direction: column;
+}
+
+.comments__list .empty {
+  margin-bottom: 24px;
+}
+
+.comment {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.comment__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.comment__author {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.comment__body {
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--ink-2);
+}
+
+.comments__form {
+  margin-top: 28px;
+}
+
+.comments__form-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  gap: 12px;
+}
+
+/* —— AI 评语 —— */
+.ai-review {
+  padding: 20px 22px;
+  margin-bottom: 28px;
+  background: rgba(196, 162, 101, 0.06);
+  border-left: 2px solid var(--gold);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.ai-review__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.ai-review__label {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.ai-review__score {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--plum);
+  line-height: 1;
+}
+
+.ai-review__body {
+  font-family: var(--font-display);
+  font-size: 16px;
+  line-height: 1.8;
+  color: var(--ink);
+}
+
+.ai-review__note {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+/* —— 幻灯片占位 —— */
+.slide-embed {
+  margin-bottom: 40px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  background: var(--paper-3);
+}
+
+.slide-embed iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.slide-placeholder {
+  margin-bottom: 40px;
+  padding: 56px 24px;
+  border: 1px dashed var(--line-2);
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+.slide-placeholder__no {
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+
+.slide-placeholder p {
+  font-size: 14px;
+  color: var(--ink-3);
+}
+
+/* ============================================================
+   教师后台
+   ============================================================ */
+
+.admin {
+  padding: clamp(40px, 6vw, 72px) 0 120px;
+}
+
+.admin__head {
+  margin-bottom: 40px;
+}
+
+.admin__head .lede {
+  margin-top: 10px;
+}
+
+.admin__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.8fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.admin__panel {
+  padding: 0;
+}
+
+.admin__panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.admin__filters {
+  display: flex;
+  gap: 6px;
+}
+
+.admin__list {
+  padding: 8px 22px 22px;
+}
+
+.admin__row {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.admin__row:last-child {
+  border-bottom: 0;
+}
+
+.admin__row-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.admin__row-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.admin__row-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--ink);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.admin__row-title:hover {
+  color: var(--plum);
+}
+
+.admin__row-review {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink-2);
+  padding: 10px 12px;
+  background: rgba(196, 162, 101, 0.06);
+  border-left: 1px solid var(--gold);
+}
+
+.admin__row-actions {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+
+.admin__side {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.admin__invites {
+  padding: 16px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.invite-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-gold);
+  border-radius: var(--radius-sm);
+  background: rgba(196, 162, 101, 0.05);
+}
+
+.invite-row code {
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: var(--plum-deep);
+}
+
+.admin__stats {
+  margin: 0;
+  padding: 0 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin__stats > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 10px;
+}
+
+.admin__stats > div:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.admin__stats dt {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.admin__stats dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--plum);
+}
+
+.admin-gate {
+  padding: 140px 24px 180px;
+  text-align: center;
+}
+
+.admin-gate .btn {
+  margin-top: 24px;
+}
+
+@media (max-width: 900px) {
+  .admin__grid {
+    grid-template-columns: 1fr;
+  }
+  .admin__row {
+    flex-direction: column;
+  }
+  .detail__body {
+    font-size: 16px;
+    line-height: 1.85;
+  }
+}

@@ -1,0 +1,183 @@
+/* ============================================================
+   登录 / 注册
+   ============================================================ */
+
+.auth {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.92fr);
+}
+
+.auth__panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: calc(64px + clamp(32px, 5vw, 64px)) clamp(24px, 7vw, 96px) clamp(40px, 6vw, 80px);
+  max-width: 560px;
+  width: 100%;
+  margin-left: auto;
+}
+
+.auth__brand {
+  display: block;
+  margin-bottom: 48px;
+}
+
+.auth__brand-mark {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+
+.auth__brand-sub {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.auth__tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 28px;
+}
+
+.auth__tab {
+  position: relative;
+  padding: 12px 20px 12px 0;
+  font-size: 14px;
+  color: var(--ink-3);
+  transition: color var(--dur-fast) var(--ease);
+}
+
+.auth__tab + .auth__tab {
+  padding-left: 20px;
+}
+
+.auth__tab:hover {
+  color: var(--plum);
+}
+
+.auth__tab.is-on {
+  color: var(--plum);
+  font-weight: 500;
+}
+
+.auth__tab.is-on::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: var(--plum);
+}
+
+.auth__tab + .auth__tab.is-on::after {
+  left: 20px;
+}
+
+.auth__form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.auth__form[hidden] {
+  display: none;
+}
+
+.auth__form .btn {
+  margin-top: 8px;
+  width: 100%;
+}
+
+.auth__error {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--err);
+  padding: 10px 14px;
+  background: rgba(163, 32, 32, 0.05);
+  border-left: 2px solid var(--err);
+}
+
+.auth__foot {
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--ink-3);
+}
+
+/* 右侧版面 */
+.auth__aside {
+  position: relative;
+  background: radial-gradient(120% 80% at 30% 20%, #3d1330 0%, #2a1020 45%, #1e121c 100%);
+  display: flex;
+  align-items: flex-end;
+  padding: clamp(40px, 6vw, 72px);
+  padding-top: calc(64px + clamp(40px, 6vw, 72px));
+  overflow: hidden;
+}
+
+/* 登录页顶栏落在深色版面上，给一层纸色底以免看不清 */
+body.page-auth .nav {
+  background: rgba(253, 248, 240, 0.94);
+  backdrop-filter: saturate(180%) blur(12px);
+  border-bottom-color: var(--line);
+}
+
+.auth__aside::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(rgba(196, 162, 101, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(196, 162, 101, 0.06) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: radial-gradient(70% 60% at 40% 40%, #000 10%, transparent 80%);
+}
+
+.auth__quote {
+  position: relative;
+  z-index: 1;
+}
+
+.auth__quote p {
+  font-family: var(--font-display);
+  font-size: clamp(20px, 2.2vw, 28px);
+  font-weight: 400;
+  line-height: 1.6;
+  color: rgba(253, 248, 240, 0.92);
+  letter-spacing: 0.01em;
+}
+
+.auth__quote-rule {
+  width: 40px;
+  height: 1px;
+  background: var(--gold);
+  margin: 28px 0 16px;
+}
+
+.auth__quote .meta {
+  color: rgba(253, 248, 240, 0.45);
+  letter-spacing: 0.12em;
+}
+
+@media (max-width: 900px) {
+  .auth {
+    grid-template-columns: 1fr;
+  }
+  .auth__panel {
+    margin: 0 auto;
+    max-width: 520px;
+  }
+  .auth__aside {
+    display: none;
+  }
+}

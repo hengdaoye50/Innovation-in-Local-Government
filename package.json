@@ -1,0 +1,24 @@
+{
+  "name": "innovation-local-government",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "地方政府创新案例库 — MPA / 行政管理课程协作平台",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "pages:dev": "npm run build && wrangler pages dev dist",
+    "db:init": "wrangler d1 execute innovation-localgov --file=migrations/0001_init.sql --remote"
+  },
+  "dependencies": {
+    "d3-geo": "^3.1.1",
+    "dompurify": "^3.2.4",
+    "mammoth": "^1.9.0",
+    "marked": "^15.0.7"
+  },
+  "devDependencies": {
+    "vite": "^6.0.11",
+    "wrangler": "^4.0.0"
+  }
+}

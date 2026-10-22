@@ -1,0 +1,551 @@
+/* ============================================================
+   地图屏 —— 深紫制图台
+   ============================================================ */
+
+.atlas {
+  position: relative;
+  padding: 0;
+  border-top: 0;
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(
+      120% 90% at 50% 0%,
+      #2f1428 0%,
+      var(--plum-stage-2) 38%,
+      var(--plum-stage) 72%
+    ),
+    var(--plum-stage);
+  color: var(--paper);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* 纸底渐隐，衔接到下一屏 */
+.atlas::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 88px;
+  background: linear-gradient(to bottom, rgba(30, 18, 28, 0), var(--paper) 94%);
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* 极淡的经纬网 */
+.atlas::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(rgba(196, 162, 101, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(196, 162, 101, 0.055) 1px, transparent 1px);
+  background-size: 88px 88px;
+  mask-image: radial-gradient(58% 62% at 50% 46%, #000 20%, transparent 78%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.atlas__head {
+  position: relative;
+  z-index: 2;
+  padding-top: 96px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.atlas__title-block {
+  max-width: 620px;
+}
+
+.atlas__eyebrow {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 18px;
+}
+
+.atlas__title {
+  font-family: var(--font-display);
+  font-size: clamp(32px, 3.8vw, 52px);
+  font-weight: 500;
+  line-height: 1.16;
+  letter-spacing: -0.015em;
+  color: #fdf8f0;
+  margin: 0;
+}
+
+.atlas__title em {
+  font-style: italic;
+  color: var(--gold);
+}
+
+.atlas__sub {
+  margin-top: 20px;
+  font-size: 15px;
+  line-height: 1.85;
+  color: rgba(253, 248, 240, 0.68);
+  max-width: 30em;
+}
+
+.atlas__stats {
+  display: flex;
+  gap: 40px;
+  padding-top: 8px;
+}
+
+.stat {
+  text-align: left;
+}
+
+.stat__num {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 3vw, 40px);
+  font-weight: 500;
+  line-height: 1;
+  color: var(--gold);
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat__label {
+  margin-top: 8px;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(253, 248, 240, 0.5);
+}
+
+/* —— 舞台 —— */
+.atlas__stage {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 460px;
+  margin: -8px 0 0;
+}
+
+.map-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* —— SVG 浮雕地图 —— */
+.map-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 620ms var(--ease), transform 620ms var(--ease);
+  touch-action: none;
+  overflow: visible;
+}
+
+.map-svg.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+.map-svg.is-grabbing {
+  cursor: grabbing;
+}
+
+.prov__side {
+  stroke: none;
+  opacity: 0.96;
+}
+
+/* fill 由 JS 写入 SVG 属性：外部 CSS 里 url(#id) 会相对样式表路径解析而失效 */
+.prov__top {
+  stroke: rgba(196, 162, 101, 0.4);
+  stroke-width: 0.65;
+  stroke-linejoin: round;
+  transition: stroke 200ms var(--ease), stroke-width 200ms var(--ease);
+}
+
+.prov__top.is-hover {
+  stroke: rgba(212, 175, 55, 0.95);
+  stroke-width: 1;
+}
+
+.map-shadow {
+  pointer-events: none;
+}
+
+.island-line {
+  fill: none;
+  stroke: rgba(196, 162, 101, 0.55);
+  stroke-width: 0.8;
+  stroke-linecap: round;
+}
+
+/* —— 案例节点 —— */
+.node {
+  cursor: pointer;
+  outline: none;
+}
+
+.node__halo {
+  transition: transform 220ms var(--ease);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.node__dot {
+  stroke: rgba(30, 18, 28, 0.5);
+  stroke-width: 0.6;
+  filter: drop-shadow(0 0 4px rgba(212, 175, 55, 0.85));
+  transition: transform 220ms var(--ease), fill 220ms var(--ease);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.node__core {
+  opacity: 0.9;
+  transition: transform 220ms var(--ease);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.node.is-hover .node__dot,
+.node:focus-visible .node__dot {
+  fill: #fff3d0;
+  transform: scale(1.55);
+}
+
+.node.is-hover .node__halo,
+.node:focus-visible .node__halo {
+  transform: scale(1.35);
+}
+
+.node.is-hover .node__core,
+.node:focus-visible .node__core {
+  transform: scale(1.3);
+}
+
+/* 地图降级提示 */
+.map-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.8;
+  color: rgba(253, 248, 240, 0.55);
+  word-break: break-word;
+}
+
+/* 地图未就绪时的骨架 */
+.map-canvas[data-pending]::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: min(560px, 62vw);
+  height: min(420px, 40vh);
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(196, 162, 101, 0.14);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(126, 12, 110, 0.16), transparent 68%);
+  animation: mappulse 2.4s ease-in-out infinite;
+}
+
+@keyframes mappulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: translate(-50%, -50%) scale(0.97);
+  }
+  50% {
+    opacity: 0.75;
+    transform: translate(-50%, -50%) scale(1.02);
+  }
+}
+
+/* —— HUD —— */
+.atlas__legend {
+  position: absolute;
+  left: max(24px, calc((100vw - var(--shell)) / 2 + var(--gutter)));
+  bottom: 108px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 12px;
+  color: rgba(253, 248, 240, 0.62);
+}
+
+.legend__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.legend__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--gold-bright);
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.85);
+  flex: none;
+}
+
+.legend__dot--lg {
+  width: 10px;
+  height: 10px;
+}
+
+.legend__line {
+  width: 14px;
+  height: 1px;
+  background: var(--gold-dim);
+  flex: none;
+}
+
+/* —— 控制按钮 —— */
+.atlas__controls {
+  position: absolute;
+  right: max(24px, calc((100vw - var(--shell)) / 2 + var(--gutter)));
+  bottom: 108px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ctrl {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(196, 162, 101, 0.28);
+  border-radius: 2px;
+  color: rgba(253, 248, 240, 0.72);
+  background: rgba(30, 18, 28, 0.42);
+  backdrop-filter: blur(6px);
+  transition: color var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+
+.ctrl:hover {
+  color: var(--gold-bright);
+  border-color: rgba(196, 162, 101, 0.6);
+  background: rgba(42, 16, 32, 0.72);
+}
+
+.ctrl.is-on {
+  color: var(--gold-bright);
+  border-color: var(--gold);
+  background: rgba(126, 12, 110, 0.3);
+}
+
+.ctrl svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.3;
+}
+
+/* —— 悬停浮层 —— */
+.map-tip {
+  position: absolute;
+  z-index: 8;
+  min-width: 200px;
+  max-width: 268px;
+  padding: 14px 16px;
+  background: var(--paper);
+  border: 1px solid rgba(196, 162, 101, 0.42);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lift);
+  pointer-events: none;
+  animation: tipin 140ms var(--ease);
+}
+
+@keyframes tipin {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.map-tip__place {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--plum);
+  margin-bottom: 6px;
+}
+
+.map-tip__title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--ink);
+  margin-bottom: 10px;
+}
+
+.map-tip__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.map-tip__meta {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+/* —— 底栏提示 —— */
+.atlas__hint {
+  position: absolute;
+  left: 50%;
+  bottom: 44px;
+  transform: translateX(-50%);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: rgba(253, 248, 240, 0.42);
+  white-space: nowrap;
+}
+
+.atlas__hint svg {
+  width: 14px;
+  height: 6px;
+  stroke: currentColor;
+  fill: none;
+}
+
+/* —— 案例列表抽屉（同城多案例） —— */
+.atlas__drawer {
+  position: absolute;
+  right: max(24px, calc((100vw - var(--shell)) / 2 + var(--gutter)));
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 9;
+  width: 300px;
+  max-height: 62%;
+  overflow: auto;
+  background: var(--paper);
+  border: 1px solid rgba(196, 162, 101, 0.42);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lift);
+  padding: 8px;
+}
+
+.atlas__drawer[hidden] {
+  display: none;
+}
+
+.drawer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.drawer__place {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.drawer__item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--line);
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.drawer__item:last-child {
+  border-bottom: 0;
+}
+
+.drawer__item:hover {
+  background: rgba(126, 12, 110, 0.05);
+}
+
+.drawer__item-title {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.drawer__item-meta {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+/* —— 响应式 —— */
+@media (max-width: 900px) {
+  .atlas__head {
+    padding-top: 84px;
+    gap: 24px;
+  }
+  .atlas__stats {
+    gap: 28px;
+    width: 100%;
+  }
+  .atlas__stage {
+    min-height: 48vh;
+    margin-top: 4px;
+  }
+  .atlas__legend {
+    display: none;
+  }
+  .atlas__controls {
+    right: var(--gutter);
+    bottom: 96px;
+    flex-direction: row;
+  }
+  .atlas__hint {
+    display: none;
+  }
+  .atlas__drawer {
+    left: var(--gutter);
+    right: var(--gutter);
+    top: auto;
+    bottom: 88px;
+    transform: none;
+    width: auto;
+    max-height: 46%;
+  }
+  .atlas::after {
+    height: 72px;
+  }
+}
+
+@media (max-width: 560px) {
+  .atlas__title {
+    font-size: clamp(28px, 8vw, 38px);
+  }
+  .stat__num {
+    font-size: 26px;
+  }
+  .atlas__stats {
+    gap: 20px;
+  }
+}

@@ -1,0 +1,19 @@
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+.env
+.env.*
+*.local
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# 工具输出与本地数据
+_*.log
+screenshots/
+scripts/.cache/
+
+# 种子 SQL 含密码哈希，不提交
+migrations/0002_seed_admin.sql
