@@ -302,6 +302,18 @@ label.btn {
   gap: 12px;
 }
 
+/* 省 / 市 / 区县 三级，等宽排布 */
+.draft__row--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.draft__row--3 .select {
+  padding-left: 10px;
+  padding-right: 26px;
+  font-size: 14px;
+}
+
 .draft__tags {
   display: flex;
   flex-wrap: wrap;

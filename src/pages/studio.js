@@ -100,7 +100,7 @@ export function studioSection() {
                 <input class="input" data-draft-title maxlength="60" placeholder="一句话说清这个创新做了什么" />
               </label>
 
-              <div class="draft__row">
+              <div class="draft__row draft__row--3">
                 <label class="field">
                   <span class="field__label">省 / 自治区</span>
                   <select class="select" data-draft-province>
@@ -113,7 +113,16 @@ export function studioSection() {
                     <option value="">请选择</option>
                   </select>
                 </label>
+                <label class="field">
+                  <span class="field__label">区 / 县</span>
+                  <select class="select" data-draft-district>
+                    <option value="">请选择</option>
+                  </select>
+                </label>
               </div>
+              <p class="field__hint" data-geo-hint>
+                选到区县后，光点会落在该区县中心；案例积累多时这一级决定能否在地图上分清。
+              </p>
 
               <div class="field">
                 <span class="field__label">创新领域</span>
@@ -332,6 +341,7 @@ export function mountStudio(root) {
   const titleInput = qs("[data-draft-title]", section);
   const provinceSel = qs("[data-draft-province]", section);
   const citySel = qs("[data-draft-city]", section);
+  const districtSel = qs("[data-draft-district]", section);
   const bodyInput = qs("[data-draft-body]", section);
   const wordCount = qs("[data-word-count]", section);
   const wordBar = qs("[data-word-bar]", section);
@@ -341,12 +351,13 @@ export function mountStudio(root) {
 
   const draft = { tags: new Set(), sources: [] };
 
-  const geo = { provinces: [], cities: [] };
+  const geo = { provinces: [], cities: [], districts: [] };
   fetch("/data/cities.json")
     .then((r) => r.json())
     .then((data) => {
       geo.provinces = data.provinces || [];
       geo.cities = data.cities || [];
+      geo.districts = data.districts || [];
       provinceSel.innerHTML =
         `<option value="">请选择</option>` +
         geo.provinces
@@ -357,13 +368,39 @@ export function mountStudio(root) {
       provinceSel.innerHTML = `<option value="">数据加载失败</option>`;
     });
 
+  /** 重置某个下拉为「请选择」占位 */
+  function resetSelect(select, placeholder = "请选择") {
+    select.innerHTML = `<option value="">${placeholder}</option>`;
+    select.value = "";
+  }
+
   provinceSel.addEventListener("change", () => {
     const name = provinceSel.value;
+    if (!name) {
+      resetSelect(citySel);
+      resetSelect(districtSel);
+      return;
+    }
     const list = geo.cities.filter((c) => c.province === name);
     citySel.innerHTML =
-      `<option value="">${list.length ? "请选择" : "该省为直辖市"}</option>` +
+      `<option value="">请选择</option>` +
       list.map((c) => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join("");
-    if (!list.length) citySel.value = "";
+    resetSelect(districtSel);
+    districtSel.innerHTML = `<option value="">请先选市</option>`;
+  });
+
+  citySel.addEventListener("change", () => {
+    const province = provinceSel.value;
+    const city = citySel.value;
+    if (!city) {
+      resetSelect(districtSel);
+      return;
+    }
+    const list = geo.districts.filter((d) => d.province === province && d.city === city);
+    districtSel.innerHTML =
+      `<option value="">${list.length ? "可选" : "暂无区县数据"}</option>` +
+      list.map((d) => `<option value="${esc(d.name)}">${esc(d.name)}</option>`).join("");
+    districtSel.value = "";
   });
 
   function updateWords() {
@@ -537,7 +574,11 @@ export function mountStudio(root) {
       if (d?.province) {
         provinceSel.value = d.province;
         provinceSel.dispatchEvent(new Event("change"));
-        if (d.city) citySel.value = d.city;
+        if (d.city) {
+          citySel.value = d.city;
+          citySel.dispatchEvent(new Event("change"));
+          if (d.district) districtSel.value = d.district;
+        }
       }
       for (const t of d?.domains || []) {
         const chip = tagBox.querySelector(`[data-domain="${CSS.escape(t)}"]`);
@@ -595,13 +636,21 @@ export function mountStudio(root) {
     const city = geo.cities.find(
       (c) => c.province === provinceSel.value && c.name === citySel.value
     );
-    const point = city || province;
+    const district = geo.districts.find(
+      (d) =>
+        d.province === provinceSel.value &&
+        d.city === citySel.value &&
+        d.name === districtSel.value
+    );
+    // 精度优先：区县 > 地级市 > 省
+    const point = district || city || province;
 
     try {
       await casesApi.create({
         title: titleInput.value.trim(),
         province: provinceSel.value,
         city: citySel.value || "",
+        district: districtSel.value || "",
         lng: point?.lng,
         lat: point?.lat,
         domains: [...draft.tags],
@@ -632,7 +681,7 @@ export function mountStudio(root) {
       statusText.dataset.state = "";
     }
   }, 400);
-  [titleInput, bodyInput, provinceSel, citySel].forEach((n) =>
+  [titleInput, bodyInput, provinceSel, citySel, districtSel].forEach((n) =>
     n.addEventListener("input", revalidate)
   );
   tagBox.addEventListener("click", revalidate);

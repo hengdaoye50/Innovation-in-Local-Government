@@ -50,7 +50,10 @@ export async function mountCaseDetail(root, id) {
         <header class="detail__head">
           <div class="detail__place">
             <span class="detail__place-dot"></span>
-            ${esc(item.province || "")}${item.city ? ` · ${esc(item.city)}` : ""}
+            ${[item.province, item.city, item.district]
+              .filter((p, i, arr) => p && arr.indexOf(p) === i)
+              .map(esc)
+              .join(" · ")}
           </div>
           <h1 class="detail__title">${esc(item.title)}</h1>
           <div class="detail__meta">

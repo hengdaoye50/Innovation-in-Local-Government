@@ -66,8 +66,18 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
 
   const view = { x: 0, y: 0, k: 1 };
   let viewRaf = 0;
+  let zoomSettleTimer = 0;
 
-  const nodeKey = (node) => `${node.province}|${node.city}|${node.count}`;
+  const nodeKey = (node) =>
+    `${node.province}|${node.city}|${node.district || ""}|${node.count}`;
+
+  /** 地点显示：省 · 市 · 区县，逐级省略重复项 */
+  function placeLabel(node, sep = " · ") {
+    const parts = [node.province, node.city, node.district].filter(
+      (p, i, arr) => p && arr.indexOf(p) === i
+    );
+    return parts.join(sep);
+  }
 
   /* ————————— 视角 ————————— */
 
@@ -77,6 +87,14 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
       "transform",
       `translate(${view.x.toFixed(1)} ${view.y.toFixed(1)}) scale(${view.k.toFixed(3)})`
     );
+    // 光点尺寸不随缩放变化（标准地图行为）：反向缩放抵消。
+    // 缩放过程中关掉过渡，否则点会慢半拍地追着画布跑
+    if (gNodes) {
+      gNodes.classList.add("is-zooming");
+      gNodes.style.setProperty("--node-scale", (1 / view.k).toFixed(4));
+      clearTimeout(zoomSettleTimer);
+      zoomSettleTimer = setTimeout(() => gNodes?.classList.remove("is-zooming"), 180);
+    }
   }
 
   function scheduleView() {
@@ -95,7 +113,8 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
   }
 
   function zoomAt(svgX, svgY, factor) {
-    const next = Math.min(4.2, Math.max(0.7, view.k * factor));
+    // 上限放到 8 倍：案例密集时需要能一直放大到区县一级
+    const next = Math.min(8, Math.max(0.6, view.k * factor));
     if (Math.abs(next - view.k) < 1e-4) return;
     const ratio = next / view.k;
     view.x = svgX - (svgX - view.x) * ratio;
@@ -415,11 +434,14 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
     const groups = new Map();
     for (const item of list) {
       if (!item || !item.lng || !item.lat) continue;
-      const key = `${item.province}|${item.city || ""}`;
+      // 按区县聚合：同城不同区的案例落点不同，放大后能分开；
+      // 只有同一区县内的多条案例才合并成一个点
+      const key = `${item.province}|${item.city || ""}|${item.district || ""}`;
       if (!groups.has(key)) {
         groups.set(key, {
           province: item.province,
           city: item.city || "",
+          district: item.district || "",
           lng: item.lng,
           lat: item.lat,
           items: [],
@@ -460,10 +482,11 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
         tabindex: "0",
         role: "button",
         "data-key": nodeKey(node),
-        "aria-label": `${node.province}${node.city ? " " + node.city : ""}：${node.title}`,
+        "aria-label": `${placeLabel(node, " ")}：${node.title}`,
       });
 
-      // 内层承担浮起动画，外层保持定位，两者互不干扰
+      // 内层承担浮起动画，最内层承担尺寸补偿，三者互不干扰
+      const lift = svgEl("g", { class: "node__lift" });
       const body = svgEl("g", { class: "node__body" });
       body.append(
         svgEl("circle", {
@@ -478,6 +501,7 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
           fill: "#fff6dc",
         })
       );
+      lift.append(body);
 
       // 贴在地面的落影：光点升起时影子放大变淡，悬浮感靠它立起来
       group.append(
@@ -493,7 +517,7 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
           ry: (node.r * 0.62).toFixed(1),
           cy: "1",
         }),
-        body
+        lift
       );
 
       const select = () => {
@@ -659,9 +683,7 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
       .map((d) => `<span class="tag tag--quiet">${esc(d)}</span>`)
       .join("");
     tooltip.innerHTML = `
-      <div class="map-tip__place">${esc(node.province)}${
-      node.city ? ` · ${esc(node.city)}` : ""
-    }</div>
+      <div class="map-tip__place">${esc(placeLabel(node))}</div>
       <div class="map-tip__title">${esc(node.title)}</div>
       ${tags ? `<div class="map-tip__tags">${tags}</div>` : ""}
       <div class="map-tip__meta">${
@@ -747,6 +769,7 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
     destroy() {
       destroyed = true;
       if (viewRaf) cancelAnimationFrame(viewRaf);
+      if (zoomSettleTimer) clearTimeout(zoomSettleTimer);
       if (container._keyHandler) {
         document.removeEventListener("keydown", container._keyHandler);
         container._keyHandler = null;

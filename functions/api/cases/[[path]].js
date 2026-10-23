@@ -103,6 +103,7 @@ async function createHandler({ request, env }) {
   const title = String(body.title || "").trim().slice(0, 60);
   const province = String(body.province || "").trim();
   const city = String(body.city || "").trim().slice(0, 30);
+  const district = String(body.district || "").trim().slice(0, 30);
   const text = String(body.body || "").trim();
   const domains = Array.isArray(body.domains)
     ? body.domains.map((d) => String(d).trim()).filter(Boolean).slice(0, 3)
@@ -137,6 +138,7 @@ async function createHandler({ request, env }) {
     title,
     province,
     city,
+    district,
     lng: Number.isFinite(lng) ? lng : null,
     lat: Number.isFinite(lat) ? lat : null,
     domains,

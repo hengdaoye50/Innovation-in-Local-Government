@@ -114,9 +114,10 @@ export async function mountAtlas(root) {
 
     focusCard.innerHTML = `
       <div class="map-focus-card__top">
-        <span class="map-focus-card__place">${esc(node.province)}${
-      node.city ? ` · ${esc(node.city)}` : ""
-    }</span>
+        <span class="map-focus-card__place">${[node.province, node.city, node.district]
+          .filter((p, i, arr) => p && arr.indexOf(p) === i)
+          .map(esc)
+          .join(" · ")}</span>
         <button class="map-focus-card__close" data-focus-close aria-label="关闭">
           <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.3">
             <path d="M1 1l8 8M9 1L1 9" stroke-linecap="round" />
@@ -184,11 +185,14 @@ export async function mountAtlas(root) {
     map?.exitAtlas();
     closeFocusCard();
 
+    const place = [node.province, node.city, node.district]
+      .filter((p, i, arr) => p && arr.indexOf(p) === i)
+      .map(esc)
+      .join(" · ");
+
     drawer.innerHTML = `
       <div class="drawer__head">
-        <span class="drawer__place">${esc(node.province)}${
-      node.city ? ` · ${esc(node.city)}` : ""
-    }</span>
+        <span class="drawer__place">${place}</span>
         <button class="btn btn--quiet btn--sm" data-close>关闭</button>
       </div>
       ${list

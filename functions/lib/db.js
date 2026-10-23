@@ -17,6 +17,7 @@ export function rowToCase(row) {
     title: row.title,
     province: row.province,
     city: row.city || "",
+    district: row.district || "",
     lng: row.lng,
     lat: row.lat,
     domains: parseJson(row.domains, []),
@@ -82,7 +83,7 @@ export function rowToComment(row) {
   };
 }
 
-const CASE_COLUMNS = `id, title, province, city, lng, lat, domains, summary, body,
+const CASE_COLUMNS = `id, title, province, city, district, lng, lat, domains, summary, body,
   sources_json, author_id, author_name, status, ai_review, ai_score, year,
   created_at, updated_at`;
 
@@ -132,15 +133,16 @@ export async function getCase(env, id) {
 
 export async function insertCase(env, data) {
   await env.DB.prepare(
-    `INSERT INTO cases (id, title, province, city, lng, lat, domains, summary, body,
+    `INSERT INTO cases (id, title, province, city, district, lng, lat, domains, summary, body,
       sources_json, author_id, author_name, status, year, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       data.id,
       data.title,
       data.province,
       data.city || null,
+      data.district || null,
       data.lng ?? null,
       data.lat ?? null,
       JSON.stringify(data.domains || []),
@@ -272,17 +274,18 @@ export async function countCasesToday(env, authorId) {
 /** 供地图使用的轻量列表：只取落点与标签 */
 export async function listCasePoints(env) {
   const { results } = await env.DB.prepare(
-    `SELECT id, title, province, city, lng, lat, domains, author_name, year
+    `SELECT id, title, province, city, district, lng, lat, domains, author_name, year
      FROM cases
      WHERE status = 'published' AND lng IS NOT NULL AND lat IS NOT NULL
      ORDER BY created_at DESC
-     LIMIT 1000`
+     LIMIT 2000`
   ).all();
   return (results || []).map((row) => ({
     id: row.id,
     title: row.title,
     province: row.province,
     city: row.city || "",
+    district: row.district || "",
     lng: row.lng,
     lat: row.lat,
     domains: parseJson(row.domains, []),

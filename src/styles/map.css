@@ -199,12 +199,26 @@
 }
 
 /* —— 光点浮起 —— */
-.node__body {
+/* 两层分工：lift 负责分析态上浮，body 负责抵消画布缩放 */
+.node__lift {
   transition: transform 640ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
-.map-svg.is-atlas .node__body {
+.map-svg.is-atlas .node__lift {
   transform: translateY(-20px);
+}
+
+/* 尺寸补偿：放大画布时光点在屏幕上保持原大小，否则密集区会糊成一片 */
+.node__body {
+  transform: scale(var(--node-scale, 1));
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 200ms var(--ease);
+}
+
+/* 缩放过程中即时跟随，停手后才恢复过渡（供选中放大用） */
+.map-nodes.is-zooming .node__body {
+  transition: none;
 }
 
 /* 落影：常态几乎不可见，升起时放大变淡 */
@@ -243,8 +257,12 @@
   fill: #f0d48a;
 }
 
+.map-svg.is-atlas .node.is-atlas-target .node__lift {
+  transform: translateY(-28px);
+}
+
 .map-svg.is-atlas .node.is-atlas-target .node__body {
-  transform: translateY(-28px) scale(1.45);
+  transform: scale(calc(var(--node-scale, 1) * 1.45));
 }
 
 .map-svg.is-atlas .node.is-atlas-target .node__dot {

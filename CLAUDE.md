@@ -56,7 +56,7 @@ MPA课程AI辅学项目开发/
 │   └── lib/                  # api / router / store / dom / markdown / demo
 ├── public/
 │   ├── data/china.json       # 中国省级 GeoJSON（已修正环绕向，见 scripts/fix-geojson.mjs）
-│   ├── data/cities.json      # 省级 + 地级市经纬度索引（用于地点定位）
+│   ├── data/cities.json      # 省 / 地级市 / 区县 三级坐标索引（定位精度到区县）
 │   └── fonts/                # 自托管拉丁标题字体
 ├── scripts/
 │   ├── build-cities.mjs      # 一次性工具：从 DataV 生成 cities.json
@@ -118,7 +118,7 @@ MPA课程AI辅学项目开发/
 users      id, username, password_hash, role, status, created_at
 invites    code, created_by, used_by, used_at, created_at
 sessions   已在 KV，键 auth:session:*
-cases      id, title, province, city, lng, lat, domain_tags, summary, body,
+cases      id, title, province, city, district, lng, lat, domain_tags, summary, body,
            sources_json, author_id, status, ai_review, created_at, updated_at
 slides     id, title, course, term, author_id, cover_url, file_url, description,
            status, created_at

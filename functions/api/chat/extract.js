@@ -28,11 +28,12 @@ const SYSTEM = `你是案例写作助教，负责把一段师生对话整理成�
 3. 只使用对话中出现过的事实。对话没提到的数据、人名、时间点一律留空或用「据报道」等限定语，绝不编造。
 4. 不要写成新闻通稿。避免「高度重视」「扎实推进」「成效显著」这类空话。
 5. 不要用感叹号，不要出现「我」「我们」。
-6. province 必须从给定列表中选择一个最贴近的；city 填地级市或区县名称。
+6. province 必须从给定列表中选择一个最贴近的；city 填地级市；district 填区或县，
+   只填对话里确实出现过的，拿不准就留空字符串。
 7. domains 从给定列表中选 1–3 个。
 
 只输出 JSON，不要任何解释文字：
-{"title":"不超过 30 字的标题","province":"省级行政区全称","city":"市或区县","domains":["领域"],"body":"正文","summary":"80 字以内摘要"}`;
+{"title":"不超过 30 字的标题","province":"省级行政区全称","city":"市","district":"区或县","domains":["领域"],"body":"正文","summary":"80 字以内摘要"}`;
 
 function parseJson(text) {
   if (!text) return null;
@@ -106,6 +107,7 @@ ${dialogue}
       title: String(parsed.title || "").slice(0, 60),
       province,
       city: String(parsed.city || "").slice(0, 30),
+      district: String(parsed.district || "").slice(0, 30),
       domains,
       body: String(parsed.body || ""),
       summary: String(parsed.summary || "").slice(0, 200),
