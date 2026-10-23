@@ -27,10 +27,10 @@ export function studioSection() {
         <div class="screen-head reveal">
           <div class="screen-head__text">
             <div class="screen-ordinal">02 / 协作</div>
-            <h2 id="studio-title">与模型一起，把一条新闻写成案例</h2>
+            <h2 id="studio-title">与模型协作，梳理地方创新案例</h2>
             <p class="lede">
-              把你看到的新闻链接贴进对话，模型会围绕改革的具体动作继续检索、追问与核对。
-              对话收敛后，右侧会生成一份可编辑的案例梗概；改到你自己满意，再提交。
+              从身边新闻中挖掘灵感，与模型一起检索、追问、核对；最终一起打磨一份案例梗概；
+              润色到你满意后再行提交。
             </p>
           </div>
           <ol class="studio__steps">
