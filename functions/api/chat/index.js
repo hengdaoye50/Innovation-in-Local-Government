@@ -108,7 +108,14 @@ export async function onRequest(context) {
     }
 
     const sources =
-      searchReady(env) && query ? await search(env, query, { oriQuestion: lastUserText }) : [];
+      searchReady(env) && query
+        ? await search(env, query, {
+            oriQuestion: lastUserText,
+            // 检索条数收在 8 条：15 条会把上下文撑得很大，
+            // 首字延迟明显变长，而多出来的末位结果对回答帮助有限
+            limit: 8,
+          })
+        : [];
 
     const blocks = [SYSTEM];
 
