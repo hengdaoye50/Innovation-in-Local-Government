@@ -545,16 +545,52 @@
   padding: 14px 0;
 }
 
-.invite-row.is-used {
-  opacity: 0.55;
-  border-color: var(--line);
-  background: transparent;
+/* —— 邀请码 —— */
+.invite-maker {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
 }
 
-.admin__invite-actions {
+.invite-maker .input {
+  flex: 1;
+  min-width: 200px;
+  font-size: 14px;
+  padding: 8px 12px;
+}
+
+.invite-maker__actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.admin__invites {
+  padding: 12px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.invite-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-gold);
+  border-radius: var(--radius-sm);
+  background: rgba(196, 162, 101, 0.05);
+  flex-wrap: wrap;
+}
+
+.invite-row.is-locked {
+  opacity: 0.6;
+  border-color: var(--line);
+  background: transparent;
 }
 
 .invite-row__main {
@@ -562,6 +598,57 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
+  flex: 1;
+}
+
+.invite-row__code {
+  font-size: 14px;
+  letter-spacing: 0.16em;
+  color: var(--plum-deep);
+  flex: none;
+}
+
+.invite-note-input {
+  flex: 1;
+  min-width: 90px;
+  max-width: 240px;
+  height: 28px;
+  padding: 0 8px;
+  font-size: 12.5px;
+  font-family: var(--font-body);
+  color: var(--ink-2);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  transition: border-color var(--dur-fast) var(--ease),
+    background var(--dur-fast) var(--ease);
+}
+
+.invite-note-input::placeholder {
+  color: var(--ink-3);
+}
+
+.invite-note-input:hover {
+  border-color: var(--line-2);
+}
+
+.invite-note-input:focus {
+  outline: none;
+  background: #fff;
+  border-color: var(--plum);
+}
+
+.invite-row__side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.admin__invite-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 /* —— 用户管理 —— */
@@ -690,30 +777,6 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
-}
-
-.admin__invites {
-  padding: 16px 22px 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.invite-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid var(--line-gold);
-  border-radius: var(--radius-sm);
-  background: rgba(196, 162, 101, 0.05);
-}
-
-.invite-row code {
-  font-size: 13px;
-  letter-spacing: 0.06em;
-  color: var(--plum-deep);
 }
 
 .admin__stats {

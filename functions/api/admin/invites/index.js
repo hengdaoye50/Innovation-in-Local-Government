@@ -1,12 +1,12 @@
 /**
  * /api/admin/invites
  *   GET  列出邀请码
- *   POST 生成新邀请码 { role: 'student' | 'teacher' }
+ *   POST 生成新邀请码 { role: 'student' | 'teacher', note? }
  *
  * 只有 admin 能签发教师邀请码；teacher 只能签发学生邀请码。
  */
-import { ok, fail, methodNotAllowed, handleError, readJson } from "../../lib/http.js";
-import { getSession, isStaff, randomInviteCode, checkBindings } from "../../lib/auth.js";
+import { ok, fail, methodNotAllowed, readJson, handleError } from "../../../lib/http.js";
+import { getSession, isStaff, randomInviteCode, checkBindings } from "../../../lib/auth.js";
 
 export async function onRequest(context) {
   const { request, env } = context;
@@ -20,19 +20,24 @@ export async function onRequest(context) {
 
     if (request.method === "GET") {
       const { results } = await env.DB.prepare(
-        `SELECT i.code, i.role, i.created_at, i.used_at, u.username AS used_by_name
+        `SELECT i.code, i.role, i.note, i.created_at, i.used_at, i.revoked_at,
+                u.username AS used_by_name
          FROM invites i
          LEFT JOIN users u ON u.id = i.used_by
          ORDER BY i.created_at DESC
-         LIMIT 100`
+         LIMIT 200`
       ).all();
       return ok({
         items: (results || []).map((r) => ({
           code: r.code,
           role: r.role || "student",
+          note: r.note || "",
           createdAt: r.created_at,
           used: Boolean(r.used_at),
           usedBy: r.used_by_name || "",
+          usedAt: r.used_at || "",
+          revoked: Boolean(r.revoked_at),
+          revokedAt: r.revoked_at || "",
         })),
       });
     }
@@ -47,15 +52,17 @@ export async function onRequest(context) {
         return fail("只有管理员可以签发教师邀请码", 403);
       }
 
+      const note = String(body.note || "").trim().slice(0, 60);
+
       for (let attempt = 0; attempt < 5; attempt += 1) {
         const code = randomInviteCode();
         try {
           await env.DB.prepare(
-            "INSERT INTO invites (code, role, created_by, created_at) VALUES (?, ?, ?, ?)"
+            "INSERT INTO invites (code, role, note, created_by, created_at) VALUES (?, ?, ?, ?, ?)"
           )
-            .bind(code, wanted, session.id, new Date().toISOString())
+            .bind(code, wanted, note || null, session.id, new Date().toISOString())
             .run();
-          return ok({ code, role: wanted });
+          return ok({ code, role: wanted, note });
         } catch (err) {
           if (attempt === 4) throw err;
         }

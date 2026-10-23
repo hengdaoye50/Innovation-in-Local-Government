@@ -117,7 +117,9 @@ export const comments = {
 
 export const admin = {
   invites: () => api.get("/api/admin/invites"),
-  createInvite: (role = "student") => api.post("/api/admin/invites", { role }),
+  createInvite: (role = "student", note = "") => api.post("/api/admin/invites", { role, note }),
+  setInviteNote: (code, note) => api.patch(`/api/admin/invites/${code}`, { note }),
+  revokeInvite: (code) => api.del(`/api/admin/invites/${code}`),
   pending: () => api.get("/api/admin/cases?status=pending"),
   users: () => api.get("/api/admin/users"),
   setUserRole: (id, role) => api.patch(`/api/admin/users/${id}`, { role }),

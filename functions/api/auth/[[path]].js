@@ -70,10 +70,13 @@ async function register({ request, env }) {
   const pwd = validatePassword(body.password);
   if (!pwd.ok) return fail(pwd.message);
 
-  const inviteRow = await env.DB.prepare("SELECT code, used_by, role FROM invites WHERE code = ?")
+  const inviteRow = await env.DB.prepare(
+    "SELECT code, used_by, role, revoked_at FROM invites WHERE code = ?"
+  )
     .bind(invite)
     .first();
   if (!inviteRow) return fail("邀请码无效");
+  if (inviteRow.revoked_at) return fail("该邀请码已作废，请联系任课教师重新领取");
   if (inviteRow.used_by) return fail("该邀请码已被使用");
 
   const exists = await env.DB.prepare("SELECT id FROM users WHERE username = ?")

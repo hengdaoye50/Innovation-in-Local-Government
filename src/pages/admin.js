@@ -512,7 +512,16 @@ async function renderInvites(panel, me) {
       <div class="card">
         <header class="admin__panel-head">
           <h2 class="h3">邀请码</h2>
-          <div class="admin__invite-actions">
+        </header>
+
+        <div class="invite-maker">
+          <input
+            class="input"
+            data-invite-note
+            maxlength="60"
+            placeholder="备注（可选），比如「第 3 组」「行管 2201 班」"
+          />
+          <div class="invite-maker__actions">
             <button class="btn btn--primary btn--sm" data-new-invite="student">生成学生邀请码</button>
             ${
               isAdmin
@@ -520,9 +529,10 @@ async function renderInvites(panel, me) {
                 : ""
             }
           </div>
-        </header>
+        </div>
+
         <div class="admin__invites" data-invite-list>
-          <p class="field__hint">一次性使用。学生凭邀请码注册，注册后该码立即作废。</p>
+          <div class="skeleton" style="height:60px"></div>
         </div>
       </div>
 
@@ -530,41 +540,123 @@ async function renderInvites(panel, me) {
         <section class="card">
           <h2 class="h3" style="margin-bottom:12px">说明</h2>
           <p class="field__hint" style="line-height:1.8">
-            邀请码全局唯一、一次性。角色由邀请码决定——用教师邀请码注册出来的账号
-            直接拥有后台权限，无需再手工调整。<br /><br />
-            ${isAdmin ? "教师邀请码只有管理员能签发。" : "你是教师角色，只能签发学生邀请码。"}
+            邀请码 6 位、一次性。角色由邀请码决定——教师邀请码注册出来的账号
+            直接拥有后台权限。<br /><br />
+            备注只给你自己看，用来记这个码给了谁。<b>作废</b>会让未使用的码立刻失效，
+            已使用的码保留作账号来历，不能作废。
+            ${isAdmin ? "" : "<br /><br />你是教师角色，只能签发学生邀请码。"}
           </p>
         </section>
       </aside>
     </div>
   `;
 
+  const listEl = qs("[data-invite-list]", panel);
+  const noteInput = qs("[data-invite-note]", panel);
+
+  function statusOf(i) {
+    if (i.revoked) return { text: "已作废", cls: "tag--quiet" };
+    if (i.used) return { text: `已使用${i.usedBy ? " · " + i.usedBy : ""}`, cls: "tag--ok" };
+    return { text: "未使用", cls: "" };
+  }
+
+  async function load() {
+    let items = [];
+    try {
+      const res = await adminApi.invites();
+      items = Array.isArray(res?.items) ? res.items : [];
+    } catch (err) {
+      listEl.innerHTML = `<div class="empty">${esc(err.message || "读取失败")}</div>`;
+      return;
+    }
+
+    if (!items.length) {
+      listEl.innerHTML = `<div class="empty">还没有生成邀请码。学生需要凭邀请码才能注册。</div>`;
+      return;
+    }
+
+    listEl.innerHTML = items
+      .map((i) => {
+        const st = statusOf(i);
+        const locked = i.used || i.revoked;
+        return `
+      <div class="invite-row${locked ? " is-locked" : ""}" data-code="${esc(i.code)}">
+        <div class="invite-row__main">
+          <code class="mono invite-row__code">${esc(i.code)}</code>
+          <span class="tag tag--quiet">${i.role === "teacher" ? "教师" : "学生"}</span>
+          ${
+            locked
+              ? `<span class="meta">${esc(i.note || "无备注")}</span>`
+              : `<input class="invite-note-input" data-note value="${esc(i.note || "")}"
+                   maxlength="60" placeholder="加备注" />`
+          }
+        </div>
+        <div class="invite-row__side">
+          <span class="tag ${st.cls}">${st.text}</span>
+          ${
+            locked
+              ? ""
+              : `<button class="btn btn--quiet btn--sm" data-revoke>作废</button>`
+          }
+        </div>
+      </div>`;
+      })
+      .join("");
+
+    // 备注：失焦或回车时保存
+    qsa("[data-note]", listEl).forEach((input) => {
+      const save = async () => {
+        const row = input.closest("[data-code]");
+        const code = row.dataset.code;
+        const note = input.value.trim();
+        if (note === (input.dataset.saved || "")) return;
+        try {
+          await adminApi.setInviteNote(code, note);
+          input.dataset.saved = note;
+          toast("备注已保存");
+        } catch (err) {
+          toast(err.message || "保存失败", { type: "error" });
+        }
+      };
+      input.dataset.saved = input.value;
+      input.addEventListener("blur", save);
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          input.blur();
+        }
+      });
+    });
+
+    // 作废
+    qsa("[data-revoke]", listEl).forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const row = btn.closest("[data-code]");
+        const code = row.dataset.code;
+        if (!window.confirm(`作废邀请码 ${code}？作废后学生无法再用它注册。`)) return;
+        btn.disabled = true;
+        try {
+          await adminApi.revokeInvite(code);
+          toast("已作废");
+          load();
+        } catch (err) {
+          toast(err.message || "作废失败", { type: "error" });
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+
   qsa("[data-new-invite]", panel).forEach((btn) => {
     btn.addEventListener("click", async () => {
       const role = btn.dataset.newInvite;
+      const note = noteInput.value.trim();
       btn.disabled = true;
       try {
-        const res = await adminApi.createInvite(role);
-        const code = res?.code || "";
-        const listEl = qs("[data-invite-list]", panel);
-        const row = document.createElement("div");
-        row.className = "invite-row";
-        row.innerHTML = `
-          <div class="invite-row__main">
-            <code class="mono">${esc(code)}</code>
-            <span class="tag tag--quiet">${role === "teacher" ? "教师" : "学生"}</span>
-          </div>
-          <button class="btn btn--quiet btn--sm" data-copy>复制</button>`;
-        row.querySelector("[data-copy]").addEventListener("click", async () => {
-          try {
-            await navigator.clipboard.writeText(code);
-            toast("已复制");
-          } catch {
-            toast("复制失败，请手动选中", { type: "error" });
-          }
-        });
-        listEl.prepend(row);
-        toast(role === "teacher" ? "教师邀请码已生成" : "学生邀请码已生成");
+        const res = await adminApi.createInvite(role, note);
+        toast(`${role === "teacher" ? "教师" : "学生"}邀请码 ${res?.code || ""} 已生成`);
+        noteInput.value = "";
+        load();
       } catch (err) {
         toast(err.message || "生成失败", { type: "error" });
       } finally {
@@ -573,27 +665,7 @@ async function renderInvites(panel, me) {
     });
   });
 
-  try {
-    const res = await adminApi.invites();
-    const items = Array.isArray(res?.items) ? res.items : [];
-    if (items.length) {
-      const listEl = qs("[data-invite-list]", panel);
-      listEl.innerHTML = items
-        .map(
-          (i) => `
-        <div class="invite-row${i.used ? " is-used" : ""}">
-          <div class="invite-row__main">
-            <code class="mono">${esc(i.code)}</code>
-            <span class="tag tag--quiet">${i.role === "teacher" ? "教师" : "学生"}</span>
-          </div>
-          <span class="meta">${i.used ? `已使用${i.usedBy ? " · " + esc(i.usedBy) : ""}` : "未使用"}</span>
-        </div>`
-        )
-        .join("");
-    }
-  } catch {
-    /* 忽略，保留提示文案 */
-  }
+  load();
 }
 
 /* ————————— 用户管理（仅 admin） ————————— */
