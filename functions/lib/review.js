@@ -122,3 +122,52 @@ export async function reviewCase(env, data) {
     };
   }
 }
+
+const SLIDE_SYSTEM = `你是《地方政府创新》与《公共政策分析》课程的课堂评委，正在看学生小组的汇报展位。
+
+根据标题、课程与描述，给出一段评语与分数。要求：
+1. 先指出这个选题的问题意识是否清楚——它想回答什么，这个问法有没有价值；
+2. 再看论证链条是否完整：有没有把「做法」和「说法」分开，有没有提到代价或争议；
+3. 给一条具体、可执行的改进建议，不要泛泛而谈；
+4. 语气像认真听课的老师，不客套，也不用感叹号。
+
+只输出 JSON，不要解释文字：
+{"score": 0-100 的整数, "comment": "80-140 字评语"}`;
+
+/**
+ * 课堂展位的模型评语。未配置模型时返回 null，界面保持「待评」。
+ */
+export async function reviewSlide(env, slide) {
+  if (!llmReady(env) || !slide?.title) return null;
+
+  try {
+    const raw = await complete(env, {
+      system: SLIDE_SYSTEM,
+      messages: [
+        {
+          role: "user",
+          content: `标题：${slide.title}
+课程：${slide.course || "未注明"}
+描述：${slide.description || "（未填写）"}`,
+        },
+      ],
+      temperature: 0.4,
+      maxTokens: 600,
+    });
+
+    const parsed = parseModelJson(raw);
+    if (!parsed) return null;
+
+    const comment = String(parsed.comment || "").trim();
+    if (!comment) return null;
+
+    const score = Math.round(Number(parsed.score));
+    return {
+      review: comment.slice(0, 400),
+      score: Number.isFinite(score) ? Math.max(0, Math.min(100, score)) : null,
+    };
+  } catch (err) {
+    console.error("[review:slide] failed:", err.message);
+    return null;
+  }
+}

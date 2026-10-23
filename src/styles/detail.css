@@ -431,11 +431,124 @@
 }
 
 .admin__head {
-  margin-bottom: 40px;
+  margin-bottom: 32px;
 }
 
 .admin__head .lede {
   margin-top: 10px;
+}
+
+/* —— 分类标签 —— */
+.admin__tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 28px;
+  overflow-x: auto;
+}
+
+.admin__tab {
+  position: relative;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink-2);
+  white-space: nowrap;
+  transition: color var(--dur) var(--ease);
+}
+
+.admin__tab::after {
+  content: "";
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: -1px;
+  height: 1.5px;
+  background: var(--gold);
+  transform: scaleX(0);
+  transition: transform var(--dur) var(--ease);
+}
+
+.admin__tab:hover {
+  color: var(--plum);
+}
+
+.admin__tab.is-on {
+  color: var(--plum);
+}
+
+.admin__tab.is-on::after {
+  transform: scaleX(1);
+}
+
+.admin__panel[hidden] {
+  display: none;
+}
+
+/* —— 两栏布局 —— */
+.admin__split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.85fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.admin__form-card,
+.admin__list-card {
+  padding: 0;
+}
+
+/* —— 表单 —— */
+.admin__form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px;
+}
+
+.admin__form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.admin__md {
+  min-height: 260px;
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+
+.admin__form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.admin__form-actions .field__hint {
+  margin: 0;
+  flex: 1;
+}
+
+.admin__form-actions .field__hint[data-state="err"] {
+  color: var(--err);
+}
+
+.admin__form-actions .field__hint[data-state="ok"] {
+  color: var(--ok);
+}
+
+.admin__row--tight {
+  padding: 14px 0;
+}
+
+.invite-row.is-used {
+  opacity: 0.55;
+  border-color: var(--line);
+  background: transparent;
 }
 
 .admin__grid {
