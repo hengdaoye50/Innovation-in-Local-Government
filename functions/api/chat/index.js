@@ -59,17 +59,30 @@ function extractLinks(text) {
   );
 }
 
+/** 消息可能是纯文本，也可能是多模态数组，统一取出其中的文字 */
+function textOf(message) {
+  const content = message?.content;
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .filter((part) => part?.type === "text")
+      .map((part) => String(part.text || ""))
+      .join(" ");
+  }
+  return "";
+}
+
 function buildQuery(messages) {
   const userTexts = messages
     .filter((m) => m.role === "user")
-    .map((m) => String(m.content || "").replace(/https?:\/\/\S+/g, " "))
+    .map((m) => textOf(m).replace(/https?:\/\/\S+/g, " "))
     .join(" ")
     .replace(/\s+/g, " ")
     .trim();
   if (userTexts) return userTexts.slice(0, 160);
 
   // 只贴了链接：退化为用链接里的路径词做检索线索
-  const links = extractLinks(messages.map((m) => m.content).join(" "));
+  const links = extractLinks(messages.map((m) => textOf(m)).join(" "));
   if (links.length) {
     try {
       const u = new URL(links[0]);
@@ -100,10 +113,24 @@ export async function onRequest(context) {
     const messages = raw
       .filter((m) => m && (m.role === "user" || m.role === "assistant"))
       .slice(-MAX_TURNS)
-      .map((m) => ({
-        role: m.role,
-        content: String(m.content || "").slice(0, MAX_CHARS),
-      }));
+      .map((m) => {
+        const content = String(m.content || "").slice(0, MAX_CHARS);
+        // 最多 3 张图，只接受 data URL，避免被塞入任意外链
+        const images = Array.isArray(m.images)
+          ? m.images
+              .filter((u) => typeof u === "string" && /^data:image\/(png|jpeg|webp|gif);base64,/.test(u))
+              .slice(0, 3)
+          : [];
+        if (!images.length) return { role: m.role, content };
+        // 多模态消息：content 变成数组（OpenAI 兼容格式）
+        return {
+          role: m.role,
+          content: [
+            { type: "text", text: content || "（见附图）" },
+            ...images.map((url) => ({ type: "image_url", image_url: { url } })),
+          ],
+        };
+      });
 
     if (!messages.length || messages[messages.length - 1].role !== "user") {
       return fail("缺少用户消息");
@@ -111,7 +138,7 @@ export async function onRequest(context) {
 
     const query = buildQuery(messages);
     const lastUser = [...messages].reverse().find((m) => m.role === "user");
-    const lastUserText = lastUser?.content || "";
+    const lastUserText = textOf(lastUser);
 
     // 学生贴的链接直接抓正文：比只拿到标题有用得多。
     // 最多两篇，单篇限 8000 字，控制成本与上下文占用。

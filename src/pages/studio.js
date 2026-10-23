@@ -20,6 +20,31 @@ const WORD_MIN = 1000;
 const WORD_MAX = 1500;
 const LINK_LIMIT = 15;
 
+/** 把上传的文件读成纯文本：docx 走 mammoth，其余按文本读 */
+async function readFileAsText(file) {
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".docx")) {
+    // 按需加载，只有真的导入 Word 时才把这部分代码取下来
+    const mammoth = (await import("mammoth")).default;
+    const buffer = await file.arrayBuffer();
+    const result = await mammoth.convertToMarkdown({ arrayBuffer: buffer });
+    return (result.value || "").replace(/\r\n/g, "\n").trim();
+  }
+  if (name.endsWith(".md") || name.endsWith(".markdown") || name.endsWith(".txt")) {
+    return (await file.text()).replace(/\r\n/g, "\n").trim();
+  }
+  throw new Error("只支持 .md / .markdown / .txt / .docx");
+}
+
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("图片读取失败"));
+    reader.readAsDataURL(file);
+  });
+}
+
 export function studioSection() {
   return `
     <section id="studio" class="screen studio" aria-labelledby="studio-title">
@@ -53,6 +78,7 @@ export function studioSection() {
             <div class="chat__log" data-chat-log role="log" aria-live="polite"></div>
 
             <div class="chat__composer">
+              <div class="chat__attachments" data-attachments hidden></div>
               <textarea
                 class="textarea chat__input"
                 data-chat-input
@@ -60,7 +86,23 @@ export function studioSection() {
                 placeholder="例如：https://www.zj.gov.cn/… 这是我们课上讲的浙江「最多跑一次」，帮我查一下最新的推进情况和具体做法。"
               ></textarea>
               <div class="chat__composer-bar">
-                <span class="field__hint" data-chat-hint>支持粘贴新闻链接，最多 ${LINK_LIMIT} 个</span>
+                <div class="flex items-center gap-2">
+                  <label class="chat__attach" title="上传图片或文档">
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif,.md,.markdown,.txt,.docx"
+                      multiple
+                      hidden
+                      data-chat-file
+                    />
+                    <svg viewBox="0 0 16 16" aria-hidden="true">
+                      <path d="M9.5 4.5L5 9a2.1 2.1 0 003 3l4.8-4.8a3.2 3.2 0 00-4.5-4.5L3.5 7.5a4.3 4.3 0 006 6l3.6-3.6"
+                        fill="none" stroke="currentColor" stroke-width="1.2"
+                        stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                  </label>
+                  <span class="field__hint" data-chat-hint>可粘贴链接，或上传图片与文档</span>
+                </div>
                 <div class="flex items-center gap-2">
                   <button class="btn btn--quiet btn--sm" data-chat-reset type="button">重开</button>
                   <button class="btn btn--primary btn--sm" data-chat-send type="button">
@@ -184,6 +226,83 @@ export function mountStudio(root) {
   let busy = false;
   let abort = null;
 
+  /* —————— 对话区的附件 —————— */
+
+  const filePicker = qs("[data-chat-file]", section);
+  const attachBar = qs("[data-attachments]", section);
+  const IMAGE_LIMIT = 3;
+  /** @type {{type:'image'|'doc', name:string, url?:string}[]} */
+  const attachments = [];
+
+  function renderAttachments() {
+    if (!attachments.length) {
+      attachBar.hidden = true;
+      attachBar.replaceChildren();
+      return;
+    }
+    attachBar.hidden = false;
+    attachBar.innerHTML = attachments
+      .map((a, i) =>
+        a.type === "image"
+          ? `<div class="attachment">
+               <img src="${a.url}" alt="${esc(a.name)}" />
+               <button type="button" data-del="${i}" aria-label="移除">×</button>
+             </div>`
+          : `<div class="attachment attachment--doc">
+               <span>${esc(a.name)}</span>
+               <button type="button" data-del="${i}" aria-label="移除">×</button>
+             </div>`
+      )
+      .join("");
+    attachBar.querySelectorAll("[data-del]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        attachments.splice(Number(btn.dataset.del), 1);
+        renderAttachments();
+      });
+    });
+  }
+
+  function clearAttachments() {
+    attachments.length = 0;
+    renderAttachments();
+  }
+
+  filePicker.addEventListener("change", async () => {
+    const files = Array.from(filePicker.files || []);
+    filePicker.value = "";
+    for (const file of files) {
+      if (file.type.startsWith("image/")) {
+        if (attachments.filter((a) => a.type === "image").length >= IMAGE_LIMIT) {
+          toast(`最多 ${IMAGE_LIMIT} 张图片`, { type: "error" });
+          break;
+        }
+        if (file.size > 3 * 1024 * 1024) {
+          toast("单张图片不超过 3MB", { type: "error" });
+          continue;
+        }
+        try {
+          attachments.push({ type: "image", name: file.name, url: await readFileAsDataURL(file) });
+        } catch {
+          toast("图片读取失败", { type: "error" });
+        }
+      } else {
+        // 文档内容直接接到输入框，学生看得见、改得动
+        try {
+          const text = await readFileAsText(file);
+          if (!text) {
+            toast("文件里没有可读取的文字", { type: "error" });
+            continue;
+          }
+          input.value = (input.value ? `${input.value}\n\n` : "") + text;
+          updateLinkCounter();
+        } catch (err) {
+          toast(err.message || "文件读取失败", { type: "error" });
+        }
+      }
+    }
+    renderAttachments();
+  });
+
   const extractLinks = (text) =>
     Array.from(new Set((text.match(/https?:\/\/[^\s)）"'，。]+/g) || []))).slice(0, LINK_LIMIT);
 
@@ -263,16 +382,28 @@ export function mountStudio(root) {
 
   async function send() {
     const value = input.value.trim();
-    if (!value || busy) return;
+    // 允许只发图片不带文字
+    if ((!value && !attachments.length) || busy) return;
     const links = extractLinks(value);
     if (links.length > LINK_LIMIT) {
       toast(`链接最多 ${LINK_LIMIT} 个`, { type: "error" });
       return;
     }
 
-    addMessage("user", value);
-    history.push({ role: "user", content: value });
+    const images = attachments.map((a) => a.url);
+    const userTextNode = addMessage("user", value || "（见附图）");
+    if (images.length) {
+      const bubble = userTextNode.closest(".msg__bubble");
+      images.forEach((url) => bubble.append(el("img", { src: url, class: "msg__image" })));
+    }
+
+    history.push({
+      role: "user",
+      content: value || "（见附图）",
+      ...(images.length ? { images } : {}),
+    });
     input.value = "";
+    clearAttachments();
     updateLinkCounter();
     busy = true;
     sendBtn.disabled = true;
@@ -526,20 +657,7 @@ export function mountStudio(root) {
     statusText.dataset.state = "";
 
     try {
-      let text = "";
-      if (name.endsWith(".docx")) {
-        // 按需加载，只有导入 Word 时才把这部分代码取下来
-        const mammoth = (await import("mammoth")).default;
-        const buffer = await file.arrayBuffer();
-        const result = await mammoth.convertToMarkdown({ arrayBuffer: buffer });
-        text = result.value || "";
-      } else if (name.endsWith(".md") || name.endsWith(".markdown") || name.endsWith(".txt")) {
-        text = await file.text();
-      } else {
-        throw new Error("只支持 .md / .markdown / .txt / .docx");
-      }
-
-      text = text.replace(/\r\n/g, "\n").trim();
+      const text = await readFileAsText(file);
       if (!text) throw new Error("文件里没有可读取的文字");
 
       // 正文已有内容时追问，避免默默覆盖
