@@ -635,6 +635,17 @@ export function mountStudio(root) {
       toast(`还差：${problems[0]}`, { type: "error" });
       return;
     }
+
+    // 区县决定光点落点精度，没选就提醒一次，学生可以坚持提交
+    if (!districtSel.value && districtSel.options.length > 1) {
+      statusText.textContent = "建议先选到区县，光点才能落准位置";
+      statusText.dataset.state = "err";
+      districtSel.focus();
+      const proceed = window.confirm(
+        "还没有选择区县，光点会落到市中心位置，同城多个案例容易叠在一起。\n\n确定就这样提交吗？"
+      );
+      if (!proceed) return;
+    }
     const user = getState().user;
     if (!user) {
       toast("请先登录再提交");
