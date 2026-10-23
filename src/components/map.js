@@ -123,24 +123,36 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
     scheduleView();
   }
 
+  /**
+   * 屏幕坐标 → SVG 用户坐标。
+   * 地图外层套了 CSS 3D 倾斜，getBoundingClientRect 拿到的只是变换后的外框，
+   * 用它做线性换算会偏。必须走 getScreenCTM 的逆矩阵。
+   */
   function clientToSvg(clientX, clientY) {
-    const rect = container.getBoundingClientRect();
-    const scale = Math.min(rect.width / VIEW_W, rect.height / VIEW_H);
-    const offsetX = (rect.width - VIEW_W * scale) / 2;
-    const offsetY = (rect.height - VIEW_H * scale) / 2;
-    return [(clientX - rect.left - offsetX) / scale, (clientY - rect.top - offsetY) / scale];
+    if (!svg) return [0, 0];
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return [0, 0];
+    const pt = svg.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    const p = pt.matrixTransform(ctm.inverse());
+    return [p.x, p.y];
   }
 
-  /** 把 SVG 用户坐标换算成容器内的像素坐标（含当前视角变换） */
+  /** 把 SVG 用户坐标换算成容器内的像素坐标（含视角变换与 3D 倾斜） */
   function toScreen(x, y) {
     const rect = container.getBoundingClientRect();
-    const scale = Math.min(rect.width / VIEW_W, rect.height / VIEW_H) || 1;
-    const offsetX = (rect.width - VIEW_W * scale) / 2;
-    const offsetY = (rect.height - VIEW_H * scale) / 2;
+    const ctm = svg?.getScreenCTM();
+    if (!ctm) return { x: 0, y: 0, scale: 1, rect };
+
+    const pt = svg.createSVGPoint();
+    pt.x = x;
+    pt.y = y;
+    const screen = pt.matrixTransform(ctm);
     return {
-      x: offsetX + (view.x + x * view.k) * scale,
-      y: offsetY + (view.y + y * view.k) * scale,
-      scale: scale * view.k,
+      x: screen.x - rect.left,
+      y: screen.y - rect.top,
+      scale: ctm.a,
       rect,
     };
   }
@@ -150,14 +162,15 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
     let lastX = 0;
     let lastY = 0;
     let moved = false;
-    let screenScale = 1;
+    let scaleX = 1;
+    let scaleY = 1;
 
     // 不用 setPointerCapture：一旦捕获，pointerup 之后的 click 会被重定向到
     // svg 上，节点自己的 click 处理器就永远收不到事件（点击光点毫无反应）。
     function onMove(event) {
       if (!dragging) return;
-      const dx = (event.clientX - lastX) / screenScale;
-      const dy = (event.clientY - lastY) / screenScale;
+      const dx = (event.clientX - lastX) / scaleX;
+      const dy = (event.clientY - lastY) / scaleY;
       lastX = event.clientX;
       lastY = event.clientY;
       if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
@@ -197,8 +210,10 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
       moved = false;
       lastX = event.clientX;
       lastY = event.clientY;
-      const rect = container.getBoundingClientRect();
-      screenScale = Math.min(rect.width / VIEW_W, rect.height / VIEW_H) || 1;
+      // 取一次屏幕变换矩阵：a 是水平缩放、d 是垂直缩放（含 3D 倾斜的压缩）
+      const ctm = svg.getScreenCTM();
+      scaleX = ctm?.a || 1;
+      scaleY = ctm?.d || 1;
       window.addEventListener("pointermove", onMove);
       window.addEventListener("pointerup", onUp);
       window.addEventListener("pointercancel", onUp);
@@ -719,6 +734,11 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
 
     container.replaceChildren();
 
+    // 单独一层承载 3D 倾斜，svg 自己只负责加载动画与缩放，
+    // 两者的 transform 才不会互相覆盖
+    const stage = document.createElement("div");
+    stage.className = "map-stage";
+
     svg = svgEl("svg", {
       viewBox: `0 0 ${VIEW_W} ${VIEW_H}`,
       preserveAspectRatio: "xMidYMid meet",
@@ -729,7 +749,8 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
 
     gRoot = svgEl("g", { class: "map-root" });
     svg.append(buildDefs(), gRoot);
-    container.append(svg);
+    stage.append(svg);
+    container.append(stage);
 
     buildLand(geo);
     renderNodes();

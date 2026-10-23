@@ -140,14 +140,25 @@
 }
 
 /* —— SVG 浮雕地图 —— */
+/* 3D 舞台：给地图一层透视倾斜，看起来像斜放在桌上的沙盘 */
+.map-stage {
+  position: absolute;
+  inset: 0;
+  perspective: 1700px;
+  perspective-origin: 50% 54%;
+}
+
 .map-svg {
   width: 100%;
   height: 100%;
   display: block;
   cursor: grab;
   opacity: 0;
-  transform: translateY(14px);
-  transition: opacity 620ms var(--ease), transform 620ms var(--ease);
+  /* 倾斜后纵向会被压缩，配一点缩小避免四角被裁；
+     translateY 把整体往下拉，抵消透视造成的上浮 */
+  transform: translateY(2.5%) rotateX(14deg) scale(0.92);
+  transform-origin: 50% 54%;
+  transition: opacity 620ms var(--ease), transform 720ms cubic-bezier(0.22, 0.61, 0.36, 1);
   /* 触屏单指留给页面纵向滚动，否则手指碰地图就滑不动 */
   touch-action: pan-y;
   overflow: visible;
@@ -156,6 +167,10 @@
 
 .map-svg.is-in {
   opacity: 1;
+}
+
+/* 进入分析态：倾斜归零，地图「立起来摊平」，正好是转场本身 */
+.map-svg.is-atlas {
   transform: none;
 }
 
@@ -909,8 +924,13 @@
   }
 
   /* 分析态：地图缩到上方便于看清光路，卡片改为贴底 */
+  .map-svg {
+    /* 窄屏透视压缩更明显，倾斜角度收小 */
+    transform: rotateX(9deg) scale(0.96);
+  }
+
   .map-svg.is-atlas {
-    transform: scale(0.72) translateY(-16%);
+    transform: rotateX(0deg) scale(0.72) translateY(-16%);
     transform-origin: 50% 0;
     transition: transform 640ms var(--ease), opacity 640ms var(--ease);
   }
