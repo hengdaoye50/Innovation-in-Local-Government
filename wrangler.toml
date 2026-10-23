@@ -20,5 +20,6 @@ SITE_ORIGIN = "https://innovation.jinhuazhang.top"
 # 锁定模型。注意 API 的模型 ID 是 deepseek-flash，
 # DeepSeek-V4.1-Flash-1017 只是版本名，不能填进 model 字段
 LLM_MODEL = "deepseek-flash"
-# 检索未接入前保持 none；接入后改为 tavily / serper / brave
-SEARCH_PROVIDER = "none"
+# 检索走 DeepSeek 官方 /v1/tools/search 与 /v1/tools/fetch，
+# 与模型共用 DEEPSEEK_API_KEY，无需另外申请检索服务
+SEARCH_PROVIDER = "deepseek"

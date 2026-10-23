@@ -4,7 +4,14 @@
  * 检索结果先于模型输出下发，前端据此展示来源列表。
  */
 import { fail, readJson, handleError, clientIp, rateLimit, ok } from "../../lib/http.js";
-import { search, searchReady, formatSources, LINK_LIMIT, providerName } from "../../lib/search.js";
+import {
+  search,
+  fetchPage,
+  searchReady,
+  formatSources,
+  LINK_LIMIT,
+  providerName,
+} from "../../lib/search.js";
 import { stream as llmStream, llmReady } from "../../lib/llm.js";
 
 const MAX_TURNS = 24;
@@ -81,11 +88,53 @@ export async function onRequest(context) {
     }
 
     const query = buildQuery(messages);
-    const sources = searchReady(env) && query ? await search(env, query) : [];
+    const lastUser = [...messages].reverse().find((m) => m.role === "user");
+    const lastUserText = lastUser?.content || "";
 
-    const system = sources.length
-      ? `${SYSTEM}\n\n以下是检索到的参考资料，请优先基于它们回答，并在提到具体事实时对应编号：\n\n${formatSources(sources)}`
-      : `${SYSTEM}\n\n当前没有可用的检索结果${providerName(env) === "none" ? "（检索服务尚未接入）" : ""}。不要虚构来源。`;
+    // 学生贴的链接直接抓正文：比只拿到标题有用得多。
+    // 最多两篇，单篇限 8000 字，控制成本与上下文占用。
+    const pastedLinks = extractLinks(lastUserText).slice(0, 2);
+    const pages = [];
+    if (searchReady(env)) {
+      for (const url of pastedLinks) {
+        const page = await fetchPage(env, url);
+        if (page) pages.push({ url, ...page });
+      }
+    }
+
+    const sources =
+      searchReady(env) && query ? await search(env, query, { oriQuestion: lastUserText }) : [];
+
+    const blocks = [SYSTEM];
+
+    if (pages.length) {
+      blocks.push(
+        `以下是学生贴出的链接正文，请以它们为主要依据，并注意区分「报道中的说法」与「可核实的做法」：\n\n${pages
+          .map(
+            (p, i) =>
+              `【链接 ${i + 1}】${p.title || p.url}\n${p.url}\n"""\n${p.content.slice(0, 6000)}\n"""`
+          )
+          .join("\n\n")}`
+      );
+    }
+
+    if (sources.length) {
+      blocks.push(
+        `以下是检索到的参考资料，请优先基于它们回答，并在提到具体事实时对应编号：\n\n${formatSources(
+          sources
+        )}`
+      );
+    }
+
+    if (!pages.length && !sources.length) {
+      blocks.push(
+        `当前没有可用的检索结果${
+          providerName(env) === "none" ? "（检索服务尚未接入）" : ""
+        }。不要虚构来源。`
+      );
+    }
+
+    const system = blocks.join("\n\n---\n\n");
 
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
@@ -101,7 +150,8 @@ export async function onRequest(context) {
         send({
           meta: {
             sources,
-            searchEnabled: sources.length > 0,
+            fetched: pages.map((p) => ({ url: p.url, title: p.title })),
+            searchEnabled: sources.length > 0 || pages.length > 0,
           },
         });
 
