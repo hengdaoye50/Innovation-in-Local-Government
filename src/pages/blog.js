@@ -1,4 +1,4 @@
-/** 博客 / 阅读展板 */
+/** 拓展材料展板 */
 import { esc, mountReveal, formatDate } from "../lib/dom.js";
 import { posts as postsApi } from "../lib/api.js";
 import { DEMO_POSTS } from "../lib/demo.js";
@@ -9,8 +9,8 @@ export function blogSection() {
       <div class="shell">
         <div class="screen-head reveal">
           <div class="screen-head__text">
-            <div class="screen-ordinal">04 / 阅读</div>
-            <h2 id="blog-title">阅读</h2>
+            <div class="screen-ordinal">04 / 拓展材料</div>
+            <h2 id="blog-title">拓展材料</h2>
             <p class="lede">
               课程推荐的文章、论文与方法笔记。写案例之前先读几篇，
               会更容易分辨「做法」与「说辞」的差别。

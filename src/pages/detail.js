@@ -86,7 +86,7 @@ export async function mountPostDetail(root, id) {
   root.innerHTML = `
     <article class="detail detail--reading">
       <div class="shell shell-narrow">
-        <a class="detail__back" href="#blog">回到阅读</a>
+        <a class="detail__back" href="#blog">回到拓展材料</a>
         <header class="detail__head">
           <div class="detail__meta">${tags}</div>
           <h1 class="detail__title">${esc(post.title)}</h1>
@@ -111,7 +111,7 @@ export async function mountPostDetail(root, id) {
   qs("[data-comments-slot]", root).append(
     createCommentBlock({ targetType: "post", targetId: post.id })
   );
-  document.title = `${post.title} · 阅读`;
+  document.title = `${post.title} · 拓展材料`;
   mountReveal(root);
 }
 

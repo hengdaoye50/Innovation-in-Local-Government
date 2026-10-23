@@ -12,7 +12,7 @@ const NAV_ITEMS = [
   { label: "案例地图", target: "atlas" },
   { label: "协作工作台", target: "studio" },
   { label: "课堂展示", target: "slides" },
-  { label: "阅读", target: "blog" },
+  { label: "拓展材料", target: "blog" },
 ];
 
 export const SITE = {
@@ -148,7 +148,7 @@ export function mountFooter() {
           <a href="#atlas">案例地图</a>
           <a href="#studio">协作工作台</a>
           <a href="#slides">课堂展示</a>
-          <a href="#blog">阅读</a>
+          <a href="#blog">拓展材料</a>
         </div>
       </div>
       <div class="footer__bottom">
