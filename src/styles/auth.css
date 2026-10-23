@@ -131,24 +131,21 @@
   position: absolute;
   inset: 0;
   z-index: 0;
-  opacity: 0.62;
+  opacity: 0.72;
   pointer-events: none;
 }
 
-/* 地图略上移，避开底部的引言 */
-.auth__map .map-svg {
-  transform: translateY(-6%) scale(0.92);
-}
-
+/* 顶部与底部各留一点渐隐，让地图边缘融进深色底 */
 .auth__map::after {
   content: "";
   position: absolute;
   inset: 0;
   background: linear-gradient(
     to bottom,
-    rgba(30, 18, 28, 0) 40%,
-    rgba(30, 18, 28, 0.82) 78%,
-    rgba(30, 18, 28, 0.96) 100%
+    rgba(30, 18, 28, 0.55) 0%,
+    rgba(30, 18, 28, 0) 22%,
+    rgba(30, 18, 28, 0) 76%,
+    rgba(30, 18, 28, 0.7) 100%
   );
   pointer-events: none;
 }
@@ -170,31 +167,7 @@ body.page-auth .nav {
   mask-image: radial-gradient(70% 60% at 40% 40%, #000 10%, transparent 80%);
 }
 
-.auth__quote {
-  position: relative;
-  z-index: 2;
-}
-
-.auth__quote p {
-  font-family: var(--font-display);
-  font-size: clamp(20px, 2.2vw, 28px);
-  font-weight: 400;
-  line-height: 1.6;
-  color: rgba(253, 248, 240, 0.92);
-  letter-spacing: 0.01em;
-}
-
-.auth__quote-rule {
-  width: 40px;
-  height: 1px;
-  background: var(--gold);
-  margin: 28px 0 16px;
-}
-
-.auth__quote .meta {
-  color: rgba(253, 248, 240, 0.45);
-  letter-spacing: 0.12em;
-}
+/* 引言区块已移除，地图独占右半屏 */
 
 @media (max-width: 900px) {
   .auth {

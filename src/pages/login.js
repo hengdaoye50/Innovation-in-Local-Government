@@ -54,11 +54,6 @@ export function mountAuth(root) {
 
       <aside class="auth__aside">
         <div class="auth__map" data-auth-map aria-hidden="true"></div>
-        <div class="auth__quote">
-          <p>「案例写作的第一步不是找答案，<br />而是把问题问准。」</p>
-          <div class="auth__quote-rule"></div>
-          <span class="meta">公共政策分析 · 课堂讲义</span>
-        </div>
       </aside>
     </div>
   `;
