@@ -120,8 +120,14 @@ export function studioSection() {
                 <h3 class="h3">案例梗概</h3>
               </div>
               <div class="draft__head-actions">
-                <label class="btn btn--quiet btn--sm" for="draft-file">
-                  导入文件
+                <label class="btn btn--ghost btn--sm draft__import" for="draft-file">
+                  <svg viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M8 11V3M5 6l3-3 3 3" fill="none" stroke="currentColor"
+                      stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+                    <path d="M2.5 11.5v1.2a1 1 0 001 1h9a1 1 0 001-1v-1.2" fill="none"
+                      stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+                  </svg>
+                  导入稿件
                   <input
                     id="draft-file"
                     type="file"

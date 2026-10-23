@@ -497,6 +497,17 @@ label.btn {
   cursor: pointer;
 }
 
+/* 导入稿件：与「从对话生成」并列的第二条入口，图标弱化、文字直白 */
+.draft__import {
+  gap: 6px;
+}
+
+.draft__import svg {
+  width: 13px;
+  height: 13px;
+  flex: none;
+}
+
 .draft__body {
   padding: 20px 22px 22px;
   display: flex;
