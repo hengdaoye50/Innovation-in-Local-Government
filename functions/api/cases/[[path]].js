@@ -157,6 +157,7 @@ async function createHandler({ request, env }) {
     status,
     review: verdict.review,
     problems: verdict.problems || [],
+    warnings: verdict.warnings || [],
     score: verdict.score,
   });
 }

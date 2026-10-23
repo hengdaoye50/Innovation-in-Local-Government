@@ -619,7 +619,7 @@ export function mountStudio(root) {
     if (!provinceSel.value) problems.push("省份");
     const n = zhLength(bodyInput.value);
     if (n < WORD_MIN) problems.push(`正文需满 ${WORD_MIN} 字（当前 ${n}）`);
-    if (n > WORD_MAX) problems.push(`正文不超过 ${WORD_MAX} 字（当前 ${n}）`);
+    // 上限只作提示不阻断：字数条会转色提醒，但不拦提交
     if (!draft.tags.size) problems.push("至少 1 个领域标签");
     const validSources = draft.sources.filter((s) => /^https?:\/\//.test(s.url));
     if (!validSources.length) problems.push("至少 1 条有效来源链接");
@@ -661,7 +661,7 @@ export function mountStudio(root) {
     const point = district || city || province;
 
     try {
-      await casesApi.create({
+      const result = await casesApi.create({
         title: titleInput.value.trim(),
         province: provinceSel.value,
         city: citySel.value || "",
@@ -672,16 +672,30 @@ export function mountStudio(root) {
         body: bodyInput.value,
         sources: validSources.map((s) => ({ url: s.url })),
       });
-      statusText.textContent = "已提交，正在自动质检";
-      statusText.dataset.state = "ok";
-      toast("提交成功，质检通过后会出现在地图上");
-      titleInput.value = "";
-      bodyInput.value = "";
-      draft.tags.clear();
-      tagBox.querySelectorAll(".chip").forEach((c) => c.classList.remove("is-on"));
-      draft.sources = [];
-      renderSources();
-      updateWords();
+
+      const published = result?.status === "published";
+
+      if (published) {
+        statusText.textContent = result.warnings?.length
+          ? `已发布。提示：${result.warnings[0]}`
+          : "已通过质检，已发布到地图";
+        statusText.dataset.state = "ok";
+        toast(result.warnings?.length ? "已发布，但篇幅偏长" : "案例已发布，地图上可以看到它了");
+        titleInput.value = "";
+        bodyInput.value = "";
+        draft.tags.clear();
+        tagBox.querySelectorAll(".chip").forEach((c) => c.classList.remove("is-on"));
+        draft.sources = [];
+        renderSources();
+        updateWords();
+      } else {
+        // 未通过时保留内容，方便学生按提示就地修改
+        const reason =
+          (result?.problems && result.problems[0]) || result?.review || "未通过自动质检";
+        statusText.textContent = `未通过质检：${reason}`;
+        statusText.dataset.state = "err";
+        toast("质检未通过，按提示修改后可重新提交", { type: "error" });
+      }
     } catch (err) {
       statusText.textContent = err.message || "提交失败";
       statusText.dataset.state = "err";

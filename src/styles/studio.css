@@ -399,8 +399,9 @@ label.btn {
   background: var(--ok);
 }
 
+/* 超出建议篇幅只是提醒，用橙色而非报错的红色 */
 .draft__meter-bar span[data-state="over"] {
-  background: var(--err);
+  background: var(--warn);
 }
 
 .draft__meter-text {
@@ -415,7 +416,7 @@ label.btn {
 }
 
 .draft__meter-text[data-state="over"] {
-  color: var(--err);
+  color: var(--warn);
 }
 
 .draft__sources {

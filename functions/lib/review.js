@@ -11,7 +11,8 @@ const LINK_LIMIT = 15;
 const SYSTEM = `你是《地方政府创新》课程的助教，负责审核本科与 MPA 学生提交的案例梗概。
 
 评估维度：
-1. 篇幅：正文（不含标点外的空白）应在 1000–1500 字之间。
+1. 篇幅：最低 1000 字，不足视为不合格；1500 字仅为建议上限，超出不必判不合格，
+   但要在评语里提醒精简。
 2. 要素：必须交代清楚 发生地（省/市或县）、实施主体、改革的具体动作、时间或阶段、可观察的效果或争议。
 3. 叙述：应为第三人称的分析性叙述，不是新闻报道的复制，也不是第一人称感想。
 4. 具体性：要有可指认的做法细节（改了什么流程、设了什么机构、动了什么规则），不能只有「高度重视」「成效显著」这类空话。
@@ -69,21 +70,32 @@ export async function reviewCase(env, data) {
   const words = zhLength(data.body);
   const linkCount = (data.sources || []).filter((s) => /^https?:\/\//.test(s.url || "")).length;
 
+  // 硬性门槛：不满足则退回，学生改完可重提
   const ruleProblems = [];
   if (words < MIN_WORDS) ruleProblems.push(`正文 ${words} 字，少于 ${MIN_WORDS} 字下限`);
-  if (words > MAX_WORDS) ruleProblems.push(`正文 ${words} 字，超过 ${MAX_WORDS} 字上限`);
   if (!data.province) ruleProblems.push("缺少发生地省份");
   if (!linkCount) ruleProblems.push("缺少有效来源链接");
   if (linkCount > LINK_LIMIT) ruleProblems.push(`来源超过 ${LINK_LIMIT} 条上限`);
 
+  // 篇幅上限只作提醒，不阻断：本意是别写太长，不是判不合格
+  const warnings = [];
+  if (words > MAX_WORDS) {
+    warnings.push(`正文 ${words} 字，超出建议的 ${MAX_WORDS} 字，可考虑精简到 1000–1500 字`);
+  }
+
   if (!llmReady(env)) {
+    const pass = ruleProblems.length === 0;
+    const reviewText = pass
+      ? `自动校验通过（模型质检未启用，仅检查了篇幅与必填项）。${
+          warnings.length ? `提示：${warnings.join("；")}。` : ""
+        }`
+      : `自动校验未通过：${ruleProblems.join("；")}。`;
     return {
-      pass: ruleProblems.length === 0,
-      score: ruleProblems.length === 0 ? 70 : 40,
-      review: ruleProblems.length
-        ? `自动校验未通过：${ruleProblems.join("；")}。`
-        : "自动校验通过（模型质检未启用，仅检查了篇幅与必填项）。",
+      pass,
+      score: pass ? 70 : 40,
+      review: reviewText,
       problems: ruleProblems,
+      warnings,
     };
   }
 
@@ -103,6 +115,7 @@ export async function reviewCase(env, data) {
 
     const problems = Array.isArray(parsed.problems) ? parsed.problems.slice(0, 3) : [];
     const merged = [...new Set([...ruleProblems, ...problems])];
+    // 只有硬性问题才决定是否退回；篇幅超限只进 warnings
     const pass = parsed.pass && ruleProblems.length === 0;
 
     return {
@@ -110,6 +123,7 @@ export async function reviewCase(env, data) {
       score: Math.max(0, Math.min(100, Math.round(Number(parsed.score) || 60))),
       review: String(parsed.comment || "").slice(0, 300),
       problems: merged,
+      warnings,
     };
   } catch (err) {
     console.error("[review] model failed:", err.message);
@@ -118,7 +132,9 @@ export async function reviewCase(env, data) {
       score: ruleProblems.length === 0 ? 70 : 40,
       review: ruleProblems.length
         ? `自动校验未通过：${ruleProblems.join("；")}。`
-        : "自动校验通过（模型质检暂时不可用，仅检查了篇幅与必填项）。",
+        : `自动校验通过（模型质检暂时不可用，仅检查了篇幅与必填项）。${
+            warnings.length ? `提示：${warnings.join("；")}。` : ""
+          }`,
       problems: ruleProblems,
     };
   }
