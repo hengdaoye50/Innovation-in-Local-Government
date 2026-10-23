@@ -1,6 +1,6 @@
 /** 登录 / 邀请码注册 */
 import { el, qs, toast } from "../lib/dom.js";
-import { auth as authApi } from "../lib/api.js";
+import { auth as authApi, cases as casesApi } from "../lib/api.js";
 import { setState } from "../lib/store.js";
 import { SITE } from "../components/chrome.js";
 
@@ -53,6 +53,7 @@ export function mountAuth(root) {
       </div>
 
       <aside class="auth__aside">
+        <div class="auth__map" data-auth-map aria-hidden="true"></div>
         <div class="auth__quote">
           <p>「案例写作的第一步不是找答案，<br />而是把问题问准。」</p>
           <div class="auth__quote-rule"></div>
@@ -61,6 +62,8 @@ export function mountAuth(root) {
       </aside>
     </div>
   `;
+
+  mountAsideMap(root);
 
   const forms = {
     login: qs('[data-form="login"]', root),
@@ -151,4 +154,36 @@ export function mountAuth(root) {
       btn.textContent = "注册并登录";
     }
   });
+}
+
+/**
+ * 登录页右侧的地图门面：只渲染不交互，纯当视觉背景。
+ * 未登录时也能看到案例在地图上的分布——这是这个平台最直观的样子。
+ */
+async function mountAsideMap(root) {
+  const host = root.querySelector("[data-auth-map]");
+  if (!host) return;
+  // 窄屏时右侧面板整个隐藏，不必白下 600KB 的 GeoJSON
+  if (!host.offsetWidth) return;
+
+  try {
+    const [{ createMap }, { DEMO_CASES }] = await Promise.all([
+      import("../components/map.js"),
+      import("../lib/demo.js"),
+    ]);
+
+    const map = createMap(host, {});
+    await map.init();
+
+    let items = [];
+    try {
+      const res = await casesApi.list({ status: "published", limit: 400 });
+      items = Array.isArray(res?.items) ? res.items : [];
+    } catch {
+      items = [];
+    }
+    map.setData(items.length ? items : DEMO_CASES);
+  } catch {
+    /* 地图加载失败不影响登录 */
+  }
 }

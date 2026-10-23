@@ -126,6 +126,33 @@
   overflow: hidden;
 }
 
+/* 地图门面：铺满右半屏，压暗后作为背景，不参与交互 */
+.auth__map {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.62;
+  pointer-events: none;
+}
+
+/* 地图略上移，避开底部的引言 */
+.auth__map .map-svg {
+  transform: translateY(-6%) scale(0.92);
+}
+
+.auth__map::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(30, 18, 28, 0) 40%,
+    rgba(30, 18, 28, 0.82) 78%,
+    rgba(30, 18, 28, 0.96) 100%
+  );
+  pointer-events: none;
+}
+
 /* 登录页顶栏落在深色版面上，给一层纸色底以免看不清 */
 body.page-auth .nav {
   background: rgba(253, 248, 240, 0.94);
@@ -145,7 +172,7 @@ body.page-auth .nav {
 
 .auth__quote {
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 .auth__quote p {
