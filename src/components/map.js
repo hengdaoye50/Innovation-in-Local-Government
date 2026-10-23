@@ -488,8 +488,10 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
       const point = projection([node.lng, node.lat]);
       if (!point || !Number.isFinite(point[0]) || !Number.isFinite(point[1])) continue;
       const [x, y] = point;
+      // 点画在省份顶面上：侧壁是从顶面往下偏移的，所以这里不能再加垂直偏移，
+      // 否则光点会比真实位置偏北十几像素，倾斜后更明显
       node.x = x;
-      node.y = y - DEPTH * SIDE_STEP;
+      node.y = y;
 
       const group = svgEl("g", {
         class: "node",
