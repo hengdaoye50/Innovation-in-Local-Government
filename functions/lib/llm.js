@@ -52,12 +52,29 @@ export function llmModel(env) {
 }
 
 function upstreamError(status, detail) {
-  console.error("[llm] upstream error", status, String(detail).slice(0, 300));
+  const raw = String(detail || "").slice(0, 300);
+  console.error("[llm] upstream error", status, raw);
+
   if (status === 401 || status === 403) {
     return Object.assign(new Error("模型密钥无效，请检查服务端配置"), { status: 503 });
   }
   if (status === 429) {
     return Object.assign(new Error("模型请求过于频繁，请稍后重试"), { status: 429 });
+  }
+  // 4xx 多为请求本身有问题（模型名不存在、参数不合法），
+  // 把上游的简短说明带出来，否则只剩「服务不可用」没法排查
+  if (status >= 400 && status < 500) {
+    let reason = raw;
+    try {
+      const parsed = JSON.parse(raw);
+      reason = parsed?.error?.message || parsed?.message || raw;
+    } catch {
+      /* 保持原文 */
+    }
+    return Object.assign(
+      new Error(`模型请求被拒绝（${status}）：${String(reason).slice(0, 180)}`),
+      { status: 502 }
+    );
   }
   return Object.assign(new Error("模型服务暂时不可用"), { status: 502 });
 }
