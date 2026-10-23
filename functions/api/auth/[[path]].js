@@ -70,7 +70,7 @@ async function register({ request, env }) {
   const pwd = validatePassword(body.password);
   if (!pwd.ok) return fail(pwd.message);
 
-  const inviteRow = await env.DB.prepare("SELECT code, used_by FROM invites WHERE code = ?")
+  const inviteRow = await env.DB.prepare("SELECT code, used_by, role FROM invites WHERE code = ?")
     .bind(invite)
     .first();
   if (!inviteRow) return fail("邀请码无效");
@@ -83,11 +83,13 @@ async function register({ request, env }) {
 
   const passwordHash = await hashPassword(pwd.value);
   const now = new Date().toISOString();
+  // 角色由邀请码决定：教师邀请码注册出来就是 teacher
+  const role = inviteRow.role === "teacher" || inviteRow.role === "admin" ? inviteRow.role : "student";
 
   const result = await env.DB.prepare(
-    "INSERT INTO users (username, password_hash, display_name, role, status, created_at) VALUES (?, ?, ?, 'student', 'active', ?)"
+    "INSERT INTO users (username, password_hash, display_name, role, status, created_at) VALUES (?, ?, ?, ?, 'active', ?)"
   )
-    .bind(name.value, passwordHash, name.value, now)
+    .bind(name.value, passwordHash, name.value, role, now)
     .run();
 
   const userId = result.meta?.last_row_id;
@@ -104,10 +106,10 @@ async function register({ request, env }) {
     return fail("该邀请码已被使用");
   }
 
-  const token = await createSession(env, { userId, username: name.value, role: "student" });
+  const token = await createSession(env, { userId, username: name.value, role });
   return withCookie(
     ok({
-      user: { id: userId, username: name.value, displayName: name.value, role: "student" },
+      user: { id: userId, username: name.value, displayName: name.value, role },
     }),
     sessionCookie(token)
   );

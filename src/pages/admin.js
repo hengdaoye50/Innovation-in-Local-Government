@@ -1,5 +1,5 @@
 /** 教师后台 —— 案例审核、展位管理、文章发布、邀请码 */
-import { esc, qs, qsa, toast, timeAgo, zhLength, mountReveal } from "../lib/dom.js";
+import { esc, qs, qsa, toast, timeAgo, formatDate, zhLength, mountReveal } from "../lib/dom.js";
 import { admin as adminApi, cases as casesApi, api } from "../lib/api.js";
 import { getState } from "../lib/store.js";
 
@@ -49,12 +49,14 @@ export function mountAdmin(root) {
         <button class="admin__tab" data-tab="slides" role="tab">展位管理</button>
         <button class="admin__tab" data-tab="posts" role="tab">文章管理</button>
         <button class="admin__tab" data-tab="invites" role="tab">邀请码</button>
+        ${user.role === "admin" ? `<button class="admin__tab" data-tab="users" role="tab">用户管理</button>` : ""}
       </div>
 
       <section class="admin__panel" data-panel="cases"></section>
       <section class="admin__panel" data-panel="slides" hidden></section>
       <section class="admin__panel" data-panel="posts" hidden></section>
       <section class="admin__panel" data-panel="invites" hidden></section>
+      ${user.role === "admin" ? `<section class="admin__panel" data-panel="users" hidden></section>` : ""}
     </div>
   `;
 
@@ -64,13 +66,15 @@ export function mountAdmin(root) {
     posts: qs('[data-panel="posts"]', root),
     invites: qs('[data-panel="invites"]', root),
   };
+  if (user.role === "admin") panels.users = qs('[data-panel="users"]', root);
 
   const loaders = {
     cases: () => renderCases(panels.cases),
     slides: () => renderSlides(panels.slides),
     posts: () => renderPosts(panels.posts),
-    invites: () => renderInvites(panels.invites),
+    invites: () => renderInvites(panels.invites, user),
   };
+  if (panels.users) loaders.users = () => renderUsers(panels.users);
 
   qsa("[data-tab]", root).forEach((tab) => {
     tab.addEventListener("click", () => {
@@ -500,13 +504,22 @@ async function renderPosts(panel) {
 
 /* ————————— 邀请码 ————————— */
 
-async function renderInvites(panel) {
+async function renderInvites(panel, me) {
+  const isAdmin = me?.role === "admin";
+
   panel.innerHTML = `
     <div class="admin__split">
       <div class="card">
         <header class="admin__panel-head">
           <h2 class="h3">邀请码</h2>
-          <button class="btn btn--gold btn--sm" data-new-invite>生成新邀请码</button>
+          <div class="admin__invite-actions">
+            <button class="btn btn--primary btn--sm" data-new-invite="student">生成学生邀请码</button>
+            ${
+              isAdmin
+                ? `<button class="btn btn--gold btn--sm" data-new-invite="teacher">生成教师邀请码</button>`
+                : ""
+            }
+          </div>
         </header>
         <div class="admin__invites" data-invite-list>
           <p class="field__hint">一次性使用。学生凭邀请码注册，注册后该码立即作废。</p>
@@ -517,34 +530,47 @@ async function renderInvites(panel) {
         <section class="card">
           <h2 class="h3" style="margin-bottom:12px">说明</h2>
           <p class="field__hint" style="line-height:1.8">
-            邀请码全局唯一。发给同学后，在注册页填入即可创建账号；
-            账号默认是学生角色，不需要你额外审核。
+            邀请码全局唯一、一次性。角色由邀请码决定——用教师邀请码注册出来的账号
+            直接拥有后台权限，无需再手工调整。<br /><br />
+            ${isAdmin ? "教师邀请码只有管理员能签发。" : "你是教师角色，只能签发学生邀请码。"}
           </p>
         </section>
       </aside>
     </div>
   `;
 
-  qs("[data-new-invite]", panel).addEventListener("click", async () => {
-    try {
-      const res = await adminApi.createInvite();
-      const code = res?.code || "";
-      const listEl = qs("[data-invite-list]", panel);
-      const row = document.createElement("div");
-      row.className = "invite-row";
-      row.innerHTML = `<code class="mono">${esc(code)}</code><button class="btn btn--quiet btn--sm" data-copy>复制</button>`;
-      row.querySelector("[data-copy]").addEventListener("click", async () => {
-        try {
-          await navigator.clipboard.writeText(code);
-          toast("已复制");
-        } catch {
-          toast("复制失败，请手动选中", { type: "error" });
-        }
-      });
-      listEl.prepend(row);
-    } catch (err) {
-      toast(err.message || "生成失败", { type: "error" });
-    }
+  qsa("[data-new-invite]", panel).forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const role = btn.dataset.newInvite;
+      btn.disabled = true;
+      try {
+        const res = await adminApi.createInvite(role);
+        const code = res?.code || "";
+        const listEl = qs("[data-invite-list]", panel);
+        const row = document.createElement("div");
+        row.className = "invite-row";
+        row.innerHTML = `
+          <div class="invite-row__main">
+            <code class="mono">${esc(code)}</code>
+            <span class="tag tag--quiet">${role === "teacher" ? "教师" : "学生"}</span>
+          </div>
+          <button class="btn btn--quiet btn--sm" data-copy>复制</button>`;
+        row.querySelector("[data-copy]").addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(code);
+            toast("已复制");
+          } catch {
+            toast("复制失败，请手动选中", { type: "error" });
+          }
+        });
+        listEl.prepend(row);
+        toast(role === "teacher" ? "教师邀请码已生成" : "学生邀请码已生成");
+      } catch (err) {
+        toast(err.message || "生成失败", { type: "error" });
+      } finally {
+        btn.disabled = false;
+      }
+    });
   });
 
   try {
@@ -556,7 +582,10 @@ async function renderInvites(panel) {
         .map(
           (i) => `
         <div class="invite-row${i.used ? " is-used" : ""}">
-          <code class="mono">${esc(i.code)}</code>
+          <div class="invite-row__main">
+            <code class="mono">${esc(i.code)}</code>
+            <span class="tag tag--quiet">${i.role === "teacher" ? "教师" : "学生"}</span>
+          </div>
           <span class="meta">${i.used ? `已使用${i.usedBy ? " · " + esc(i.usedBy) : ""}` : "未使用"}</span>
         </div>`
         )
@@ -565,4 +594,115 @@ async function renderInvites(panel) {
   } catch {
     /* 忽略，保留提示文案 */
   }
+}
+
+/* ————————— 用户管理（仅 admin） ————————— */
+
+const ROLE_TEXT = { student: "学生", teacher: "教师", admin: "管理员" };
+
+async function renderUsers(panel) {
+  panel.innerHTML = `
+    <div class="card">
+      <header class="admin__panel-head">
+        <h2 class="h3">账号</h2>
+        <span class="meta" data-user-counts></span>
+      </header>
+      <div class="admin__list" data-user-list>
+        <div class="skeleton" style="height:80px"></div>
+      </div>
+    </div>
+  `;
+
+  async function load() {
+    const listEl = qs("[data-user-list]", panel);
+    const countEl = qs("[data-user-counts]", panel);
+    let data;
+    try {
+      data = await api.get("/api/admin/users");
+    } catch (err) {
+      listEl.innerHTML = `<div class="empty">${esc(err.message || "读取失败")}</div>`;
+      return;
+    }
+
+    const items = data?.items || [];
+    const counts = data?.counts || {};
+    countEl.textContent = `管理员 ${counts.admins || 0} · 教师 ${counts.teachers || 0} · 学生 ${counts.students || 0}`;
+
+    if (!items.length) {
+      listEl.innerHTML = `<div class="empty">还没有账号。</div>`;
+      return;
+    }
+
+    listEl.innerHTML = items
+      .map(
+        (u) => `
+      <article class="admin__row" data-user="${u.id}">
+        <div class="admin__row-main">
+          <div class="admin__row-meta">
+            <span class="user-badge" data-role="${esc(u.role)}">${ROLE_TEXT[u.role] || u.role}</span>
+            ${u.isSelf ? `<span class="tag tag--quiet">当前账号</span>` : ""}
+            ${u.status === "disabled" ? `<span class="tag tag--warn">已停用</span>` : ""}
+          </div>
+          <div class="admin__row-title" style="cursor:default">${esc(u.displayName)}</div>
+          <div class="meta">
+            ${esc(u.username)} · 注册于 ${esc(formatDate(u.createdAt))}
+            ${u.lastLoginAt ? ` · 最近登录 ${esc(timeAgo(u.lastLoginAt))}` : " · 从未登录"}
+          </div>
+        </div>
+        <div class="admin__row-actions">
+          <select class="select admin__role-select" data-role-select ${u.isSelf ? "disabled" : ""}>
+            ${["student", "teacher", "admin"]
+              .map(
+                (r) =>
+                  `<option value="${r}"${r === u.role ? " selected" : ""}>${ROLE_TEXT[r]}</option>`
+              )
+              .join("")}
+          </select>
+          ${
+            u.isSelf
+              ? ""
+              : `<button class="btn ${u.status === "disabled" ? "btn--ghost" : "btn--quiet"} btn--sm" data-toggle-status data-status="${
+                  u.status === "disabled" ? "active" : "disabled"
+                }">${u.status === "disabled" ? "启用" : "停用"}</button>`
+          }
+        </div>
+      </article>`
+      )
+      .join("");
+
+    qsa("[data-role-select]", listEl).forEach((sel) => {
+      sel.addEventListener("change", async () => {
+        const row = sel.closest("[data-user]");
+        const id = row.dataset.user;
+        const role = sel.value;
+        sel.disabled = true;
+        try {
+          await api.patch(`/api/admin/users/${id}`, { role });
+          toast(`已改为${ROLE_TEXT[role]}`);
+          load();
+        } catch (err) {
+          toast(err.message || "修改失败", { type: "error" });
+          load();
+        }
+      });
+    });
+
+    qsa("[data-toggle-status]", listEl).forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.closest("[data-user]").dataset.user;
+        const status = btn.dataset.status;
+        btn.disabled = true;
+        try {
+          await api.patch(`/api/admin/users/${id}`, { status });
+          toast(status === "disabled" ? "账号已停用" : "账号已启用");
+          load();
+        } catch (err) {
+          toast(err.message || "操作失败", { type: "error" });
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+
+  load();
 }

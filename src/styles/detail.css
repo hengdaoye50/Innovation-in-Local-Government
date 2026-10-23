@@ -551,6 +551,56 @@
   background: transparent;
 }
 
+.admin__invite-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.invite-row__main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* —— 用户管理 —— */
+.admin__role-select {
+  height: 32px;
+  padding: 0 26px 0 10px;
+  font-size: 13px;
+  width: auto;
+  min-width: 92px;
+}
+
+.user-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 2px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  border: 1px solid var(--line-2);
+  color: var(--ink-2);
+}
+
+.user-badge[data-role="admin"] {
+  border-color: rgba(196, 162, 101, 0.55);
+  background: rgba(196, 162, 101, 0.1);
+  color: var(--plum-deep);
+}
+
+.user-badge[data-role="teacher"] {
+  border-color: rgba(126, 12, 110, 0.32);
+  color: var(--plum);
+}
+
+.user-badge[data-role="student"] {
+  border-color: var(--line);
+  color: var(--ink-3);
+}
+
 .admin__grid {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.8fr);

@@ -34,7 +34,7 @@ export function mountAuth(root) {
         <form class="auth__form" data-form="register" hidden>
           <label class="field">
             <span class="field__label">邀请码</span>
-            <input class="input" name="invite" placeholder="形式如 INV-XXXX-XXXX" autocomplete="off" />
+            <input class="input" name="invite" placeholder="6 位字母数字，如 A7K2M9" autocomplete="off" maxlength="6" style="letter-spacing:0.14em;text-transform:uppercase" />
           </label>
           <label class="field">
             <span class="field__label">用户名</span>
@@ -127,6 +127,8 @@ export function mountAuth(root) {
     const password = String(data.get("password") || "");
 
     if (!invite) return fillError(forms.register, "请填写邀请码");
+    if (!/^[A-Za-z0-9]{6}$/.test(invite))
+      return fillError(forms.register, "邀请码为 6 位字母数字，请核对后再试");
     if (!/^[A-Za-z0-9]{6,}$/.test(username))
       return fillError(forms.register, "用户名需为字母或数字，至少 6 位");
     if (password.length < 8 || password.length > 18)

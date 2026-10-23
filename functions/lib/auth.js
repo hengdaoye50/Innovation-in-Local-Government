@@ -87,15 +87,31 @@ export function randomToken() {
   return toHex(crypto.getRandomValues(new Uint8Array(32)));
 }
 
+/**
+ * 6 位字母数字邀请码。
+ * 字母表剔除了 I/O/0/1 这类易混字符，且强制至少各含一位字母与数字，
+ * 避免出现「全是数字」这种容易被顺序猜到的组合。
+ */
 export function randomInviteCode() {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const block = (n) => {
+  const LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const DIGITS = "23456789";
+  const ALPHABET = LETTERS + DIGITS;
+
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const bytes = crypto.getRandomValues(new Uint8Array(6));
+    let code = "";
+    for (let i = 0; i < 6; i += 1) code += ALPHABET[bytes[i] % ALPHABET.length];
+    if (/[A-Z]/.test(code) && /[0-9]/.test(code)) return code;
+  }
+
+  // 极端情况下兜底：直接拼一个确定混合的码
+  const pick = (set, n) => {
     const bytes = crypto.getRandomValues(new Uint8Array(n));
     let s = "";
-    for (let i = 0; i < n; i += 1) s += alphabet[bytes[i] % alphabet.length];
+    for (let i = 0; i < n; i += 1) s += set[bytes[i] % set.length];
     return s;
   };
-  return `INV-${block(4)}-${block(4)}`;
+  return pick(DIGITS, 1) + pick(LETTERS, 4) + pick(DIGITS, 1);
 }
 
 export async function createSession(env, { userId, username, role }) {
