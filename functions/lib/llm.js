@@ -8,13 +8,18 @@
 const PROVIDERS = {
   deepseek: {
     base: "https://api.deepseek.com/v1",
-    model: "deepseek-chat",
+    // 注意：模型 ID 是 deepseek-flash，DeepSeek-V4.1-Flash-1017 只是版本名
+    model: "deepseek-flash",
     keyEnv: "DEEPSEEK_API_KEY",
+    // 思考模式默认开启且 effort=high，会产生大量 reasoning token
+    //（按输出计费 4-8 元/百万），首字延迟也明显。对话与质检用不上，关掉。
+    extra: { thinking: { type: "disabled" } },
   },
   fireworks: {
     base: "https://api.fireworks.ai/inference/v1",
     model: "accounts/fireworks/models/deepseek-v4p1-flash",
     keyEnv: "FIREWORKS_API_KEY",
+    extra: {},
   },
 };
 
@@ -35,6 +40,7 @@ function resolve(env) {
     base: (env.LLM_BASE || preset.base).replace(/\/$/, ""),
     model: env.LLM_MODEL || preset.model,
     key: env[preset.keyEnv] || env.DEEPSEEK_API_KEY || env.FIREWORKS_API_KEY || "",
+    extra: preset.extra || {},
   };
 }
 
@@ -81,7 +87,7 @@ function upstreamError(status, detail) {
 
 /** 非流式补全 */
 export async function complete(env, { system, messages, temperature = 0.4, maxTokens = 2000 }) {
-  const { key, model } = resolve(env);
+  const { key, model, extra } = resolve(env);
   if (!key) throw Object.assign(new Error("服务端未配置模型密钥"), { status: 503 });
 
   const res = await fetch(endpoint(env), {
@@ -92,6 +98,7 @@ export async function complete(env, { system, messages, temperature = 0.4, maxTo
       messages: [{ role: "system", content: system }, ...messages],
       temperature,
       max_tokens: maxTokens,
+      ...extra,
     }),
   });
 
@@ -103,7 +110,7 @@ export async function complete(env, { system, messages, temperature = 0.4, maxTo
 
 /** 流式补全，逐段回调增量 */
 export async function stream(env, { system, messages, temperature = 0.5, maxTokens = 2000, onDelta }) {
-  const { key, model } = resolve(env);
+  const { key, model, extra } = resolve(env);
   if (!key) throw Object.assign(new Error("服务端未配置模型密钥"), { status: 503 });
 
   const res = await fetch(endpoint(env), {
@@ -115,6 +122,7 @@ export async function stream(env, { system, messages, temperature = 0.5, maxToke
       temperature,
       max_tokens: maxTokens,
       stream: true,
+      ...extra,
     }),
   });
 
