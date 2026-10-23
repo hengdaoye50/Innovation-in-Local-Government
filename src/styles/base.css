@@ -479,16 +479,28 @@
 }
 
 .nav.is-dark .nav__link {
-  color: rgba(253, 248, 240, 0.66);
+  color: rgba(253, 248, 240, 0.8);
 }
 
 .nav.is-dark .nav__link:hover {
-  color: var(--gold);
-  background: rgba(253, 248, 240, 0.07);
+  color: #fdf8f0;
+  background: none;
+}
+
+.nav.is-dark .nav__link::after {
+  background: var(--gold);
 }
 
 .nav.is-dark .nav__link.is-active {
   color: var(--gold);
+}
+
+.nav.is-dark .nav__link.is-active::after {
+  background: var(--gold-bright);
+}
+
+.nav.is-dark .nav__actions {
+  border-left-color: rgba(196, 162, 101, 0.22);
 }
 
 .nav.is-dark .nav__toggle {
@@ -534,7 +546,7 @@
   align-items: center;
   gap: 10px;
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 600;
   letter-spacing: 0.01em;
   color: var(--ink);
@@ -545,6 +557,19 @@
 .nav__brand span {
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.nav__brand-short {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .nav__brand-full {
+    display: none;
+  }
+  .nav__brand-short {
+    display: inline;
+  }
 }
 
 .nav__link--mobile {
@@ -565,32 +590,60 @@
 .nav__links {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
 }
 
 .nav__link {
-  padding: 6px 12px;
-  font-size: 14px;
+  position: relative;
+  padding: 8px 15px;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
   color: var(--ink-2);
   border-radius: 2px;
-  transition: color var(--dur-fast) var(--ease),
-    background var(--dur-fast) var(--ease);
+  transition: color var(--dur) var(--ease);
+}
+
+/* 悬停与选中用一条从中间展开的细线，而不是色块背景 */
+.nav__link::after {
+  content: "";
+  position: absolute;
+  left: 15px;
+  right: 15px;
+  bottom: 3px;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform var(--dur) var(--ease);
 }
 
 .nav__link:hover {
   color: var(--plum);
-  background: rgba(126, 12, 110, 0.05);
+  background: none;
+}
+
+.nav__link:hover::after {
+  transform: scaleX(1);
 }
 
 .nav__link.is-active {
   color: var(--plum);
-  font-weight: 500;
+}
+
+/* 当前所在屏用金色细线常驻，区别于悬停 */
+.nav__link.is-active::after {
+  transform: scaleX(1);
+  background: var(--gold);
+  height: 1.5px;
 }
 
 .nav__actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  padding-left: 18px;
+  border-left: 1px solid var(--line);
 }
 
 .nav__toggle {
@@ -620,8 +673,16 @@
     display: flex;
   }
   .nav__link {
-    padding: 12px 0;
+    padding: 13px 0;
+    font-size: 15.5px;
     white-space: nowrap;
+  }
+  /* 纵向菜单里下划线会横穿整行，去掉 */
+  .nav__link::after {
+    display: none;
+  }
+  .nav__link.is-active {
+    color: var(--gold);
   }
   .nav__toggle {
     display: grid;

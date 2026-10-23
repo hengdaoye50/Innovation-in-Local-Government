@@ -147,8 +147,11 @@ async function boot0() {
   mountFooter();
   start();
 
-  // 路由切换后刷新导航状态
-  window.addEventListener("route:mounted", () => nav.refreshUser());
+  // 路由切换后刷新导航状态（含深色首屏的反色判断）
+  window.addEventListener("route:mounted", () => {
+    nav.refreshUser();
+    nav.sync();
+  });
 
   // 隐藏启动屏
   if (boot) {

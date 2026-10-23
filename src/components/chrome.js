@@ -17,6 +17,8 @@ const NAV_ITEMS = [
 
 export const SITE = {
   name: "公共政策分析课程协作平台",
+  // 窄屏用的短名，全称在手机上会被截成「公共政策分析课程…」
+  short: "公共政策分析",
   latin: "Local Governance Innovation",
   course: "MPA · 公共政策分析 / 地方政府创新",
 };
@@ -27,7 +29,8 @@ export function mountNav(actions = {}) {
     <div class="nav__inner">
       <a class="nav__brand" href="#/" aria-label="${esc(SITE.name)} 首页">
         ${SEAL}
-        <span>${esc(SITE.name)}</span>
+        <span class="nav__brand-full">${esc(SITE.name)}</span>
+        <span class="nav__brand-short">${esc(SITE.short)}</span>
       </a>
       <nav class="nav__links" aria-label="主导航">
         ${NAV_ITEMS.map(
@@ -104,6 +107,9 @@ export function mountNav(actions = {}) {
   return {
     refreshUser: () => renderUser(host, actions),
     updateActive,
+    // 路由渲染完成后要重算一次：首屏挂载时 #atlas 还不存在，
+    // 不重算的话顶栏会一直停在浅色主题，压在深色地图上几乎看不清
+    sync: onScroll,
   };
 }
 
