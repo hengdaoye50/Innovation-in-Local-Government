@@ -16,9 +16,6 @@ export function atlasSection() {
           <h1 class="atlas__title" id="atlas-title">
             地方创变，<em>落在地图上</em>
           </h1>
-          <p class="atlas__sub">
-            每一枚光点，都是一位同学从公开新闻出发、与模型协同检索后写下的案例梗概。
-          </p>
         </div>
         <div class="atlas__stats" aria-label="案例统计">
           <div class="stat">
