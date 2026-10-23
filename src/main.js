@@ -122,6 +122,33 @@ onRouteChange((path) => {
 /* —————————————— 启动 —————————————— */
 
 async function boot0() {
+  // 先查会话：未登录时只渲染登录页，不挂导航、不请求任何内容数据。
+  // 服务端 _middleware.js 也会把页面入口带上 gate 标记，两层一起生效。
+  let user = null;
+  try {
+    const me = await authApi.me();
+    user = me?.user ?? null;
+  } catch {
+    user = null;
+  }
+  setState({ user, authChecked: true });
+
+  const hideBoot = () => {
+    if (!boot) return;
+    requestAnimationFrame(() => {
+      boot.classList.add("done");
+      setTimeout(() => boot.setAttribute("hidden", ""), 460);
+    });
+  };
+
+  if (!user) {
+    document.body.classList.add("page-auth");
+    app.innerHTML = `<main id="auth-root"></main>`;
+    mountAuth(app.querySelector("#auth-root"));
+    hideBoot();
+    return;
+  }
+
   const nav = mountNav({
     onLogout: async () => {
       try {
@@ -130,18 +157,10 @@ async function boot0() {
         /* 忽略 */
       }
       setState({ user: null });
-      nav.refreshUser();
-      toast("已登出");
+      // 整页跳转：让服务端中间件重新判定，回到登录页
+      window.location.href = "/";
     },
   });
-
-  // 会话检查：失败视为未登录，不阻塞页面
-  try {
-    const me = await authApi.me();
-    setState({ user: me?.user ?? null, authChecked: true });
-  } catch {
-    setState({ user: null, authChecked: true });
-  }
   nav.refreshUser();
 
   mountFooter();
@@ -153,13 +172,7 @@ async function boot0() {
     nav.sync();
   });
 
-  // 隐藏启动屏
-  if (boot) {
-    requestAnimationFrame(() => {
-      boot.classList.add("done");
-      setTimeout(() => boot.setAttribute("hidden", ""), 460);
-    });
-  }
+  hideBoot();
 }
 
 boot0();

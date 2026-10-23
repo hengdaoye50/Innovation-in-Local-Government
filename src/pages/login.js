@@ -108,8 +108,8 @@ export function mountAuth(root) {
     try {
       const res = await authApi.login(username, password);
       setState({ user: res?.user || res || { username }, authChecked: true });
-      toast("登录成功");
-      window.location.hash = "/";
+      // 整页跳转：让服务端中间件拿到新 cookie 后放行
+      window.location.href = "/";
     } catch (err) {
       fillError(forms.login, err.message || "登录失败");
     } finally {
@@ -142,8 +142,8 @@ export function mountAuth(root) {
     try {
       const res = await authApi.register(username, password, invite);
       setState({ user: res?.user || res || { username }, authChecked: true });
-      toast("注册成功，欢迎加入");
-      window.location.hash = "/";
+      // 整页跳转：让服务端中间件拿到新 cookie 后放行
+      window.location.href = "/";
     } catch (err) {
       fillError(forms.register, err.message || "注册失败");
     } finally {

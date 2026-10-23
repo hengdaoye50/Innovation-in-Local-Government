@@ -194,6 +194,27 @@ export function mountStudio(root) {
   }
   input.addEventListener("input", updateLinkCounter);
 
+  // marked + DOMPurify 只在对话区用得到，按需加载，不进主包
+  let renderMd = null;
+  import("../lib/markdown.js")
+    .then((m) => {
+      renderMd = m.renderMarkdown;
+    })
+    .catch(() => {
+      /* 加载失败就退回纯文本 */
+    });
+
+  /** 渲染消息正文：模型输出是 Markdown，必须渲染，否则 **加粗** 会原样显示 */
+  function paintMessage(node, text) {
+    if (!node) return;
+    if (renderMd) {
+      node.innerHTML = renderMd(text);
+      node.classList.add("msg__text--md");
+    } else {
+      node.textContent = text;
+    }
+  }
+
   function addMessage(role, content = "", sources = null) {
     const node = el("div", { class: `msg msg--${role}` });
     node.innerHTML = `
@@ -215,7 +236,7 @@ export function mountStudio(root) {
       </div>
     `;
     const textNode = node.querySelector(".msg__text");
-    textNode.textContent = content;
+    paintMessage(textNode, content);
     log.append(node);
     log.scrollTop = log.scrollHeight;
     return textNode;
@@ -304,7 +325,7 @@ export function mountStudio(root) {
             dropThinking();
             textNode = addMessage("assistant", "");
           }
-          textNode.textContent = full;
+          paintMessage(textNode, full);
           log.scrollTop = log.scrollHeight;
         },
       });
