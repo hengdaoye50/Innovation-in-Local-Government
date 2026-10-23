@@ -16,7 +16,7 @@ const NAV_ITEMS = [
 ];
 
 export const SITE = {
-  name: "地方政府创新案例库",
+  name: "公共政策分析课程协作平台",
   latin: "Local Governance Innovation",
   course: "MPA · 公共政策分析 / 地方政府创新",
 };

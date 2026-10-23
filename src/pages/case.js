@@ -126,6 +126,6 @@ export async function mountCaseDetail(root, id) {
     })
   );
 
-  document.title = `${item.title} · 地方政府创新案例库`;
+  document.title = `${item.title} · 公共政策分析课程协作平台`;
   mountReveal(root);
 }
