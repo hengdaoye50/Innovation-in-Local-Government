@@ -11,9 +11,10 @@ const PROVIDERS = {
     // 注意：模型 ID 是 deepseek-flash，DeepSeek-V4.1-Flash-1017 只是版本名
     model: "deepseek-flash",
     keyEnv: "DEEPSEEK_API_KEY",
-    // 思考模式默认开启且 effort=high，会产生大量 reasoning token
-    //（按输出计费 4-8 元/百万），首字延迟也明显。对话与质检用不上，关掉。
-    extra: { thinking: { type: "disabled" } },
+    // 思考模式开启，effort 拉满。注意两点连带影响：
+    // 1) 该模式下 temperature 不生效（传了不报错但被忽略）；
+    // 2) reasoning token 会占用 max_tokens 预算，所以调用方的上限要放宽。
+    extra: { thinking: { type: "enabled" }, reasoning_effort: "high" },
   },
   fireworks: {
     base: "https://api.fireworks.ai/inference/v1",
@@ -109,7 +110,14 @@ export async function complete(env, { system, messages, temperature = 0.4, maxTo
 }
 
 /** 流式补全，逐段回调增量 */
-export async function stream(env, { system, messages, temperature = 0.5, maxTokens = 2000, onDelta }) {
+export async function stream(env, {
+  system,
+  messages,
+  temperature = 0.5,
+  maxTokens = 2000,
+  onDelta,
+  onThinking,
+}) {
   const { key, model, extra } = resolve(env);
   if (!key) throw Object.assign(new Error("服务端未配置模型密钥"), { status: 503 });
 
@@ -134,6 +142,7 @@ export async function stream(env, { system, messages, temperature = 0.5, maxToke
   const decoder = new TextDecoder();
   let buffer = "";
   let full = "";
+  let thinking = false;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -149,7 +158,16 @@ export async function stream(env, { system, messages, temperature = 0.5, maxToke
       if (!data || data === "[DONE]") continue;
       try {
         const chunk = JSON.parse(data);
-        const delta = chunk.choices?.[0]?.delta?.content || "";
+        const d = chunk.choices?.[0]?.delta || {};
+
+        // 思考模式下模型先吐 reasoning_content，正文可能十几秒才开始。
+        // 首次出现时通知上层，避免前端一直停在「正在输入」像卡死。
+        if (d.reasoning_content && !thinking) {
+          thinking = true;
+          onThinking?.();
+        }
+
+        const delta = d.content || "";
         if (delta) {
           full += delta;
           onDelta?.(delta);

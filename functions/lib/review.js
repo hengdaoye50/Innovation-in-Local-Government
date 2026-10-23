@@ -92,7 +92,8 @@ export async function reviewCase(env, data) {
       system: SYSTEM,
       messages: [{ role: "user", content: buildUserPrompt(data) }],
       temperature: 0.2,
-      maxTokens: 700,
+      // 思考模式会先消耗 reasoning token，额度需覆盖「思考 + JSON 结论」
+      maxTokens: 2500,
     });
     const parsed = parseModelJson(raw);
 
@@ -152,7 +153,7 @@ export async function reviewSlide(env, slide) {
         },
       ],
       temperature: 0.4,
-      maxTokens: 600,
+      maxTokens: 2000,
     });
 
     const parsed = parseModelJson(raw);

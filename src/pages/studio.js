@@ -258,36 +258,50 @@ export function mountStudio(root) {
     const typing = addTyping();
 
     let textNode = null;
+    let thinkingNode = null;
     let acc = "";
     abort = new AbortController();
+
+    const dropThinking = () => {
+      thinkingNode?.closest(".msg")?.remove();
+      thinkingNode = null;
+    };
 
     try {
       await streamChat({
         messages: history,
         signal: abort.signal,
         onMeta: (meta) => {
-          typing.remove();
-          textNode = addMessage("assistant", "");
+          // 思考模式：模型先思考十几秒才吐正文，先给个状态提示
+          if (meta?.thinking && !textNode && !thinkingNode) {
+            typing.remove();
+            thinkingNode = addMessage("assistant", "正在梳理思路…");
+            thinkingNode.closest(".msg__bubble")?.classList.add("msg__bubble--thinking");
+            log.scrollTop = log.scrollHeight;
+          }
           if (meta?.sources?.length) {
-            const bubble = textNode.closest(".msg__bubble");
-            const box = el("div", {
-              class: "msg__sources",
-              html: meta.sources
-                .map(
-                  (s) =>
-                    `<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(
-                      s.title
-                    )}</a>`
-                )
-                .join(""),
-            });
-            bubble.append(box);
+            const host = textNode || thinkingNode;
+            if (host) {
+              const box = el("div", {
+                class: "msg__sources",
+                html: meta.sources
+                  .map(
+                    (s) =>
+                      `<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(
+                        s.title
+                      )}</a>`
+                  )
+                  .join(""),
+              });
+              host.closest(".msg__bubble")?.append(box);
+            }
           }
         },
         onDelta: (_, full) => {
           acc = full;
           if (!textNode) {
             typing.remove();
+            dropThinking();
             textNode = addMessage("assistant", "");
           }
           textNode.textContent = full;
@@ -304,6 +318,7 @@ export function mountStudio(root) {
       }
     } catch (err) {
       typing.remove();
+      dropThinking();
       if (err.name !== "AbortError") {
         const node = addMessage(
           "assistant",

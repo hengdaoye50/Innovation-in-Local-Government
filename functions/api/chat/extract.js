@@ -92,7 +92,8 @@ ${dialogue}
         },
       ],
       temperature: 0.4,
-      maxTokens: 3000,
+      // 要产出 1000–1500 字正文，叠加思考 token，额度必须放宽
+      maxTokens: 8000,
     });
 
     const parsed = parseJson(raw);

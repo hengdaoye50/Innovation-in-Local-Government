@@ -110,7 +110,9 @@ export async function onRequest(context) {
             system,
             messages,
             temperature: 0.5,
-            maxTokens: 1400,
+            // 思考模式的 reasoning token 也占 max_tokens，留足余量
+            maxTokens: 4000,
+            onThinking: () => send({ meta: { thinking: true } }),
             onDelta: (delta) => send({ delta }),
           });
           send({ done: true });
