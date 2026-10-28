@@ -5,7 +5,8 @@
 import { complete, llmReady } from "./llm.js";
 
 const MIN_WORDS = 1000;
-const MAX_WORDS = 1500;
+// 篇幅只卡下限：太短讲不清一个案例。上限不设，写长了不算问题
+const MAX_WORDS = 2400;
 const LINK_LIMIT = 15;
 
 const SYSTEM = `你是《地方政府创新》课程的助教，负责审核本科与 MPA 学生提交的案例梗概。
@@ -96,7 +97,7 @@ export async function reviewCase(env, data) {
   // 篇幅上限只作提醒，不阻断：本意是别写太长，不是判不合格
   const warnings = [];
   if (words > MAX_WORDS) {
-    warnings.push(`正文 ${words} 字，超出建议的 ${MAX_WORDS} 字，可考虑精简到 1000–1500 字`);
+    warnings.push(`正文 ${words} 字，篇幅偏长，可考虑精简到 1500 字左右`);
   }
 
   if (!llmReady(env)) {
