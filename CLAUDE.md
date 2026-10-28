@@ -63,6 +63,9 @@ MPA课程AI辅学项目开发/
 │   ├── fix-geojson.mjs       # 一次性工具：修正 GeoJSON 环绕向（必须执行过）
 │   ├── seed-admin.mjs        # 生成首个教师账号的 SQL（哈希本地计算）
 │   └── shot.mjs              # 开发期视觉检查：CDP 截图
+├── examples/                 # 示例稿件，仅用于测试导入与演示，不参与构建
+│   ├── sample-case.md        # Markdown 版
+│   └── sample-case.docx      # Word 版（同内容的转换产物）
 ├── functions/
 │   ├── api/                  # Pages Functions（auth / cases / chat / slides / posts / comments / admin）
 │   └── lib/                  # 服务端共享模块（http / auth / db / llm / search / review）
