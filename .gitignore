@@ -17,3 +17,8 @@ scripts/.cache/
 
 # 种子 SQL 含密码哈希，不提交
 migrations/0002_seed_admin.sql
+
+# Playwright 截图与页面快照
+.playwright-mcp/
+home-*.png
+*-inspect.png
