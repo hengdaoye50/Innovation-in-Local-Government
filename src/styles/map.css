@@ -29,8 +29,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  height: 88px;
-  background: linear-gradient(to bottom, rgba(30, 18, 28, 0), var(--paper) 94%);
+  height: 64px;
+  background: linear-gradient(to bottom, rgba(30, 18, 28, 0), var(--paper) 96%);
   pointer-events: none;
   z-index: 3;
 }
@@ -197,6 +197,11 @@
 
 .map-svg.is-atlas .island-line {
   opacity: 0.4;
+  transition: opacity 640ms var(--ease);
+}
+
+.map-svg.is-atlas .inset-frame {
+  opacity: 0.5;
   transition: opacity 640ms var(--ease);
 }
 
@@ -544,6 +549,15 @@
   stroke: rgba(196, 162, 101, 0.55);
   stroke-width: 0.8;
   stroke-linecap: round;
+  /* 附图里的九段线被缩放过，线宽要固定，否则会细到看不见 */
+  vector-effect: non-scaling-stroke;
+}
+
+/* 南海诸岛附图：半透明底 + 金色细边，从主图上游离出来 */
+.inset-frame {
+  fill: rgba(24, 14, 24, 0.55);
+  stroke: rgba(196, 162, 101, 0.38);
+  stroke-width: 0.8;
 }
 
 /* —— 案例节点 —— */

@@ -30,8 +30,10 @@ const LIFT = 20;
 const SIDE_COLORS = ["#0c070c", "#150b14", "#1f101d", "#2b1426"];
 
 const PAD_X = 24;
-const PAD_TOP = 8;
-const PAD_BOTTOM = 30;
+// 上部留白大于底部：省面下方还有侧壁和投影阴影（合计约 34 单位），
+// 若按对称留白，陆地会整体偏上、下方空出一截
+const PAD_TOP = 34;
+const PAD_BOTTOM = 4;
 
 function svgEl(tag, attrs = {}, children = []) {
   const node = document.createElementNS(NS, tag);
@@ -449,10 +451,41 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
       gTops.append(top);
     }
 
-    const gIslands = svgEl("g", { class: "map-islands" });
+    // 九段线不做主图的一部分：它会让整张图的视觉重心往下拽。
+    // 按国内地图出版的标准做法缩成右下角的附图，既不缺版图要素，也不干扰主体构图。
+    const gInset = svgEl("g", { class: "map-inset" });
     for (const feature of islands) {
       const d = pathGen(feature);
-      if (d) gIslands.append(svgEl("path", { d, class: "island-line" }));
+      if (!d) continue;
+
+      const b = pathGen.bounds(feature);
+      const w = Math.max(1, b[1][0] - b[0][0]);
+      const h = Math.max(1, b[1][1] - b[0][1]);
+      // 附图尺寸固定，线宽由 non-scaling-stroke 保持恒定，不随缩放变细
+      const boxW = 88;
+      const boxH = 108;
+      const s = Math.min(boxW / w, boxH / h) * 0.84;
+      const boxX = VIEW_W - boxW - 6;
+      // 不能贴底：底部有纸色渐隐，附图会糊在里面。放在东侧海面的空白处
+      const boxY = VIEW_H - boxH - 150;
+      const tx = boxX + (boxW - w * s) / 2 - b[0][0] * s;
+      const ty = boxY + (boxH - h * s) / 2 - b[0][1] * s;
+
+      gInset.append(
+        svgEl("rect", {
+          x: boxX,
+          y: boxY,
+          width: boxW,
+          height: boxH,
+          rx: 1.5,
+          class: "inset-frame",
+        }),
+        svgEl(
+          "g",
+          { transform: `translate(${tx.toFixed(1)} ${ty.toFixed(1)}) scale(${s.toFixed(3)})` },
+          [svgEl("path", { d, class: "island-line" })]
+        )
+      );
     }
 
     gLinks = svgEl("g", { class: "map-links" });
@@ -461,7 +494,7 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
     gAtlas = svgEl("g", { class: "map-atlas" });
 
     gLand.append(gShadow, gSides, gTops);
-    gRoot.append(gLand, gIslands, gLinks, gNodes, gAtlas, gFocus);
+    gRoot.append(gLand, gInset, gLinks, gNodes, gAtlas, gFocus);
   }
 
   /* ————————— 节点 ————————— */
