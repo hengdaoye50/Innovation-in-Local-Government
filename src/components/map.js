@@ -112,6 +112,25 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
     applyView();
   }
 
+  /**
+   * 限制平移范围：地图不能被拖到完全离屏。
+   * 留出四成余量——允许把边缘省份拖到中间，但不允许把整张图甩出去。
+   */
+  function clampView() {
+    const rect = container.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    // 屏幕上 1 像素对应多少 SVG 单位（含 3D 倾斜带来的纵向压缩）
+    const ctm = svg?.getScreenCTM();
+    const pxPerSvgX = ctm?.a || 1;
+    const pxPerSvgY = ctm?.d || 1;
+
+    const maxX = (rect.width * 0.6) / (pxPerSvgX * view.k);
+    const maxY = (rect.height * 0.6) / (pxPerSvgY * view.k);
+
+    view.x = Math.max(-maxX, Math.min(maxX, view.x));
+    view.y = Math.max(-maxY, Math.min(maxY, view.y));
+  }
+
   function zoomAt(svgX, svgY, factor) {
     // 上限放到 8 倍：案例密集时需要能一直放大到区县一级
     const next = Math.min(8, Math.max(0.6, view.k * factor));
@@ -120,6 +139,7 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
     view.x = svgX - (svgX - view.x) * ratio;
     view.y = svgY - (svgY - view.y) * ratio;
     view.k = next;
+    clampView();
     scheduleView();
   }
 
@@ -184,6 +204,7 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
       }
       view.x += dx * view.k;
       view.y += dy * view.k;
+      clampView();
       scheduleView();
     }
 

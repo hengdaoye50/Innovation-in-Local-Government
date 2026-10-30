@@ -146,15 +146,14 @@
   display: block;
   cursor: grab;
   opacity: 0;
-  /* 倾斜后纵向会被压缩，配一点缩小避免四角被裁；
-     translateY 把整体往下拉，抵消透视造成的上浮 */
-  transform: translateY(2.5%) rotateX(14deg) scale(0.92);
+  /* 倾斜后纵向会被压缩，放大一点让地图填满舞台；
+     不写 contain: paint —— 它会在 SVG 边界处留一条可见接缝 */
+  transform: rotateX(14deg) scale(1.04);
   transform-origin: 50% 54%;
   transition: opacity 620ms var(--ease), transform 720ms cubic-bezier(0.22, 0.61, 0.36, 1);
   /* 触屏单指留给页面纵向滚动，否则手指碰地图就滑不动 */
   touch-action: pan-y;
   overflow: visible;
-  contain: layout paint;
 }
 
 .map-svg.is-in {

@@ -1,0 +1,164 @@
+- generic [active] [ref=f2e1]:
+  - banner [ref=f2e2]:
+    - generic [ref=f2e3]:
+      - link "公共政策分析课程协作平台 首页" [ref=f2e4] [cursor=pointer]:
+        - /url: "#/"
+        - generic [ref=f2e8]: 公共政策分析课程协作平台
+      - navigation "主导航" [ref=f2e9]:
+        - link "案例地图" [ref=f2e10] [cursor=pointer]:
+          - /url: "#atlas"
+        - link "协作工作台" [ref=f2e11] [cursor=pointer]:
+          - /url: "#studio"
+        - link "课堂展示" [ref=f2e12] [cursor=pointer]:
+          - /url: "#slides"
+        - link "拓展材料" [ref=f2e13] [cursor=pointer]:
+          - /url: "#blog"
+      - generic [ref=f2e14]:
+        - generic [ref=f2e15]:
+          - generic "teacher01" [ref=f2e16]: t
+          - link "管理" [ref=f2e17] [cursor=pointer]:
+            - /url: "#/admin"
+          - button "登出" [ref=f2e18] [cursor=pointer]
+        - link "开始撰写" [ref=f2e19] [cursor=pointer]:
+          - /url: "#studio"
+  - generic: Local Governance Innovation
+  - main [ref=f2e21]:
+    - region [ref=f2e22]:
+      - generic [ref=f2e23]:
+        - generic [ref=f2e24]:
+          - generic [ref=f2e25]: Local Governance Innovation Atlas
+          - heading [level=1] [ref=f2e26]:
+            - text: 地方创变，
+            - emphasis [ref=f2e27]: 落在地图上
+        - generic "案例统计" [ref=f2e28]:
+          - generic [ref=f2e29]:
+            - generic [ref=f2e30]: "0"
+            - generic [ref=f2e31]: 案例
+          - generic [ref=f2e32]:
+            - generic [ref=f2e33]: "0"
+            - generic [ref=f2e34]: 省级行政区
+          - generic [ref=f2e35]:
+            - generic [ref=f2e36]: "0"
+            - generic [ref=f2e37]: 参与同学
+      - generic [ref=f2e38]:
+        - generic [ref=f2e40]:
+          - generic [ref=f2e41]: 单个案例
+          - generic [ref=f2e43]: 多案例同城
+          - generic [ref=f2e45]: 省级边界
+        - generic [ref=f2e47]:
+          - button "放大" [ref=f2e48] [cursor=pointer]
+          - button "缩小" [ref=f2e52] [cursor=pointer]
+          - button "复位视角" [ref=f2e56] [cursor=pointer]
+        - generic [ref=f2e60]: 拖动移动 · Ctrl + 滚轮缩放 · 点击光点展开关联
+    - region [ref=f2e64]:
+      - generic [ref=f2e65]:
+        - generic [ref=f2e66]:
+          - generic [ref=f2e67]:
+            - generic [ref=f2e68]: 02 / 协作
+            - heading "与模型协作，梳理地方创新案例" [level=2] [ref=f2e69]
+            - paragraph [ref=f2e70]: 从身边新闻中挖掘灵感，与模型一起检索、追问、核对；最终一起打磨一份案例梗概； 润色到你满意后再行提交。
+          - list [ref=f2e71]:
+            - listitem [ref=f2e72]:
+              - generic [ref=f2e73]: "01"
+              - text: 贴上来源
+            - listitem [ref=f2e74]:
+              - generic [ref=f2e75]: "02"
+              - text: 追问细节
+            - listitem [ref=f2e76]:
+              - generic [ref=f2e77]: "03"
+              - text: 定稿提交
+        - generic [ref=f2e78]:
+          - generic [ref=f2e79]:
+            - generic [ref=f2e80]:
+              - generic [ref=f2e81]: 检索与对话
+              - generic [ref=f2e84]: 0 / 15 链接
+            - log [ref=f2e85]
+            - generic [ref=f2e86]:
+              - textbox "例如：https://www.zj.gov.cn/… 这是我们课上讲的浙江「最多跑一次」，帮我查一下最新的推进情况和具体做法。" [ref=f2e87]
+              - generic [ref=f2e88]:
+                - generic [ref=f2e89]:
+                  - generic "上传图片或文档" [ref=f2e90] [cursor=pointer]
+                  - generic [ref=f2e93]: 可粘贴链接，或上传图片与文档
+                - generic [ref=f2e94]:
+                  - button "重开" [ref=f2e95] [cursor=pointer]
+                  - button "发送" [ref=f2e96] [cursor=pointer]
+          - complementary "案例梗概编辑器" [ref=f2e97]:
+            - generic [ref=f2e98]:
+              - generic [ref=f2e99]:
+                - generic [ref=f2e100]: Draft
+                - heading "案例梗概" [level=3] [ref=f2e101]
+              - generic [ref=f2e102]:
+                - generic [ref=f2e103] [cursor=pointer]: 导入稿件
+                - button "从对话生成" [ref=f2e107] [cursor=pointer]
+            - generic [ref=f2e108]:
+              - generic [ref=f2e109]:
+                - generic [ref=f2e110]: 标题
+                - textbox "标题" [ref=f2e111]:
+                  - /placeholder: 一句话说清这个创新做了什么
+              - generic [ref=f2e112]:
+                - generic [ref=f2e113]:
+                  - generic [ref=f2e114]: 省 / 自治区
+                  - combobox "省 / 自治区" [ref=f2e115]:
+                    - option "请选择" [selected]
+                - generic [ref=f2e116]:
+                  - generic [ref=f2e117]: 市 / 地区
+                  - combobox "市 / 地区" [ref=f2e118]:
+                    - option "请选择" [selected]
+                - generic [ref=f2e119]:
+                  - generic [ref=f2e120]: 区 / 县
+                  - combobox "区 / 县" [ref=f2e121]:
+                    - option "请选择" [selected]
+              - paragraph [ref=f2e122]: 选到区县后，光点会落在该区县中心；案例积累多时这一级决定能否在地图上分清。
+              - generic [ref=f2e123]:
+                - generic [ref=f2e124]: 创新领域
+                - generic [ref=f2e125]:
+                  - button "数字治理" [ref=f2e126] [cursor=pointer]
+                  - button "营商环境" [ref=f2e127] [cursor=pointer]
+                  - button "基层治理" [ref=f2e128] [cursor=pointer]
+                  - button "公共服务" [ref=f2e129] [cursor=pointer]
+                  - button "生态治理" [ref=f2e130] [cursor=pointer]
+                  - button "乡村振兴" [ref=f2e131] [cursor=pointer]
+                  - button "社会组织" [ref=f2e132] [cursor=pointer]
+                  - button "政务公开" [ref=f2e133] [cursor=pointer]
+                  - button "应急管理" [ref=f2e134] [cursor=pointer]
+                  - button "城市更新" [ref=f2e135] [cursor=pointer]
+              - generic [ref=f2e136]:
+                - generic [ref=f2e137]: 正文
+                - textbox "正文" [ref=f2e138]:
+                  - /placeholder: 从改革的起因、具体动作、推进方式写到效果与争议。
+              - generic [ref=f2e139]: 0 字
+              - generic [ref=f2e142]:
+                - generic [ref=f2e143]: 来源链接
+                - button "+ 添加来源" [ref=f2e144] [cursor=pointer]
+              - button "提交作品" [ref=f2e146] [cursor=pointer]
+    - region [ref=f2e147]:
+      - generic [ref=f2e149]:
+        - generic [ref=f2e150]:
+          - generic [ref=f2e151]: 03 / 课堂
+          - heading "课堂展示板" [level=2] [ref=f2e152]
+          - paragraph [ref=f2e153]: 每个展位是一次课堂汇报。模型评委先读一遍并留下评语，同学和老师可以在下面接着讨论—— 同意、反驳，或者补上它漏掉的那一环。
+        - link "教师上传展位" [ref=f2e154] [cursor=pointer]:
+          - /url: "#/admin"
+    - region [ref=f2e159]:
+      - generic [ref=f2e162]:
+        - generic [ref=f2e163]: 04 / 拓展材料
+        - heading "拓展材料" [level=2] [ref=f2e164]
+        - paragraph [ref=f2e165]: 课程推荐的文章、论文与方法笔记。
+  - contentinfo [ref=f2e169]:
+    - generic [ref=f2e170]:
+      - generic [ref=f2e171]:
+        - generic [ref=f2e172]:
+          - generic [ref=f2e173]: 公共政策分析课程协作平台
+          - paragraph [ref=f2e174]: 由 MPA · 公共政策分析 / 地方政府创新 课程共建。案例由学生从公开新闻出发、 经与模型协同检索后独立撰写，版权归作者本人所有，引用请注明来源。
+        - generic [ref=f2e175]:
+          - link "案例地图" [ref=f2e176] [cursor=pointer]:
+            - /url: "#atlas"
+          - link "协作工作台" [ref=f2e177] [cursor=pointer]:
+            - /url: "#studio"
+          - link "课堂展示" [ref=f2e178] [cursor=pointer]:
+            - /url: "#slides"
+          - link "拓展材料" [ref=f2e179] [cursor=pointer]:
+            - /url: "#blog"
+      - generic [ref=f2e180]:
+        - generic [ref=f2e181]: Local Governance Innovation · 课程协作平台
+        - generic [ref=f2e182]: "2026"
