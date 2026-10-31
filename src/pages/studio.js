@@ -231,6 +231,14 @@ export function mountStudio(root) {
   let history = [];
   let busy = false;
   let abort = null;
+  /** 开场引导卡：发出第一条消息后收起 */
+  let startCard = null;
+
+  function dismissStart() {
+    if (!startCard) return;
+    startCard.remove();
+    startCard = null;
+  }
 
   /* —————— 对话区的附件 —————— */
 
@@ -378,12 +386,56 @@ export function mountStudio(root) {
     return node;
   }
 
+  /** 开场：三条起始路径，学生不必先想好措辞 */
   function welcome() {
     log.innerHTML = "";
-    addMessage(
-      "assistant",
-      "把新闻链接贴进来，或者直接说你想写的创新点。我会先核对这件事的基本事实——谁在做、从什么时候开始、具体动作是什么——再帮你补上背景与争议。\n\n准备得差不多了，点右上角「从对话生成」，我会整理成一份 1000–1500 字的梗概初稿。"
-    );
+
+    const card = el("div", { class: "chat-start" });
+    card.innerHTML = `
+      <div class="chat-start__title">从哪条路开始</div>
+      <ol class="chat-start__list">
+        <li>
+          <button class="chat-start__item" type="button" data-start="material">
+            <span class="chat-start__no">01</span>
+            <span class="chat-start__body">
+              <span class="chat-start__label">手上有报道、文件或课上讲的例子</span>
+              <span class="chat-start__hint">贴进下面的输入框。我先核对时间、主体和具体动作，再看它新在哪里。</span>
+            </span>
+          </button>
+        </li>
+        <li>
+          <button class="chat-start__item" type="button" data-start="direction">
+            <span class="chat-start__no">02</span>
+            <span class="chat-start__body">
+              <span class="chat-start__label">只知道一个方向</span>
+              <span class="chat-start__hint">说出领域、地方或关键词。我去检索近期报道和政策文本，回来与你逐条对。</span>
+            </span>
+          </button>
+        </li>
+        <li>
+          <button class="chat-start__item" type="button" data-start="draft">
+            <span class="chat-start__no">03</span>
+            <span class="chat-start__body">
+              <span class="chat-start__label">已经写了一稿</span>
+              <span class="chat-start__hint">导入右侧编辑区。我按段落看结构、证据和落点，不整段重写。</span>
+            </span>
+          </button>
+        </li>
+      </ol>
+      <p class="chat-start__note">缺的部分我去检索，查不到就直接说缺口在哪，不替你补。</p>
+    `;
+    card.querySelectorAll("[data-start]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (btn.dataset.start === "draft") {
+          qs("#draft-file", section).click();
+          dismissStart();
+        } else {
+          input.focus();
+        }
+      });
+    });
+    log.append(card);
+    startCard = card;
   }
 
   async function send() {
@@ -397,6 +449,7 @@ export function mountStudio(root) {
     }
 
     const images = attachments.map((a) => a.url);
+    dismissStart();
     const userTextNode = addMessage("user", value || "（见附图）");
     if (images.length) {
       const bubble = userTextNode.closest(".msg__bubble");
@@ -675,12 +728,16 @@ export function mountStudio(root) {
         }
       }
 
-      bodyInput.value = text;
-      if (!titleInput.value.trim() && stem) titleInput.value = stem.slice(0, 60);
-
-      // 文首若是 Markdown 一级标题，顺手提为标题
+      // 文首的 Markdown 一级标题当作标题，并从正文里摘掉；
+      // 没有标题才退回文件名。先取 heading 再填空，顺序反了文件名会把条件占掉。
       const heading = text.match(/^#\s+(.+)$/m);
-      if (heading && !titleInput.value.trim()) titleInput.value = heading[1].slice(0, 60);
+      bodyInput.value = heading
+        ? text.replace(/^#\s+.+\r?\n?/, "").replace(/^[\s\u3000]+/, "")
+        : text;
+      if (!titleInput.value.trim()) {
+        const pick = heading ? heading[1].trim() : stem;
+        if (pick) titleInput.value = pick.slice(0, 60);
+      }
 
       updateWords();
       statusText.textContent = `已导入 ${zhLength(text)} 字，请检查段落与来源`;

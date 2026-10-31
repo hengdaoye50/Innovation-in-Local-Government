@@ -1,5 +1,5 @@
 /** 地图屏 —— 首屏 */
-import { el, esc, mountCounters, qs } from "../lib/dom.js";
+import { esc, mountCounters, qs } from "../lib/dom.js";
 import { createMap } from "../components/map.js";
 import { ICONS } from "../components/chrome.js";
 import { getState, setState } from "../lib/store.js";
@@ -220,7 +220,6 @@ export async function mountAtlas(root) {
 
   // 数据：优先真实 API，失败回落示例数据
   let list = [];
-  let isDemo = false;
   try {
     const res = await casesApi.list({ status: "published", limit: 400 });
     list = Array.isArray(res?.items) ? res.items : Array.isArray(res) ? res : [];
@@ -229,7 +228,6 @@ export async function mountAtlas(root) {
   }
   if (!list.length) {
     list = DEMO_CASES;
-    isDemo = true;
   }
   setState({ cases: list, casesLoaded: true });
 
@@ -246,14 +244,6 @@ export async function mountAtlas(root) {
     canvasHost.innerHTML = `<div class="map-fallback">地图资源加载失败：${String(
       err && err.stack ? err.stack : err
     ).slice(0, 700)}</div>`;
-  }
-
-  if (isDemo) {
-    const note = el("div", {
-      class: "atlas__demo-note",
-      html: "当前展示为课程示例案例，真实作品将在同学提交后出现在地图上。",
-    });
-    section.querySelector(".atlas__stage").append(note);
   }
 
   return map;

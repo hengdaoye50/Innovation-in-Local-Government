@@ -97,6 +97,94 @@
   scroll-behavior: smooth;
 }
 
+/* —— 开场引导：三条起始路径 ——
+   做成图录里的一条注记：编号 + 细规则线，不用卡片阴影和彩色块 */
+.chat-start {
+  margin-left: 36px;
+  padding: 2px 0 0 14px;
+  border-left: 1px solid var(--line-gold);
+}
+
+.chat-start__title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: 0.02em;
+}
+
+.chat-start__list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chat-start__item {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: none;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.chat-start__item:first-child {
+  border-top: 0;
+}
+
+.chat-start__no {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--gold);
+  letter-spacing: 0.06em;
+}
+
+.chat-start__body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.chat-start__label {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.chat-start__hint {
+  font-size: 12px;
+  line-height: 1.75;
+  color: var(--ink-2);
+}
+
+.chat-start__item:hover .chat-start__label,
+.chat-start__item:hover .chat-start__no,
+.chat-start__item:focus-visible .chat-start__label,
+.chat-start__item:focus-visible .chat-start__no {
+  color: var(--plum);
+}
+
+.chat-start__item:focus-visible {
+  outline: 1px solid var(--plum);
+  outline-offset: 2px;
+}
+
+.chat-start__note {
+  margin: 10px 0 0;
+  padding-top: 9px;
+  border-top: 1px solid var(--line-gold);
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--ink-3);
+}
+
 .msg {
   display: flex;
   gap: 10px;
@@ -655,27 +743,6 @@ label.btn {
   color: var(--ok);
 }
 
-/* —— 示例提示 —— */
-.atlas__demo-note {
-  position: absolute;
-  left: 50%;
-  bottom: 76px;
-  transform: translateX(-50%);
-  z-index: 4;
-  padding: 6px 14px;
-  border: 1px solid rgba(196, 162, 101, 0.24);
-  border-radius: 2px;
-  background: rgba(30, 18, 28, 0.55);
-  backdrop-filter: blur(6px);
-  font-size: 11.5px;
-  letter-spacing: 0.06em;
-  color: rgba(253, 248, 240, 0.66);
-  white-space: nowrap;
-  max-width: 92vw;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 @media (max-width: 1080px) {
   .studio__grid {
     grid-template-columns: 1fr;
@@ -694,7 +761,7 @@ label.btn {
     display: none;
   }
   .studio__chat {
-    height: 520px;
+    height: 600px;
   }
   .draft__row {
     grid-template-columns: 1fr;
@@ -702,7 +769,22 @@ label.btn {
   .msg__bubble {
     max-width: 92%;
   }
-  .atlas__demo-note {
-    display: none;
+  /* 竖屏对话区高度有限，开场卡要压到一屏内 */
+  .chat-start {
+    margin-left: 0;
+    padding-left: 12px;
+  }
+  .chat-start__item {
+    padding: 7px 0;
+  }
+  .chat-start__hint {
+    font-size: 11.5px;
+    line-height: 1.65;
+  }
+  .chat-start__note {
+    margin-top: 8px;
+    padding-top: 8px;
+    font-size: 11px;
+    line-height: 1.6;
   }
 }
