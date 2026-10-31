@@ -120,7 +120,7 @@ export function studioSection() {
                 <h3 class="h3">案例梗概</h3>
               </div>
               <div class="draft__head-actions">
-                <label class="btn btn--ghost btn--sm draft__import" for="draft-file">
+                <label class="btn btn--quiet btn--sm draft__import" for="draft-file">
                   <svg viewBox="0 0 16 16" aria-hidden="true">
                     <path d="M8 11V3M5 6l3-3 3 3" fill="none" stroke="currentColor"
                       stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
@@ -142,68 +142,85 @@ export function studioSection() {
               </div>
             </header>
 
+            <p class="draft__lede">没有成稿先在左边对话里攒材料；已有成稿，从这里导入。</p>
+
             <div class="draft__body">
-              <label class="field">
-                <span class="field__label">标题</span>
-                <input class="input" data-draft-title maxlength="60" placeholder="一句话说清这个创新做了什么" />
-              </label>
+              <section class="draft__section draft__section--first">
+                <div class="draft__section-head">
+                  <span class="draft__section-no">01</span>
+                  <span class="draft__section-title">定位</span>
+                </div>
 
-              <div class="draft__row draft__row--3">
                 <label class="field">
-                  <span class="field__label">省 / 自治区</span>
-                  <select class="select" data-draft-province>
-                    <option value="">请选择</option>
-                  </select>
+                  <span class="field__label">标题</span>
+                  <input class="input" data-draft-title maxlength="60" placeholder="一句话说清这个创新做了什么" />
                 </label>
-                <label class="field">
-                  <span class="field__label">市 / 地区</span>
-                  <select class="select" data-draft-city>
-                    <option value="">请选择</option>
-                  </select>
-                </label>
-                <label class="field">
-                  <span class="field__label">区 / 县</span>
-                  <select class="select" data-draft-district>
-                    <option value="">请选择</option>
-                  </select>
-                </label>
-              </div>
-              <p class="field__hint" data-geo-hint>
-                选到区县后，光点会落在该区县中心；案例积累多时这一级决定能否在地图上分清。
-              </p>
 
-              <div class="field">
-                <span class="field__label">创新领域</span>
+                <div class="draft__row draft__row--3">
+                  <label class="field">
+                    <span class="field__label">省 / 自治区</span>
+                    <select class="select" data-draft-province>
+                      <option value="">请选择</option>
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span class="field__label">市 / 地区</span>
+                    <select class="select" data-draft-city>
+                      <option value="">请选择</option>
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span class="field__label">区 / 县</span>
+                    <select class="select" data-draft-district>
+                      <option value="">请选择</option>
+                    </select>
+                  </label>
+                </div>
+                <p class="field__hint" data-geo-hint>
+                  选到区县后，光点会落在该区县中心；案例积累多时这一级决定能否在地图上分清。
+                </p>
+              </section>
+
+              <section class="draft__section">
+                <div class="draft__section-head">
+                  <span class="draft__section-no">02</span>
+                  <span class="draft__section-title">归类</span>
+                </div>
                 <div class="draft__tags" data-draft-tags>
                   ${DOMAINS.map(
                     (d) =>
                       `<button type="button" class="chip" data-domain="${esc(d)}">${esc(d)}</button>`
                   ).join("")}
                 </div>
-              </div>
+              </section>
 
-              <label class="field">
-                <span class="field__label">正文</span>
+              <section class="draft__section">
+                <div class="draft__section-head">
+                  <span class="draft__section-no">03</span>
+                  <span class="draft__section-title">正文</span>
+                  <span class="draft__section-meta mono" data-word-count>0 字</span>
+                </div>
                 <textarea
                   class="textarea draft__text"
                   data-draft-body
                   rows="12"
                   placeholder="从改革的起因、具体动作、推进方式写到效果与争议。"
                 ></textarea>
-              </label>
+                <div class="draft__meter">
+                  <div class="draft__meter-bar"><span data-word-bar></span></div>
+                </div>
+              </section>
 
-              <div class="draft__meter">
-                <div class="draft__meter-bar"><span data-word-bar></span></div>
-                <span class="draft__meter-text mono" data-word-count>0 字</span>
-              </div>
-
-              <div class="field">
-                <span class="field__label">来源链接</span>
+              <section class="draft__section">
+                <div class="draft__section-head">
+                  <span class="draft__section-no">04</span>
+                  <span class="draft__section-title">来源</span>
+                </div>
                 <div class="draft__sources" data-draft-sources></div>
-                <button class="btn btn--quiet btn--sm" data-add-source type="button">
+                <button class="btn btn--quiet btn--sm draft__add-source" data-add-source type="button">
                   + 添加来源
                 </button>
-              </div>
+              </section>
 
               <div class="draft__actions">
                 <span class="field__hint" data-draft-status></span>

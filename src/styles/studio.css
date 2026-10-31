@@ -597,10 +597,71 @@ label.btn {
 }
 
 .draft__body {
-  padding: 20px 22px 22px;
+  padding: 0 22px 22px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 22px;
+}
+
+.draft__lede {
+  margin: 0;
+  padding: 12px 22px 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--ink-3);
+}
+
+/* —— 编辑器分区块：编号 + 细规则线，与对话区开场卡同一套编号语言 —— */
+.draft__section {
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.draft__section--first {
+  border-top: 0;
+  padding-top: 20px;
+}
+
+.draft__section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+}
+
+.draft__section-no {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.6;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+}
+
+.draft__section-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+
+/* 字数放区块标题右侧，替代原来压在正文下方的进度条文字 */
+.draft__section-meta {
+  margin-left: auto;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+}
+
+.draft__section-meta[data-state="ok"] {
+  color: var(--ok);
+}
+
+.draft__section-meta[data-state="over"] {
+  color: var(--warn);
 }
 
 .draft__row {
@@ -643,10 +704,66 @@ label.btn {
   color: var(--plum);
 }
 
-.chip.is-on {
-  background: var(--plum);
-  border-color: var(--plum);
-  color: #fff;
+/* 编辑器里的选项不做紫块填充：金色细边 + 紫字，符合「金色只做线」 */
+.studio__draft .chip {
+  border-radius: 0;
+  letter-spacing: 0.02em;
+}
+
+.studio__draft .chip.is-on {
+  background: transparent;
+  border-color: var(--gold);
+  color: var(--plum);
+  font-weight: 500;
+}
+
+/* —— 编辑器控件：去掉填充块与圆角，只留下划线 —— */
+.studio__draft .field__label {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--ink-3);
+  margin-bottom: 6px;
+}
+
+.studio__draft .input,
+.studio__draft .select,
+.studio__draft .textarea {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line-2);
+  border-radius: 0;
+  padding: 7px 0;
+}
+
+.studio__draft .input:hover,
+.studio__draft .select:hover,
+.studio__draft .textarea:hover {
+  border-bottom-color: var(--line-strong);
+}
+
+.studio__draft .input:focus,
+.studio__draft .select:focus,
+.studio__draft .textarea:focus {
+  background: transparent;
+  box-shadow: none;
+  border-bottom-color: var(--plum);
+}
+
+.studio__draft .select {
+  background-position: right 2px center;
+  padding-right: 24px;
+}
+
+.studio__draft .draft__text {
+  border: 1px solid var(--line);
+  padding: 14px 16px;
+  min-height: 260px;
+  font-size: 15px;
+  line-height: 1.95;
+}
+
+.studio__draft .draft__text:focus {
+  border-color: var(--gold);
 }
 
 .draft__text {
@@ -655,18 +772,18 @@ label.btn {
   line-height: 1.85;
 }
 
+/* 字数进度压成一条 1px 的金线 */
 .draft__meter {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-top: -8px;
+  margin-top: -6px;
 }
 
 .draft__meter-bar {
   flex: 1;
-  height: 2px;
-  background: var(--paper-3);
-  border-radius: 1px;
+  height: 1px;
+  background: var(--line);
   overflow: hidden;
 }
 
@@ -687,26 +804,16 @@ label.btn {
   background: var(--warn);
 }
 
-.draft__meter-text {
-  font-size: 11.5px;
-  color: var(--ink-3);
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-}
-
-.draft__meter-text[data-state="ok"] {
-  color: var(--ok);
-}
-
-.draft__meter-text[data-state="over"] {
-  color: var(--warn);
-}
-
 .draft__sources {
   display: flex;
   flex-direction: column;
   gap: 6px;
   margin-bottom: 8px;
+}
+
+/* quiet 按钮在纵向 flex 里会被拉成整行，来源区的添加入口要靠左 */
+.draft__add-source {
+  align-self: flex-start;
 }
 
 .source-row {
@@ -741,6 +848,14 @@ label.btn {
 
 .draft__actions .field__hint[data-state="ok"] {
   color: var(--ok);
+}
+
+/* 两栏等高：对话区跟着编辑器撑到视口高度，否则左边短一截、底下空一块 */
+@media (min-width: 1081px) {
+  .studio__chat,
+  .studio__draft {
+    height: min(780px, calc(100vh - 108px));
+  }
 }
 
 @media (max-width: 1080px) {
