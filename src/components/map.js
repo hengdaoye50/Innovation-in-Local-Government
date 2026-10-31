@@ -32,8 +32,10 @@ const SIDE_COLORS = ["#0c070c", "#150b14", "#1f101d", "#2b1426"];
 const PAD_X = 24;
 // 上部留白大于底部：省面下方还有侧壁和投影阴影（合计约 34 单位），
 // 若按对称留白，陆地会整体偏上、下方空出一截
-const PAD_TOP = 34;
-const PAD_BOTTOM = 4;
+// 南海诸岛拆走后，主图只剩到海南岛（约 18°N），bbox 变矮、缩放随之变大，
+// 因此上下要留足余量，否则陆地会顶出舞台
+const PAD_TOP = 56;
+const PAD_BOTTOM = 34;
 
 function svgEl(tag, attrs = {}, children = []) {
   const node = document.createElementNS(NS, tag);
@@ -378,11 +380,43 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
       String(f.properties?.adcode || "").includes("_JD")
     );
 
+    // 南海诸岛的岛礁本身挂在海南省的 MultiPolygon 里，只移走九段线不够。
+    // 这里按纬度把完全位于海南岛以南的多边形拆出来（海南岛最南端约 18.15°N，
+    // 西沙、南沙都在 18°N 以南），主图只留大陆与海南本岛，拆出的部分并入附图。
+    const SOUTH_LAT = 18.2;
+    const southernPolys = [];
+    const mainLand = [];
+
+    for (const feature of land) {
+      const geom = feature.geometry;
+      if (!geom || geom.type !== "MultiPolygon") {
+        mainLand.push(feature);
+        continue;
+      }
+      const keep = [];
+      for (const poly of geom.coordinates) {
+        let maxLat = -90;
+        for (const ring of poly) {
+          for (const point of ring) if (point[1] > maxLat) maxLat = point[1];
+        }
+        if (maxLat < SOUTH_LAT) southernPolys.push(poly);
+        else keep.push(poly);
+      }
+      if (keep.length === geom.coordinates.length) {
+        mainLand.push(feature);
+      } else if (keep.length) {
+        mainLand.push({
+          ...feature,
+          geometry: { type: "MultiPolygon", coordinates: keep },
+        });
+      }
+    }
+
     const base = geoConicEqualArea().parallels([25, 47]).rotate([-105, 0]);
-    projection = fitProjection(base, land);
+    projection = fitProjection(base, mainLand);
     pathGen = geoPath(projection).digits(1);
 
-    const shapes = land
+    const shapes = mainLand
       .map((feature) => {
         const c = pathGen.centroid(feature);
         return { feature, name: feature.properties.name, cy: c[1] };
@@ -451,25 +485,44 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
       gTops.append(top);
     }
 
-    // 九段线不做主图的一部分：它会让整张图的视觉重心往下拽。
-    // 按国内地图出版的标准做法缩成右下角的附图，既不缺版图要素，也不干扰主体构图。
-    const gInset = svgEl("g", { class: "map-inset" });
-    for (const feature of islands) {
-      const d = pathGen(feature);
-      if (!d) continue;
+    // 附图装的是九段线 + 从海南拆出来的南海岛礁。
+    // 按国内地图出版的标准做法缩到右下角，既不缺版图要素，也不让它们拖拽主图的构图。
+    const insetFeatures = [...islands];
+    if (southernPolys.length) {
+      insetFeatures.push({
+        type: "Feature",
+        properties: { name: "南海诸岛" },
+        geometry: { type: "MultiPolygon", coordinates: southernPolys },
+      });
+    }
 
-      const b = pathGen.bounds(feature);
+    const gInset = svgEl("g", { class: "map-inset" });
+    if (insetFeatures.length) {
+      const collection = { type: "FeatureCollection", features: insetFeatures };
+      const b = pathGen.bounds(collection);
       const w = Math.max(1, b[1][0] - b[0][0]);
       const h = Math.max(1, b[1][1] - b[0][1]);
       // 附图尺寸固定，线宽由 non-scaling-stroke 保持恒定，不随缩放变细
       const boxW = 88;
-      const boxH = 108;
-      const s = Math.min(boxW / w, boxH / h) * 0.84;
+      const boxH = 116;
+      const s = Math.min(boxW / w, boxH / h) * 0.86;
       const boxX = VIEW_W - boxW - 6;
-      // 不能贴底：底部有纸色渐隐，附图会糊在里面。放在东侧海面的空白处
-      const boxY = VIEW_H - boxH - 150;
+      // 放右上角的海面：右下角已被广东、福建占住，附图放那儿会叠在主图上
+      const boxY = 96;
       const tx = boxX + (boxW - w * s) / 2 - b[0][0] * s;
       const ty = boxY + (boxH - h * s) / 2 - b[0][1] * s;
+
+      const inner = svgEl("g", {
+        transform: `translate(${tx.toFixed(1)} ${ty.toFixed(1)}) scale(${s.toFixed(3)})`,
+      });
+      for (const feature of insetFeatures) {
+        const d = pathGen(feature);
+        if (!d) continue;
+        const isIsland = feature.properties?.name === "南海诸岛";
+        inner.append(
+          svgEl("path", { d, class: isIsland ? "island-fill" : "island-line" })
+        );
+      }
 
       gInset.append(
         svgEl("rect", {
@@ -480,11 +533,7 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
           rx: 1.5,
           class: "inset-frame",
         }),
-        svgEl(
-          "g",
-          { transform: `translate(${tx.toFixed(1)} ${ty.toFixed(1)}) scale(${s.toFixed(3)})` },
-          [svgEl("path", { d, class: "island-line" })]
-        )
+        inner
       );
     }
 

@@ -553,6 +553,14 @@
   vector-effect: non-scaling-stroke;
 }
 
+/* 附图里的岛礁：填充 + 细描边，缩小后仍能看出分布 */
+.island-fill {
+  fill: rgba(126, 12, 110, 0.62);
+  stroke: rgba(212, 175, 55, 0.6);
+  stroke-width: 0.6;
+  vector-effect: non-scaling-stroke;
+}
+
 /* 南海诸岛附图：半透明底 + 金色细边，从主图上游离出来 */
 .inset-frame {
   fill: rgba(24, 14, 24, 0.55);
