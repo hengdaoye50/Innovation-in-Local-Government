@@ -380,12 +380,29 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
       String(f.properties?.adcode || "").includes("_JD")
     );
 
-    // 南海诸岛的岛礁本身挂在海南省的 MultiPolygon 里，只移走九段线不够。
-    // 这里按纬度把完全位于海南岛以南的多边形拆出来（海南岛最南端约 18.15°N，
-    // 西沙、南沙都在 18°N 以南），主图只留大陆与海南本岛，拆出的部分并入附图。
-    const SOUTH_LAT = 18.2;
+    // 南海诸岛的岛礁挂在省级 MultiPolygon 里，只移走九段线不够。而且它们不都归海南：
+    // 西沙、中沙、南沙并进海南省，东沙群岛并进广东省，按纬度切会漏掉东沙。
+    // 改为按"孤立"判定：位于南海海域、且与本省主体相距超过 1.5°（约 165 km）的碎块
+    // 移入附图。珠江口、雷州、涠洲这些沿海岛屿紧贴主体，不会被误移。
+    const SEA_BOX = { minLng: 105, maxLng: 120, minLat: 3, maxLat: 21.5 };
+    const ORPHAN_GAP = 1.5;
     const southernPolys = [];
     const mainLand = [];
+
+    const minDistToMain = (poly, mainPoly) => {
+      let best = Infinity;
+      for (const ring of poly) {
+        for (const [lng, lat] of ring) {
+          for (const mainRing of mainPoly) {
+            for (const [mlng, mlat] of mainRing) {
+              const d = Math.hypot(lng - mlng, lat - mlat);
+              if (d < best) best = d;
+            }
+          }
+        }
+      }
+      return best;
+    };
 
     for (const feature of land) {
       const geom = feature.geometry;
@@ -393,14 +410,41 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
         mainLand.push(feature);
         continue;
       }
+
+      let mainIdx = 0;
+      for (let i = 1; i < geom.coordinates.length; i += 1) {
+        if (geom.coordinates[i][0].length > geom.coordinates[mainIdx][0].length) mainIdx = i;
+      }
+      const mainPoly = geom.coordinates[mainIdx];
+
       const keep = [];
-      for (const poly of geom.coordinates) {
-        let maxLat = -90;
-        for (const ring of poly) {
-          for (const point of ring) if (point[1] > maxLat) maxLat = point[1];
+      for (let i = 0; i < geom.coordinates.length; i += 1) {
+        const poly = geom.coordinates[i];
+        if (i === mainIdx) {
+          keep.push(poly);
+          continue;
         }
-        if (maxLat < SOUTH_LAT) southernPolys.push(poly);
-        else keep.push(poly);
+        let sumLng = 0;
+        let sumLat = 0;
+        let count = 0;
+        for (const ring of poly)
+          for (const [lng, lat] of ring) {
+            sumLng += lng;
+            sumLat += lat;
+            count += 1;
+          }
+        const cLng = sumLng / count;
+        const cLat = sumLat / count;
+        const inSea =
+          cLng > SEA_BOX.minLng &&
+          cLng < SEA_BOX.maxLng &&
+          cLat > SEA_BOX.minLat &&
+          cLat < SEA_BOX.maxLat;
+        if (inSea && minDistToMain(poly, mainPoly) > ORPHAN_GAP) {
+          southernPolys.push(poly);
+        } else {
+          keep.push(poly);
+        }
       }
       if (keep.length === geom.coordinates.length) {
         mainLand.push(feature);
@@ -485,8 +529,8 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
       gTops.append(top);
     }
 
-    // 附图装的是九段线 + 从海南拆出来的南海岛礁。
-    // 按国内地图出版的标准做法缩到右下角，既不缺版图要素，也不让它们拖拽主图的构图。
+    // 附图装的是九段线 + 移出主图的南海岛礁（西沙/中沙/南沙并进海南，东沙并进广东）。
+    // 按国内地图出版的做法缩成一小块，既不缺版图要素，也不让它们拖累主图构图。
     const insetFeatures = [...islands];
     if (southernPolys.length) {
       insetFeatures.push({
@@ -503,12 +547,14 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
       const w = Math.max(1, b[1][0] - b[0][0]);
       const h = Math.max(1, b[1][1] - b[0][1]);
       // 附图尺寸固定，线宽由 non-scaling-stroke 保持恒定，不随缩放变细
-      const boxW = 88;
-      const boxH = 116;
+      const boxW = 80;
+      const boxH = 104;
       const s = Math.min(boxW / w, boxH / h) * 0.86;
-      const boxX = VIEW_W - boxW - 6;
-      // 放右上角的海面：右下角已被广东、福建占住，附图放那儿会叠在主图上
-      const boxY = 96;
+      const boxX = VIEW_W - boxW - 4;
+      // 放在东侧海面（长江口以东）：右下角放不下 —— 舞台有 rotateX(14deg) 透视，
+      // viewBox 底边落到屏幕可视区之外还被底部渐变遮住，贴底的附图必被切；
+      // 而 y<500 才避开台湾（561~622, 501~568），x>588 才避开浙江/江苏/上海东岸
+      const boxY = 380;
       const tx = boxX + (boxW - w * s) / 2 - b[0][0] * s;
       const ty = boxY + (boxH - h * s) / 2 - b[0][1] * s;
 
