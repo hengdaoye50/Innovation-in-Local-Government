@@ -3,7 +3,7 @@ import { esc, qs, formatDate, mountReveal } from "../lib/dom.js";
 import { slides as slidesApi, posts as postsApi } from "../lib/api.js";
 import { renderMarkdown } from "../lib/markdown.js";
 import { createCommentBlock } from "../components/comments.js";
-import { DEMO_SLIDES, DEMO_POSTS } from "../lib/demo.js";
+import { DEMO_SLIDES } from "../lib/demo.js";
 
 export async function mountSlideDetail(root, id) {
   root.innerHTML = `<div class="shell detail__loading"><div class="skeleton" style="height:40px;width:50%"></div></div>`;
@@ -74,7 +74,7 @@ export async function mountPostDetail(root, id) {
   try {
     post = await postsApi.detail(id);
   } catch {
-    post = DEMO_POSTS.find((p) => p.id === id) || null;
+    post = null;
   }
   if (!post) {
     root.innerHTML = emptyHtml("文章不存在", "它可能已被移除。");
