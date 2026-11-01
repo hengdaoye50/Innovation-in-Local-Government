@@ -154,6 +154,25 @@ posts      id, title, author, source_url, tags, body, cover_url, published_at
 - D1 绑定名 `DB`；KV 绑定名 `SESSIONS`。
 - 必需 Secrets：`CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`、`FIREWORKS_API_KEY`、
   `AUTH_SECRET`、`SEARCH_API_KEY`（接入检索后）。
+
+### 数据库迁移
+
+跑 `wrangler d1 migrations apply --remote` 前先确认 `d1_migrations` 表和库里实际结构一致：
+
+```bash
+npx wrangler d1 execute innovation-localgov --remote --command "SELECT name FROM d1_migrations"
+npx wrangler d1 execute innovation-localgov --remote --command "PRAGMA table_info(<表名>)"
+```
+
+**踩过的坑**：线上表结构是早先手工建的，`d1_migrations` 却是空的，于是 `migrations apply` 认为七条全没跑过，
+从 `0001` 重头开始——前两条无害（`IF NOT EXISTS`、`ON CONFLICT`），到 `0003` 加 `district` 列时撞
+`duplicate column name` 中断。更隐蔽的后果是 `0002_seed_admin.sql` 里有
+`ON CONFLICT DO UPDATE SET password_hash = excluded.password_hash`，会把人已有账号的密码重置掉。
+
+排查和补齐见 `scripts/repair-migrations-0003-0007.sql`：用 `CREATE TABLE IF NOT EXISTS` 补表、
+手动 `ALTER TABLE` 补列，再把遗漏的版本号 `INSERT OR IGNORE` 进 `d1_migrations`。
+新增迁移时，凡是 `ALTER TABLE ADD COLUMN`（SQLite 没有 IF NOT EXISTS），代码里都要留缺列降级，
+并且**绝不能把「仅自己可见」这类隐私选项静默降级成公开**。
 - 所有部署与 CI/CD 修改都需要用户先确认。
 
 ## 视觉
