@@ -6,8 +6,8 @@
  * 表结构见 migrations/0006_annotations.sql。线上若还没跑过迁移，
  * 这里用 CREATE TABLE IF NOT EXISTS 兜一次底，保证功能能先用起来。
  */
-import { ok, fail, methodNotAllowed, readJson, handleError } from "../../../lib/http.js";
-import { getSession, isReadOnly, checkBindings } from "../../../lib/auth.js";
+import { ok, fail, methodNotAllowed, readJson, handleError } from "../../../../lib/http.js";
+import { getSession, isReadOnly, checkBindings } from "../../../../lib/auth.js";
 
 // 与 public/data/readings/*.json 对应；未登记的文献不接受标注
 const READING_IDS = new Set(["flyvbjerg-case-study"]);
