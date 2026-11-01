@@ -48,14 +48,16 @@ export function mountAdmin(root) {
       </header>
 
       <div class="admin__tabs" role="tablist">
-        <button class="admin__tab is-on" data-tab="cases" role="tab">案例审核</button>
+        <button class="admin__tab is-on" data-tab="stats" role="tab">数据</button>
+        <button class="admin__tab" data-tab="cases" role="tab">案例审核</button>
         <button class="admin__tab" data-tab="slides" role="tab">展位管理</button>
         <button class="admin__tab" data-tab="posts" role="tab">文章管理</button>
         <button class="admin__tab" data-tab="invites" role="tab">邀请码</button>
         ${user.role === "admin" ? `<button class="admin__tab" data-tab="users" role="tab">用户管理</button>` : ""}
       </div>
 
-      <section class="admin__panel" data-panel="cases"></section>
+      <section class="admin__panel" data-panel="stats"></section>
+      <section class="admin__panel" data-panel="cases" hidden></section>
       <section class="admin__panel" data-panel="slides" hidden></section>
       <section class="admin__panel" data-panel="posts" hidden></section>
       <section class="admin__panel" data-panel="invites" hidden></section>
@@ -64,6 +66,7 @@ export function mountAdmin(root) {
   `;
 
   const panels = {
+    stats: qs('[data-panel="stats"]', root),
     cases: qs('[data-panel="cases"]', root),
     slides: qs('[data-panel="slides"]', root),
     posts: qs('[data-panel="posts"]', root),
@@ -72,6 +75,7 @@ export function mountAdmin(root) {
   if (user.role === "admin") panels.users = qs('[data-panel="users"]', root);
 
   const loaders = {
+    stats: () => renderStats(panels.stats),
     cases: () => renderCases(panels.cases),
     slides: () => renderSlides(panels.slides),
     posts: () => renderPosts(panels.posts),
@@ -90,11 +94,142 @@ export function mountAdmin(root) {
     });
   });
 
-  loaders.cases();
+  // 默认停在「数据」这一栏，先把它加载出来
+  loaders.stats();
   mountReveal(root);
 }
 
 /* ————————— 案例审核 ————————— */
+
+/* ————————— 数据面板 ————————— */
+
+// 文献标题在本地 JSON 里，接口只回 id，这里补一下用于显示
+const READING_TITLES = { "flyvbjerg-case-study": "案例研究的五个误解" };
+
+async function renderStats(panel) {
+  panel.innerHTML = `<div class="card"><div class="skeleton" style="height:120px"></div></div>`;
+
+  let data = null;
+  try {
+    data = await api.get("/api/admin/stats");
+  } catch (err) {
+    panel.innerHTML = `<div class="card"><div class="empty">${esc(
+      err.message || "读取失败"
+    )}</div></div>`;
+    return;
+  }
+
+  const { active, totals, trend, ranking, hasData } = data || {};
+  const maxViews = Math.max(1, ...(trend || []).map((d) => d.views));
+
+  const rankBlock = (title, rows, type) => `
+    <section class="card stats__rank">
+      <header class="admin__panel-head">
+        <h2 class="h3">${title}</h2>
+        <span class="meta">按读过人数</span>
+      </header>
+      ${
+        rows && rows.length
+          ? `<ol class="stats__list">
+              ${rows
+                .map(
+                  (r, i) => `
+                <li>
+                  <span class="stats__no mono">${String(i + 1).padStart(2, "0")}</span>
+                  <span class="stats__name">${esc(
+                    r.title ||
+                      (type === "reading" ? READING_TITLES[r.id] || r.id : r.id)
+                  )}</span>
+                  <span class="stats__nums mono"><b>${r.views}</b> 人 · ${r.comments} 评</span>
+                </li>`
+                )
+                .join("")}
+            </ol>`
+          : `<p class="empty">还没有浏览记录。</p>`
+      }
+    </section>`;
+
+  panel.innerHTML = `
+    ${
+      hasData
+        ? ""
+        : `<div class="card stats__notice">
+             <p class="field__hint" style="margin:0;line-height:1.8">
+               访问记录从这次上线开始统计，所以现在还没有数据。等同学用起来，
+               这里的活跃度和排行会自动出现。
+             </p>
+           </div>`
+    }
+
+    <div class="stats__grid">
+      <section class="card stats__metrics">
+        <div class="stats__metric">
+          <span class="stats__value">${active?.today ?? 0}</span>
+          <span class="stats__label">今日活跃</span>
+        </div>
+        <div class="stats__metric">
+          <span class="stats__value">${active?.week ?? 0}</span>
+          <span class="stats__label">近 7 天活跃</span>
+        </div>
+        <div class="stats__metric">
+          <span class="stats__value">${active?.month ?? 0}</span>
+          <span class="stats__label">近 30 天活跃</span>
+        </div>
+      </section>
+
+      <section class="card stats__metrics">
+        <div class="stats__metric">
+          <span class="stats__value">${totals?.views ?? 0}</span>
+          <span class="stats__label">累计浏览</span>
+        </div>
+        <div class="stats__metric">
+          <span class="stats__value">${totals?.users ?? 0}</span>
+          <span class="stats__label">账号</span>
+        </div>
+        <div class="stats__metric">
+          <span class="stats__value">${totals?.cases ?? 0}</span>
+          <span class="stats__label">已发布案例</span>
+        </div>
+        <div class="stats__metric">
+          <span class="stats__value">${totals?.comments ?? 0}</span>
+          <span class="stats__label">留言</span>
+        </div>
+      </section>
+    </div>
+
+    <section class="card stats__trend">
+      <header class="admin__panel-head">
+        <h2 class="h3">近两周</h2>
+        <span class="meta">柱高为当日浏览，数字为当日活跃人数</span>
+      </header>
+      ${
+        trend && trend.length
+          ? `<div class="stats__bars">
+              ${trend
+                .map(
+                  (d) => `
+                <div class="stats__bar-item" title="${d.day}">
+                  <span class="stats__bar-users mono">${d.users}</span>
+                  <div class="stats__bar" style="height:${Math.max(
+                    4,
+                    Math.round((d.views / maxViews) * 96)
+                  )}px"></div>
+                  <span class="stats__bar-day mono">${d.day.slice(5)}</span>
+                </div>`
+                )
+                .join("")}
+            </div>`
+          : `<p class="empty">近两周还没有访问。</p>`
+      }
+    </section>
+
+    <div class="stats__ranks">
+      ${rankBlock("案例", ranking?.case, "case")}
+      ${rankBlock("课堂展位", ranking?.slide, "slide")}
+      ${rankBlock("文献共读", ranking?.reading, "reading")}
+    </div>
+  `;
+}
 
 async function renderCases(panel) {
   panel.innerHTML = `

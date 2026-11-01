@@ -1047,3 +1047,142 @@
     line-height: 1.85;
   }
 }
+
+/* —— 后台数据面板 —— */
+.stats__notice {
+  margin-bottom: 18px;
+  border-left: 1px solid var(--line-gold);
+}
+
+.stats__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.stats__metrics {
+  display: flex;
+  gap: 28px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  padding: 22px 24px;
+}
+
+.stats__metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stats__value {
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 1;
+  color: var(--plum);
+  font-variant-numeric: tabular-nums;
+}
+
+.stats__label {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--ink-3);
+}
+
+.stats__trend {
+  margin-bottom: 18px;
+}
+
+.stats__bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding-top: 16px;
+  overflow-x: auto;
+}
+
+.stats__bar-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 34px;
+}
+
+.stats__bar-users {
+  font-size: 10px;
+  color: var(--ink-3);
+}
+
+.stats__bar {
+  width: 14px;
+  background: var(--gold);
+  border-radius: 1px 1px 0 0;
+  opacity: 0.75;
+}
+
+.stats__bar-day {
+  font-size: 9.5px;
+  color: var(--ink-3);
+}
+
+.stats__ranks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.stats__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.stats__list li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: baseline;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.stats__list li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.stats__no {
+  font-size: 10px;
+  color: var(--gold);
+}
+
+.stats__name {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stats__nums {
+  font-size: 10.5px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.stats__nums b {
+  color: var(--plum);
+  font-weight: 500;
+}
+
+@media (max-width: 1080px) {
+  .stats__grid,
+  .stats__ranks {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

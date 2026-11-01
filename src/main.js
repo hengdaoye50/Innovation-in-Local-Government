@@ -10,7 +10,7 @@ import "./styles/auth.css";
 import { mountNav, mountFooter } from "./components/chrome.js";
 import { route, setNotFound, start, navigate, currentPath, onRouteChange } from "./lib/router.js";
 import { getState, setState } from "./lib/store.js";
-import { auth as authApi } from "./lib/api.js";
+import { auth as authApi, api } from "./lib/api.js";
 import { toast } from "./lib/dom.js";
 
 import { atlasSection, mountAtlas } from "./pages/atlas.js";
@@ -125,7 +125,30 @@ setNotFound(renderNotFound);
 onRouteChange((path) => {
   dispose();
   if (!path.startsWith("/login")) document.body.classList.remove("page-auth");
+  reportView(path);
 });
+
+/**
+ * 访问上报：后台的日活/浏览排行靠它。
+ * 只报登录用户，登录页不算；失败静默，埋点不该影响页面。
+ */
+function reportView(path) {
+  if (!getState().user) return;
+  const targets = [
+    [/^\/case\/(.+)$/, "case"],
+    [/^\/slide\/(.+)$/, "slide"],
+    [/^\/reading\/(.+)$/, "reading"],
+  ];
+  for (const [re, type] of targets) {
+    const hit = path.match(re);
+    if (hit) {
+      api.post("/api/views", { targetType: type, targetId: hit[1] }).catch(() => {});
+      return;
+    }
+  }
+  const page = { "/": "atlas", "/admin": "admin" }[path];
+  if (page) api.post("/api/views", { targetType: "page", targetId: page }).catch(() => {});
+}
 
 /* —————————————— 启动 —————————————— */
 
