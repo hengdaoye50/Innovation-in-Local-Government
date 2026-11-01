@@ -42,6 +42,11 @@
   --line-strong: rgba(126, 12, 110, 0.32);
   --line-gold: rgba(196, 162, 101, 0.5);
 
+  /* 纸面上做抬升面用的纸白：比纸底更亮，卡片才「浮」得起来 */
+  --paper-raised: #fffdf8;
+  /* 控件的凹陷底色：比纸底略深，像按进纸里的一块 */
+  --paper-inset: #f7efe2;
+
   /* —— 语义 —— */
   --ok: #3d7a5c;
   --warn: #b06a1e;
@@ -57,13 +62,25 @@
   /* —— 尺寸 —— */
   --shell: 1180px;
   --gutter: 24px;
-  --radius: 4px;
-  --radius-sm: 3px;
-  --radius-btn: 2px;
 
-  /* —— 阴影 —— */
-  --shadow-float: 0 8px 28px rgba(30, 18, 28, 0.1);
-  --shadow-lift: 0 12px 40px rgba(30, 18, 28, 0.14);
+  /* 圆角阶梯：极小标记 4 / 控件 8 / 卡片 12 / 浮层 16。
+     每档只差一档用途，不再混用 0–4px 这种看不出差别的值 */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-btn: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --radius-full: 999px;
+
+  /* —— 阴影 ——
+     纸本层次不靠重投影：一级是接触阴影（元素与纸的贴合），
+     二级是环境阴影（离纸的高度），两者都很淡，靠叠加而非浓度 */
+  --shadow-xs: 0 1px 2px rgba(31, 20, 28, 0.04);
+  --shadow-sm: 0 1px 2px rgba(31, 20, 28, 0.04), 0 4px 12px -6px rgba(31, 20, 28, 0.1);
+  --shadow-md: 0 2px 4px rgba(31, 20, 28, 0.05), 0 12px 28px -14px rgba(31, 20, 28, 0.16);
+  --shadow-lg: 0 4px 8px rgba(31, 20, 28, 0.06), 0 24px 56px -24px rgba(31, 20, 28, 0.2);
+  --shadow-float: var(--shadow-md);
+  --shadow-lift: var(--shadow-lg);
 
   /* —— 动效 —— */
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
@@ -169,7 +186,6 @@ button {
 :focus-visible {
   outline: 2px solid var(--plum);
   outline-offset: 3px;
-  border-radius: 2px;
 }
 
 /* 细滚动条 */

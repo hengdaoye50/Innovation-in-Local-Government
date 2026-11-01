@@ -135,7 +135,7 @@
   white-space: nowrap;
   transition: background var(--dur-fast) var(--ease),
     color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease),
-    transform var(--dur-fast) var(--ease);
+    box-shadow var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
 }
 
 .btn:active {
@@ -145,31 +145,37 @@
 .btn--primary {
   background: var(--plum);
   color: #fff;
+  box-shadow: 0 1px 2px rgba(92, 8, 79, 0.18), 0 6px 16px -8px rgba(92, 8, 79, 0.4);
 }
 
 .btn--primary:hover {
   background: var(--plum-bright);
   color: #fff;
+  box-shadow: 0 1px 2px rgba(92, 8, 79, 0.2), 0 10px 24px -10px rgba(92, 8, 79, 0.46);
 }
 
 .btn--primary:active {
   background: var(--plum-deep);
+  box-shadow: 0 1px 2px rgba(92, 8, 79, 0.24);
 }
 
 .btn--ghost {
   border: 1px solid var(--line-strong);
   color: var(--plum);
-  background: transparent;
+  background: var(--paper-raised);
+  box-shadow: var(--shadow-xs);
 }
 
 .btn--ghost:hover {
-  background: rgba(126, 12, 110, 0.06);
+  background: #fff;
   border-color: var(--plum);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn--quiet {
   color: var(--ink-2);
   padding: 0 12px;
+  border-radius: var(--radius-btn);
 }
 
 .btn--quiet:hover {
@@ -180,12 +186,14 @@
 .btn--gold {
   border: 1px solid var(--line-gold);
   color: var(--plum-deep);
-  background: rgba(196, 162, 101, 0.08);
+  background: var(--paper-raised);
+  box-shadow: var(--shadow-xs);
 }
 
 .btn--gold:hover {
-  background: rgba(196, 162, 101, 0.16);
+  background: rgba(196, 162, 101, 0.1);
   border-color: var(--gold);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn--sm {
@@ -213,7 +221,7 @@
   height: 22px;
   padding: 0 8px;
   border: 1px solid var(--line-gold);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.08em;
@@ -246,12 +254,13 @@
 /* —— 卡片 —— */
 .card {
   position: relative;
-  background: var(--paper-2);
+  background: var(--paper-raised);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 24px;
+  box-shadow: var(--shadow-sm);
   transition: transform var(--dur) var(--ease),
-    border-color var(--dur) var(--ease);
+    border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
 
 .card::before {
@@ -261,12 +270,14 @@
   left: 24px;
   width: 32px;
   height: 1px;
+  border-radius: 1px;
   background: var(--gold);
 }
 
 .card--hover:hover {
   transform: translateY(-2px);
   border-color: var(--line-gold);
+  box-shadow: var(--shadow-md);
 }
 
 .card--flush {
@@ -297,13 +308,14 @@
 .textarea,
 .select {
   width: 100%;
-  background: var(--paper-3);
-  border: 1px solid var(--line);
+  background: var(--paper-inset);
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
   padding: 10px 14px;
   font-size: 15px;
   line-height: 1.6;
   color: var(--ink);
+  box-shadow: inset 0 1px 2px rgba(31, 20, 28, 0.04);
   transition: border-color var(--dur-fast) var(--ease),
     box-shadow var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
   appearance: none;
@@ -324,7 +336,7 @@
 .textarea:focus,
 .select:focus {
   outline: none;
-  background: #fff;
+  background: var(--paper-raised);
   border-color: var(--plum);
   box-shadow: 0 0 0 3px rgba(126, 12, 110, 0.1);
 }
