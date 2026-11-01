@@ -5,7 +5,7 @@
  */
 import { ok, fail, methodNotAllowed, readJson, handleError, randomId } from "../../lib/http.js";
 import { getSession, isStaff, checkBindings } from "../../lib/auth.js";
-import { listSlides, getSlide } from "../../lib/db.js";
+import { listSlides, getSlide, hasSlideVisibility } from "../../lib/db.js";
 import { reviewSlide } from "../../lib/review.js";
 
 export async function onRequest(context) {
@@ -27,6 +27,7 @@ export async function onRequest(context) {
         limit: url.searchParams.get("limit") || 24,
         viewerId: session?.id || 0,
         isAdmin: session?.role === "admin",
+        hasVisibility: await hasSlideVisibility(env),
       });
       return ok({ items });
     }
@@ -56,28 +57,52 @@ export async function onRequest(context) {
       const description = String(body.description || "").slice(0, 2000);
       const author = String(body.author || "").trim().slice(0, 40) || session.displayName;
       // 可见性：private 只有上传者与管理员能看，默认公开
-      const visibility = body.visibility === "private" ? "private" : "public";
+      const allowPrivate = await hasSlideVisibility(env);
+      const visibility = body.visibility === "private" && allowPrivate ? "private" : "public";
 
-      await env.DB.prepare(
-        `INSERT INTO slides (id, title, course, term, author_id, author_name, cover_url,
-          file_url, description, slide_count, status, visibility, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', ?, ?)`
-      )
-        .bind(
-          slideId,
-          title,
-          String(body.course || "").slice(0, 40),
-          String(body.term || "").slice(0, 20),
-          session.id,
-          author,
-          String(body.coverUrl || "").slice(0, 500),
-          String(body.fileUrl || "").slice(0, 500),
-          description,
-          Number(body.slides) || 0,
-          visibility,
-          new Date().toISOString()
+      if (allowPrivate) {
+        await env.DB.prepare(
+          `INSERT INTO slides (id, title, course, term, author_id, author_name, cover_url,
+            file_url, description, slide_count, status, visibility, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', ?, ?)`
         )
-        .run();
+          .bind(
+            slideId,
+            title,
+            String(body.course || "").slice(0, 40),
+            String(body.term || "").slice(0, 20),
+            session.id,
+            author,
+            String(body.coverUrl || "").slice(0, 500),
+            String(body.fileUrl || "").slice(0, 500),
+            description,
+            Number(body.slides) || 0,
+            visibility,
+            new Date().toISOString()
+          )
+          .run();
+      } else {
+        // 迁移没跑：退化成原来那条语句，先让上传能用
+        await env.DB.prepare(
+          `INSERT INTO slides (id, title, course, term, author_id, author_name, cover_url,
+            file_url, description, slide_count, status, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', ?)`
+        )
+          .bind(
+            slideId,
+            title,
+            String(body.course || "").slice(0, 40),
+            String(body.term || "").slice(0, 20),
+            session.id,
+            author,
+            String(body.coverUrl || "").slice(0, 500),
+            String(body.fileUrl || "").slice(0, 500),
+            description,
+            Number(body.slides) || 0,
+            new Date().toISOString()
+          )
+          .run();
+      }
 
       // 模型评语异步生成，不阻塞上传响应；没有配密钥时保持「待评」
       context.waitUntil(

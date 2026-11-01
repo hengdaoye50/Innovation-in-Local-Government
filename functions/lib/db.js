@@ -192,12 +192,29 @@ export async function updateCaseStatus(env, id, status, aiReview, aiScore) {
   return result.meta?.changes > 0;
 }
 
-export async function listSlides(env, { limit = 24, course, term, viewerId = 0, isAdmin = false } = {}) {
+/**
+ * slides 表有没有 visibility 列。
+ * 0007 是 ALTER TABLE，迁移没跑之前查询里带这一列会直接报错，
+ * 所以先探一下，缺列时按全公开处理，展板不至于打不开。
+ */
+export async function hasSlideVisibility(env) {
+  try {
+    const { results } = await env.DB.prepare("PRAGMA table_info(slides)").all();
+    return (results || []).some((r) => r.name === "visibility");
+  } catch {
+    return false;
+  }
+}
+
+export async function listSlides(
+  env,
+  { limit = 24, course, term, viewerId = 0, isAdmin = false, hasVisibility = false } = {}
+) {
   const where = ["status = 'published'"];
   const binds = [];
-  // 私有展位只对上传者本人与管理员可见（未跑 0007 迁移时列不存在，这里会退化成公开）
-  if (!isAdmin) {
-    where.push("(COALESCE(visibility, 'public') = 'public' OR author_id = ?)");
+  // 私有展位只对上传者本人与管理员可见；没跑迁移时这一列不存在，等于全部公开
+  if (hasVisibility && !isAdmin) {
+    where.push("(visibility = 'public' OR author_id = ?)");
     binds.push(viewerId);
   }
   if (course) {
