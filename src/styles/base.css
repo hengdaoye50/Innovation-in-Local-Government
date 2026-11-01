@@ -111,6 +111,17 @@
   justify-content: flex-end;
 }
 
+/* 顶栏上的角色标记：观察员没有写作入口，用一枚金边小签标明身份 */
+.nav__role-mark {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+  padding: 2px 6px;
+  border: 1px solid var(--line-gold);
+  border-radius: var(--radius-xs);
+  white-space: nowrap;
+}
+
 .screen-ordinal {
   font-family: var(--font-display);
   font-size: 13px;
@@ -129,6 +140,11 @@
 }
 
 /* —— 按钮 —— */
+/* 组件的 display 会盖掉 hidden 属性，这里显式让 [hidden] 生效 */
+[hidden] {
+  display: none !important;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;

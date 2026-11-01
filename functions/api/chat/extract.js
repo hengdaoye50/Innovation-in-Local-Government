@@ -4,6 +4,7 @@
  */
 import { ok, fail, readJson, handleError, clientIp, rateLimit } from "../../lib/http.js";
 import { complete, llmReady } from "../../lib/llm.js";
+import { getSession, isReadOnly } from "../../lib/auth.js";
 
 const PROVINCES = [
   "北京市", "天津市", "河北省", "山西省", "内蒙古自治区",
@@ -115,6 +116,10 @@ export async function onRequest(context) {
 
   try {
     if (!llmReady(env)) return fail("服务端未配置模型密钥", 503);
+
+    const session = await getSession(env, request);
+    if (!session) return fail("请先登录再使用工作台", 401);
+    if (isReadOnly(session)) return fail("观察员账号只能浏览，不能使用工作台", 403);
 
     const limit = rateLimit(`extract:${clientIp(request)}`, { limit: 10, windowMs: 10 * 60_000 });
     if (!limit.allowed) return fail("请求过于频繁，请稍后再试", 429);

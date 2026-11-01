@@ -29,7 +29,8 @@ export async function onRequest(context) {
       `SELECT
          SUM(CASE WHEN role = 'admin' THEN 1 ELSE 0 END) AS admins,
          SUM(CASE WHEN role = 'teacher' THEN 1 ELSE 0 END) AS teachers,
-         SUM(CASE WHEN role = 'student' THEN 1 ELSE 0 END) AS students
+         SUM(CASE WHEN role = 'student' THEN 1 ELSE 0 END) AS students,
+         SUM(CASE WHEN role = 'observer' THEN 1 ELSE 0 END) AS observers
        FROM users`
     ).first();
 
@@ -48,6 +49,7 @@ export async function onRequest(context) {
         admins: Number(counts?.admins) || 0,
         teachers: Number(counts?.teachers) || 0,
         students: Number(counts?.students) || 0,
+        observers: Number(counts?.observers) || 0,
       },
     });
   } catch (err) {

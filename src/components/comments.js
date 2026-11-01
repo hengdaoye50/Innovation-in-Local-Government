@@ -14,6 +14,9 @@ export function createCommentBlock({ targetType, targetId, aiReview, aiScore } =
   const host = el("section", { class: "comments" });
   let list = [];
 
+  // 观察员只读：不渲染输入框，改成一行说明，避免填完被后端拒绝
+  const readOnly = getState().user?.role === "observer";
+
   host.innerHTML = `
     <header class="comments__head">
       <h3 class="h3">讨论</h3>
@@ -21,13 +24,17 @@ export function createCommentBlock({ targetType, targetId, aiReview, aiScore } =
     </header>
     ${renderAi(aiReview, aiScore)}
     <div class="comments__list" data-comments></div>
-    <form class="comments__form" data-comment-form>
-      <textarea class="textarea" rows="3" placeholder="写下你的判断：哪一步说得通，哪一步还需要证据。" data-comment-input></textarea>
-      <div class="comments__form-bar">
-        <span class="field__hint" data-comment-hint></span>
-        <button class="btn btn--primary btn--sm" type="submit">发表</button>
-      </div>
-    </form>
+    ${
+      readOnly
+        ? `<p class="comments__readonly">观察员账号只能阅读讨论，不参与留言。</p>`
+        : `<form class="comments__form" data-comment-form>
+             <textarea class="textarea" rows="3" placeholder="写下你的判断：哪一步说得通，哪一步还需要证据。" data-comment-input></textarea>
+             <div class="comments__form-bar">
+               <span class="field__hint" data-comment-hint></span>
+               <button class="btn btn--primary btn--sm" type="submit">发表</button>
+             </div>
+           </form>`
+    }
   `;
 
   const listEl = host.querySelector("[data-comments]");
@@ -70,7 +77,7 @@ export function createCommentBlock({ targetType, targetId, aiReview, aiScore } =
     renderList();
   }
 
-  form.addEventListener("submit", async (event) => {
+  form?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const body = input.value.trim();
     if (!body) return;

@@ -42,7 +42,7 @@ export function mountNav(actions = {}) {
       </nav>
       <div class="nav__actions">
         <span class="nav__user-slot"></span>
-        <a class="btn btn--primary btn--sm" href="#studio">开始撰写</a>
+        <a class="btn btn--primary btn--sm" href="#studio" data-write-cta>开始撰写</a>
         <button class="nav__toggle" aria-label="展开菜单" aria-expanded="false">
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3">
             <path d="M2 5h14M2 9h14M2 13h14" stroke-linecap="round"/>
@@ -122,6 +122,9 @@ function renderUser(host, actions) {
     return;
   }
   const initial = (user.displayName || user.username || "?")[0];
+  // 观察员只读：顶栏不该出现「开始撰写」这个入口，点了也只会被拦
+  const writeCta = host.querySelector("[data-write-cta]");
+  if (writeCta) writeCta.hidden = user.role === "observer";
   slot.innerHTML = `
     <span class="nav-user" title="${esc(user.username)}">
       <span class="nav-user__badge" data-role="${esc(user.role)}">${esc(initial)}</span>
@@ -129,6 +132,11 @@ function renderUser(host, actions) {
     ${
       user.role === "admin" || user.role === "teacher"
         ? `<a class="nav__link" href="#/admin">管理</a>`
+        : ""
+    }
+    ${
+      user.role === "observer"
+        ? `<span class="nav__role-mark mono" aria-label="观察员账号">观察员</span>`
         : ""
     }
     <button class="nav__link" data-action="logout">登出</button>

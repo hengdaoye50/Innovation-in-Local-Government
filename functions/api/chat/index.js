@@ -13,6 +13,7 @@ import {
   providerName,
 } from "../../lib/search.js";
 import { stream as llmStream, llmReady } from "../../lib/llm.js";
+import { getSession, isReadOnly } from "../../lib/auth.js";
 
 const MAX_TURNS = 24;
 const MAX_CHARS = 8000;
@@ -103,6 +104,11 @@ export async function onRequest(context) {
 
   try {
     if (!llmReady(env)) return fail("服务端未配置模型密钥，请联系管理员", 503);
+
+    // 工作台是登录后的写作工具：观察员与匿名请求都不该消耗模型额度
+    const session = await getSession(env, request);
+    if (!session) return fail("请先登录再使用工作台", 401);
+    if (isReadOnly(session)) return fail("观察员账号只能浏览，不能使用工作台", 403);
 
     const limit = rateLimit(`chat:${clientIp(request)}`, { limit: 30, windowMs: 10 * 60_000 });
     if (!limit.allowed) return fail("对话请求过于频繁，请稍后再试", 429);

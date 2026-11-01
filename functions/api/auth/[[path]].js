@@ -86,8 +86,9 @@ async function register({ request, env }) {
 
   const passwordHash = await hashPassword(pwd.value);
   const now = new Date().toISOString();
-  // 角色由邀请码决定：教师邀请码注册出来就是 teacher
-  const role = inviteRow.role === "teacher" || inviteRow.role === "admin" ? inviteRow.role : "student";
+  // 角色由邀请码决定：教师邀请码注册出来就是 teacher，观察员邀请码只读
+  const ALLOWED_INVITE_ROLES = ["teacher", "admin", "observer"];
+  const role = ALLOWED_INVITE_ROLES.includes(inviteRow.role) ? inviteRow.role : "student";
 
   const result = await env.DB.prepare(
     "INSERT INTO users (username, password_hash, display_name, role, status, created_at) VALUES (?, ?, ?, ?, 'active', ?)"

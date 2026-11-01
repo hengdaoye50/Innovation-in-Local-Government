@@ -45,9 +45,11 @@ export async function onRequest(context) {
     if (request.method === "POST") {
       const body = await readJson(request, 2_000);
       const wanted = String(body.role || "student");
-      if (!["student", "teacher"].includes(wanted)) return fail("角色只能是 student 或 teacher");
+      if (!["student", "teacher", "observer"].includes(wanted)) {
+        return fail("角色只能是 student、teacher 或 observer");
+      }
 
-      // 提权边界：只有管理员能发教师邀请码
+      // 提权边界：只有管理员能发教师邀请码；观察员码教师也能发（只读，不涉及提权）
       if (wanted === "teacher" && session.role !== "admin") {
         return fail("只有管理员可以签发教师邀请码", 403);
       }

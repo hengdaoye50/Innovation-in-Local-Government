@@ -16,7 +16,7 @@ import {
   clientIp,
   rateLimit,
 } from "../../lib/http.js";
-import { getSession, isStaff, checkBindings } from "../../lib/auth.js";
+import { getSession, isStaff, isReadOnly, checkBindings } from "../../lib/auth.js";
 import {
   listCases,
   getCase,
@@ -89,6 +89,7 @@ async function detailHandler(env, id) {
 async function createHandler({ request, env }) {
   const session = await getSession(env, request);
   if (!session) return fail("请先登录再提交", 401);
+  if (isReadOnly(session)) return fail("观察员账号只能浏览，不能提交作品", 403);
 
   const limit = rateLimit(`case:${clientIp(request)}`, { limit: 10, windowMs: 10 * 60_000 });
   if (!limit.allowed) return fail("提交过于频繁，请稍后再试", 429);

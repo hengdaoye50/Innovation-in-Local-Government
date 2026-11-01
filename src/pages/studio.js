@@ -250,6 +250,25 @@ export function mountStudio(root) {
   const section = qs("#studio", root);
   if (!section) return;
 
+  // 观察员只读：工作台是写作工具，直接换成说明卡，避免填完才发现提交被拒
+  const { user } = getState();
+  if (user?.role === "observer") {
+    const grid = qs(".studio__grid", section);
+    if (grid) {
+      grid.innerHTML = `
+        <div class="card studio__readonly">
+          <div class="eyebrow">Observer</div>
+          <h3 class="h3" style="margin:10px 0 12px">观察员账号只能浏览</h3>
+          <p class="field__hint" style="line-height:1.85;max-width:44em">
+            这里是对模型协作、撰写与提交作品的写作台，观察员账号没有写作权限。
+            案例地图、课堂展示板与拓展材料仍然可以正常查看。
+          </p>
+          <a class="btn btn--ghost btn--sm" href="#atlas" style="margin-top:18px">去看案例地图</a>
+        </div>`;
+    }
+    return;
+  }
+
   const log = qs("[data-chat-log]", section);
   const input = qs("[data-chat-input]", section);
   const sendBtn = qs("[data-chat-send]", section);

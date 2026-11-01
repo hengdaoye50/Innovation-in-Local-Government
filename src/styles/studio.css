@@ -37,6 +37,13 @@
   align-items: start;
 }
 
+/* 观察员看到的说明卡：占满整行，不做成表单的样子 */
+.studio__readonly {
+  grid-column: 1 / -1;
+  padding: 36px 40px;
+  max-width: 720px;
+}
+
 /* —— 对话 —— */
 .studio__chat {
   display: flex;

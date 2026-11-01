@@ -173,6 +173,14 @@ export function isStaff(session) {
   return session?.role === "teacher" || session?.role === "admin";
 }
 
+/**
+ * 观察员账号只读：能看案例、展位、材料，但不能提交、评论、用工作台。
+ * 所有写接口在拿到 session 后都要过这一关。
+ */
+export function isReadOnly(session) {
+  return session?.role === "observer";
+}
+
 export function publicUser(session) {
   if (!session) return null;
   return {

@@ -437,6 +437,17 @@
   margin-top: 28px;
 }
 
+/* 观察员：没有输入框，用一行说明替代，语气平和不要像报错 */
+.comments__readonly {
+  margin: 26px 0 0;
+  padding: 12px 14px;
+  border-left: 1px solid var(--line-gold);
+  background: rgba(196, 162, 101, 0.05);
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--ink-3);
+}
+
 .comments__form-bar {
   display: flex;
   align-items: center;

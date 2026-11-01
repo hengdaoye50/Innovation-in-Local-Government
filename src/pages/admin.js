@@ -1,4 +1,7 @@
 /** 教师后台 —— 案例审核、展位管理、文章发布、邀请码 */
+
+// 角色在界面与导出表格里的中文名，邀请码与用户列表共用
+const ROLE_LABEL = { student: "学生", teacher: "教师", observer: "观察员", admin: "管理员" };
 import { esc, qs, qsa, toast, timeAgo, formatDate, zhLength, mountReveal } from "../lib/dom.js";
 import { admin as adminApi, cases as casesApi, api } from "../lib/api.js";
 import { getState } from "../lib/store.js";
@@ -543,6 +546,9 @@ async function renderInvites(panel, me) {
               <button class="btn btn--primary btn--sm" data-new-invite="student">
                 生成学生邀请码
               </button>
+              <button class="btn btn--quiet btn--sm" data-new-invite="observer">
+                生成观察员邀请码
+              </button>
               ${
                 isAdmin
                   ? `<button class="btn btn--gold btn--sm" data-new-invite="teacher">生成教师邀请码</button>`
@@ -565,12 +571,13 @@ async function renderInvites(panel, me) {
           <h2 class="h3" style="margin-bottom:12px">说明</h2>
           <p class="field__hint" style="line-height:1.8">
             邀请码 6 位、一次性。角色由邀请码决定——教师邀请码注册出来的账号
-            直接拥有后台权限。<br /><br />
+            直接拥有后台权限；<b>观察员</b>邀请码注册出来的账号只能浏览案例、展位与材料，
+            不能提交作品、参与讨论，也不能用工作台。<br /><br />
             备注只给你自己看，用来记这个码给了谁。<b>作废</b>会让未使用的码立刻失效，
             已使用的码保留作账号来历，不能作废。<br /><br />
             给一个班发码时把<b>数量</b>改成人头数（一次最多 200），生成后点<b>导出表格</b>，
             导出的是当前这张列表，CSV 用 Excel 直接打开，备注列可以填班级或学号段。
-            ${isAdmin ? "" : "<br /><br />你是教师角色，只能签发学生邀请码。"}
+            ${isAdmin ? "" : "<br /><br />你是教师角色，可以签发学生与观察员邀请码。"}
           </p>
         </section>
       </aside>
@@ -613,7 +620,7 @@ async function renderInvites(panel, me) {
       <div class="invite-row${locked ? " is-locked" : ""}" data-code="${esc(i.code)}">
         <div class="invite-row__main">
           <code class="mono invite-row__code">${esc(i.code)}</code>
-          <span class="tag tag--quiet">${i.role === "teacher" ? "教师" : "学生"}</span>
+          <span class="tag tag--quiet">${ROLE_LABEL[i.role] || "学生"}</span>
           ${
             locked
               ? `<span class="meta">${esc(i.note || "无备注")}</span>`
@@ -685,7 +692,7 @@ async function renderInvites(panel, me) {
       btn.disabled = true;
       try {
         const res = await adminApi.createInvite(role, note, count);
-        const label = role === "teacher" ? "教师" : "学生";
+        const label = ROLE_LABEL[role] || "学生";
         toast(
           count > 1
             ? `已生成 ${res?.count || count} 个${label}邀请码，记得导出表格`
@@ -712,7 +719,7 @@ async function renderInvites(panel, me) {
       const status = i.revoked ? "已作废" : i.used ? "已使用" : "未使用";
       rows.push([
         i.code,
-        i.role === "teacher" ? "教师" : "学生",
+        ROLE_LABEL[i.role] || "学生",
         i.note || "",
         status,
         i.usedBy || "",
@@ -742,7 +749,7 @@ async function renderInvites(panel, me) {
 
 /* ————————— 用户管理（仅 admin） ————————— */
 
-const ROLE_TEXT = { student: "学生", teacher: "教师", admin: "管理员" };
+const ROLE_TEXT = ROLE_LABEL;
 
 async function renderUsers(panel) {
   panel.innerHTML = `
@@ -770,7 +777,9 @@ async function renderUsers(panel) {
 
     const items = data?.items || [];
     const counts = data?.counts || {};
-    countEl.textContent = `管理员 ${counts.admins || 0} · 教师 ${counts.teachers || 0} · 学生 ${counts.students || 0}`;
+    countEl.textContent = `管理员 ${counts.admins || 0} · 教师 ${counts.teachers || 0} · 学生 ${
+      counts.students || 0
+    } · 观察员 ${counts.observers || 0}`;
 
     if (!items.length) {
       listEl.innerHTML = `<div class="empty">还没有账号。</div>`;

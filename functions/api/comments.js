@@ -4,7 +4,7 @@
  *   POST { target_type, target_id, body }
  */
 import { ok, fail, methodNotAllowed, readJson, handleError, randomId, clientIp, rateLimit } from "../lib/http.js";
-import { getSession, isStaff, checkBindings } from "../lib/auth.js";
+import { getSession, isStaff, isReadOnly, checkBindings } from "../lib/auth.js";
 import { listComments, insertComment } from "../lib/db.js";
 
 const VALID_TYPES = new Set(["case", "slide", "post"]);
@@ -31,6 +31,7 @@ export async function onRequest(context) {
     if (request.method === "POST") {
       const session = await getSession(env, request);
       if (!session) return fail("登录后才能发表讨论", 401);
+      if (isReadOnly(session)) return fail("观察员账号只能浏览，不能参与讨论", 403);
 
       const limit = rateLimit(`cmt:${clientIp(request)}`, { limit: 20, windowMs: 10 * 60_000 });
       if (!limit.allowed) return fail("发言过于频繁，请稍后再试", 429);
