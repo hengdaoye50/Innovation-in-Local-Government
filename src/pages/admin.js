@@ -147,10 +147,14 @@ async function renderCases(panel) {
     }
 
     listEl.innerHTML = items
-      .map((c) => {
+      .map((c, i) => {
         const st = STATUS_LABEL[c.status] || STATUS_LABEL.pending;
         return `
         <article class="admin__row">
+          <span class="admin__row-no mono" aria-hidden="true">${String(i + 1).padStart(
+            2,
+            "0"
+          )}</span>
           <div class="admin__row-main">
             <div class="admin__row-meta">
               <span class="tag ${st.cls}">${st.text}</span>

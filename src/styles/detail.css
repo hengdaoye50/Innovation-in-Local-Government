@@ -847,12 +847,28 @@
 }
 
 .admin__row {
+  position: relative;
   display: flex;
   gap: 16px;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 18px 0;
+  padding: 18px 0 18px 34px;
   border-bottom: 1px solid var(--line);
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.admin__row:hover {
+  background: rgba(196, 162, 101, 0.05);
+}
+
+/* 行号放在内容左侧，提交队列读起来像一份待办清单 */
+.admin__row-no {
+  position: absolute;
+  left: 0;
+  top: 21px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--gold);
 }
 
 .admin__row:last-child {
