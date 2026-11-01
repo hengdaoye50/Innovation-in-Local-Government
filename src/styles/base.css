@@ -477,6 +477,8 @@
   background: rgba(253, 248, 240, 0.92);
   backdrop-filter: saturate(180%) blur(12px);
   border-bottom-color: var(--line);
+  /* 滚动后顶栏浮在内容之上：一道极淡的接触阴影，够用就好 */
+  box-shadow: 0 8px 20px -18px rgba(31, 20, 28, 0.55);
 }
 
 /* 深色首屏上的反色态 */

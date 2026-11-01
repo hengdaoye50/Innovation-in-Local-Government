@@ -547,10 +547,13 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
       const w = Math.max(1, b[1][0] - b[0][0]);
       const h = Math.max(1, b[1][1] - b[0][1]);
       // 附图尺寸固定，线宽由 non-scaling-stroke 保持恒定，不随缩放变细
-      const boxW = 80;
-      const boxH = 104;
+      const boxW = 64;
+      const boxH = 92;
       const s = Math.min(boxW / w, boxH / h) * 0.86;
-      const boxX = VIEW_W - boxW - 4;
+      // 位置按实测反推：舞台 rotateX(14deg) scale(1.04) 后越靠右放得越大，
+      // 登录页那种满宽面板里，右边距不够就会被视口裁掉；左边又要留出东海海面，
+      // 不贴着浙江福建的海岸线
+      const boxX = VIEW_W - boxW - 56;
       // 放在东侧海面（长江口以东）：右下角放不下 —— 舞台有 rotateX(14deg) 透视，
       // viewBox 底边落到屏幕可视区之外还被底部渐变遮住，贴底的附图必被切；
       // 而 y<500 才避开台湾（561~622, 501~568），x>588 才避开浙江/江苏/上海东岸
