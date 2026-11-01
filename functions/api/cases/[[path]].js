@@ -22,6 +22,7 @@ import {
   listMyCases,
   getCase,
   insertCase,
+  updateCaseContent,
   updateCaseStatus,
   listCasePoints,
   countCasesToday,
@@ -46,9 +47,10 @@ export async function onRequest(context) {
     if (id === "points" && method === "GET") return ok(await listCasePoints(env));
     if (id && method === "GET") return await detailHandler(env, id);
     if (!id && method === "POST") return await createHandler(context);
+    if (id && method === "PUT") return await updateOwnHandler(context, id);
     if (id && method === "PATCH") return await statusHandler(context, id);
 
-    return methodNotAllowed(["GET", "POST", "PATCH"]);
+    return methodNotAllowed(["GET", "POST", "PUT", "PATCH"]);
   } catch (err) {
     return handleError(err);
   }
@@ -95,21 +97,11 @@ async function detailHandler(env, id) {
   return ok(item);
 }
 
-async function createHandler({ request, env }) {
-  const session = await getSession(env, request);
-  if (!session) return fail("请先登录再提交", 401);
-  if (isReadOnly(session)) return fail("观察员账号只能浏览，不能提交作品", 403);
-
-  const limit = rateLimit(`case:${clientIp(request)}`, { limit: 10, windowMs: 10 * 60_000 });
-  if (!limit.allowed) return fail("提交过于频繁，请稍后再试", 429);
-
-  const today = await countCasesToday(env, session.id);
-  if (today >= DAILY_LIMIT) {
-    return fail(`每个账号每日最多提交 ${DAILY_LIMIT} 篇，明天再来`, 429);
-  }
-
-  const body = await readJson(request, 120_000);
-
+/**
+ * 解析并校验案例字段。新建和作者修改共用，避免两处规则漂移。
+ * @returns {{ error?: string, data?: object }}
+ */
+function parseCasePayload(body) {
   const title = String(body.title || "").trim().slice(0, 60);
   const province = String(body.province || "").trim();
   const city = String(body.city || "").trim().slice(0, 30);
@@ -128,14 +120,48 @@ async function createHandler({ request, env }) {
         .slice(0, 15)
     : [];
 
-  if (!title) return fail("请填写标题");
-  if (!province) return fail("请选择发生地省份");
-  if (!text) return fail("正文不能为空");
-  if (!domains.length) return fail("请至少选择 1 个创新领域");
-  if (!sources.length) return fail("请至少添加 1 条有效来源链接");
+  if (!title) return { error: "请填写标题" };
+  if (!province) return { error: "请选择发生地省份" };
+  if (!text) return { error: "正文不能为空" };
+  if (!domains.length) return { error: "请至少选择 1 个创新领域" };
+  if (!sources.length) return { error: "请至少添加 1 条有效来源链接" };
 
   const lng = Number(body.lng);
   const lat = Number(body.lat);
+
+  return {
+    data: {
+      title,
+      province,
+      city,
+      district,
+      lng: Number.isFinite(lng) ? lng : null,
+      lat: Number.isFinite(lat) ? lat : null,
+      domains,
+      sources,
+      body: text,
+      summary: text.replace(/\s+/g, " ").slice(0, 160),
+    },
+  };
+}
+
+async function createHandler({ request, env }) {
+  const session = await getSession(env, request);
+  if (!session) return fail("请先登录再提交", 401);
+  if (isReadOnly(session)) return fail("观察员账号只能浏览，不能提交作品", 403);
+
+  const limit = rateLimit(`case:${clientIp(request)}`, { limit: 10, windowMs: 10 * 60_000 });
+  if (!limit.allowed) return fail("提交过于频繁，请稍后再试", 429);
+
+  const today = await countCasesToday(env, session.id);
+  if (today >= DAILY_LIMIT) {
+    return fail(`每个账号每日最多提交 ${DAILY_LIMIT} 篇，明天再来`, 429);
+  }
+
+  const body = await readJson(request, 120_000);
+  const parsed = parseCasePayload(body);
+  if (parsed.error) return fail(parsed.error);
+  const { title, province, city, district, lng, lat, domains, sources, body: text } = parsed.data;
 
   const verdict = await reviewCase(env, { title, province, city, body: text, domains, sources });
   const status = verdict.pass ? "published" : "rejected";
@@ -149,10 +175,10 @@ async function createHandler({ request, env }) {
     province,
     city,
     district,
-    lng: Number.isFinite(lng) ? lng : null,
-    lat: Number.isFinite(lat) ? lat : null,
+    lng,
+    lat,
     domains,
-    summary: text.replace(/\s+/g, " ").slice(0, 160),
+    summary: parsed.data.summary,
     body: text,
     sources,
     authorId: session.id,
@@ -172,10 +198,58 @@ async function createHandler({ request, env }) {
   });
 }
 
+/**
+ * 作者修改自己的作品：只允许 pending / rejected。
+ * 已发布的不让改，避免地图上的内容被悄悄换掉；改完重新走一遍质检。
+ */
+async function updateOwnHandler({ request, env }, id) {
+  const session = await getSession(env, request);
+  if (!session) return fail("请先登录", 401);
+  if (isReadOnly(session)) return fail("观察员账号只能浏览", 403);
+
+  const existing = await getCase(env, id);
+  if (!existing) return fail("案例不存在", 404);
+  if (existing.authorId !== session.id) return fail("只能修改自己的作品", 403);
+  if (!["pending", "rejected"].includes(existing.status)) {
+    return fail("已发布或已下架的作品不能再改，需要调整请联系任课教师", 409);
+  }
+
+  const limit = rateLimit(`case-edit:${clientIp(request)}`, { limit: 20, windowMs: 10 * 60_000 });
+  if (!limit.allowed) return fail("修改过于频繁，请稍后再试", 429);
+
+  const body = await readJson(request, 120_000);
+  const parsed = parseCasePayload(body);
+  if (parsed.error) return fail(parsed.error);
+
+  const verdict = await reviewCase(env, {
+    title: parsed.data.title,
+    province: parsed.data.province,
+    city: parsed.data.city,
+    body: parsed.data.body,
+    domains: parsed.data.domains,
+    sources: parsed.data.sources,
+  });
+  const status = verdict.pass ? "published" : "rejected";
+
+  await updateCaseContent(env, id, {
+    ...parsed.data,
+    status,
+    aiReview: verdict.review || null,
+  });
+
+  return ok({
+    id,
+    status,
+    review: verdict.review,
+    problems: verdict.problems || [],
+    warnings: verdict.warnings || [],
+    score: verdict.score,
+  });
+}
+
 async function statusHandler({ request, env }, id) {
   const session = await getSession(env, request);
   if (!isStaff(session)) return fail("只有教师可以修改作品状态", 403);
-
   const body = await readJson(request, 4_000);
   const status = String(body.status || "");
   if (!VALID_STATUS.has(status)) return fail("状态值无效");

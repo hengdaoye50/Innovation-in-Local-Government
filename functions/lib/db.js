@@ -188,6 +188,37 @@ export async function insertCase(env, data) {
     .run();
 }
 
+/**
+ * 作者改自己的作品：只改内容字段，状态由调用方决定（改完通常回到 pending 重新质检）。
+ */
+export async function updateCaseContent(env, id, data) {
+  const result = await env.DB.prepare(
+    `UPDATE cases SET
+       title = ?, province = ?, city = ?, district = ?, lng = ?, lat = ?,
+       domains = ?, summary = ?, body = ?, sources_json = ?,
+       status = ?, ai_review = ?, updated_at = ?
+     WHERE id = ?`
+  )
+    .bind(
+      data.title,
+      data.province,
+      data.city || null,
+      data.district || null,
+      data.lng ?? null,
+      data.lat ?? null,
+      JSON.stringify(data.domains || []),
+      data.summary || null,
+      data.body,
+      JSON.stringify(data.sources || []),
+      data.status,
+      data.aiReview ?? null,
+      new Date().toISOString(),
+      id
+    )
+    .run();
+  return result.meta?.changes > 0;
+}
+
 export async function updateCaseStatus(env, id, status, aiReview, aiScore) {
   const sets = ["status = ?", "updated_at = ?"];
   const binds = [status, new Date().toISOString()];

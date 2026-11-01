@@ -916,6 +916,70 @@ export function mountStudio(root) {
     return new Date(iso).toISOString().slice(0, 10);
   }
 
+  /** 编辑模式：正在改哪一条自己的作品（null 表示新建） */
+  let editingId = null;
+  let mineItems = [];
+
+  function exitEdit() {
+    editingId = null;
+    const bar = qs("[data-edit-bar]", section);
+    if (bar) bar.hidden = true;
+    const restoreBar = qs(".draft__restore", section);
+    if (restoreBar) restoreBar.hidden = false;
+    const submitBtn = qs("[data-draft-submit]", section);
+    if (submitBtn) submitBtn.textContent = "提交作品";
+    titleInput.value = "";
+    bodyInput.value = "";
+    draft.tags.clear();
+    tagBox.querySelectorAll(".chip").forEach((c) => c.classList.remove("is-on"));
+    draft.sources = [];
+    renderSources();
+    resetSelect(provinceSel);
+    resetSelect(citySel);
+    resetSelect(districtSel);
+    updateWords();
+    try {
+      localStorage.removeItem(draftKey);
+    } catch {
+      /* 忽略 */
+    }
+  }
+
+  function enterEdit(item) {
+    editingId = item.id;
+    // 编辑已提交的内容时，把「上次未提交的草稿」提示收起来，免得两条提示叠在一起
+    const restoreBar = qs(".draft__restore", section);
+    if (restoreBar) restoreBar.hidden = true;
+    titleInput.value = item.title || "";
+    bodyInput.value = item.body || "";
+    draft.tags = new Set(item.domains || []);
+    tagBox.querySelectorAll("[data-domain]").forEach((chip) => {
+      chip.classList.toggle("is-on", draft.tags.has(chip.dataset.domain));
+    });
+    draft.sources = Array.isArray(item.sources) ? item.sources.map((s) => ({ url: s.url })) : [];
+    renderSources();
+    applyGeo({ province: item.province, city: item.city, district: item.district });
+    updateWords();
+
+    let bar = qs("[data-edit-bar]", section);
+    if (!bar) {
+      bar = el("div", { class: "draft__edit" });
+      bar.setAttribute("data-edit-bar", "");
+      bar.innerHTML = `
+        <span class="draft__edit-text"></span>
+        <button class="btn btn--quiet btn--sm" type="button" data-exit-edit>取消修改</button>
+      `;
+      qs(".draft__lede", section)?.after(bar);
+      bar.querySelector("[data-exit-edit]").addEventListener("click", () => exitEdit());
+    }
+    bar.hidden = false;
+    bar.querySelector(".draft__edit-text").textContent = `正在修改：${item.title}`;
+    qs("[data-draft-submit]", section).textContent = "保存修改";
+    statusText.textContent = "改完保存，会重新走一遍质检";
+    statusText.dataset.state = "";
+    section.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   async function loadMine() {
     const host = qs("[data-mine-list]", section);
     if (!host) return;
@@ -926,19 +990,26 @@ export function mountStudio(root) {
     } catch {
       items = [];
     }
+    mineItems = items;
     if (!items.length) {
       host.innerHTML = `<div class="empty">还没有提交过作品。写完一篇，提交后会出现在这里。</div>`;
       return;
     }
     host.innerHTML = items
-      .map((c) => {
+      .map((c, index) => {
         const st = STATUS_LABEL[c.status] || STATUS_LABEL.pending;
+        const editable = c.status === "pending" || c.status === "rejected";
         return `
         <article class="mine-row">
           <div class="mine-row__meta">
             <span class="tag ${st.cls}">${st.text}</span>
             <span class="meta mono">${zhLength(c.body || c.summary || "")} 字</span>
             <span class="meta">${timeAgo(c.createdAt)}</span>
+            ${
+              editable
+                ? `<button class="btn btn--quiet btn--sm mine-row__edit" type="button" data-edit="${index}">修改</button>`
+                : ""
+            }
           </div>
           <a class="mine-row__title" href="#/case/${esc(c.id)}">${esc(c.title)}</a>
           ${
@@ -949,6 +1020,13 @@ export function mountStudio(root) {
         </article>`;
       })
       .join("");
+
+    host.querySelectorAll("[data-edit]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const item = mineItems[Number(btn.dataset.edit)];
+        if (item) enterEdit(item);
+      });
+    });
   }
   loadMine();
 
@@ -1129,34 +1207,51 @@ export function mountStudio(root) {
     // 精度优先：区县 > 地级市 > 省
     const point = district || city || province;
 
+    const payload = {
+      title: titleInput.value.trim(),
+      province: provinceSel.value,
+      city: citySel.value || "",
+      district: districtSel.value || "",
+      lng: point?.lng,
+      lat: point?.lat,
+      domains: [...draft.tags],
+      body: bodyInput.value,
+      sources: validSources.map((s) => ({ url: s.url })),
+    };
+
     try {
-      const result = await casesApi.create({
-        title: titleInput.value.trim(),
-        province: provinceSel.value,
-        city: citySel.value || "",
-        district: districtSel.value || "",
-        lng: point?.lng,
-        lat: point?.lat,
-        domains: [...draft.tags],
-        body: bodyInput.value,
-        sources: validSources.map((s) => ({ url: s.url })),
-      });
+      const result = editingId
+        ? await casesApi.update(editingId, payload)
+        : await casesApi.create(payload);
 
       const published = result?.status === "published";
+      const wasEditing = Boolean(editingId);
 
       if (published) {
         statusText.textContent = result.warnings?.length
           ? `已发布。提示：${result.warnings[0]}`
-          : "已通过质检，已发布到地图";
+          : wasEditing
+            ? "修改已通过质检，地图上的内容已更新"
+            : "已通过质检，已发布到地图";
         statusText.dataset.state = "ok";
-        toast(result.warnings?.length ? "已发布，但篇幅偏长" : "案例已发布，地图上可以看到它了");
-        titleInput.value = "";
-        bodyInput.value = "";
-        draft.tags.clear();
-        tagBox.querySelectorAll(".chip").forEach((c) => c.classList.remove("is-on"));
-        draft.sources = [];
-        renderSources();
-        updateWords();
+        toast(
+          wasEditing
+            ? "修改已通过，地图上的内容更新了"
+            : result.warnings?.length
+              ? "已发布，但篇幅偏长"
+              : "案例已发布，地图上可以看到它了"
+        );
+        if (wasEditing) {
+          exitEdit();
+        } else {
+          titleInput.value = "";
+          bodyInput.value = "";
+          draft.tags.clear();
+          tagBox.querySelectorAll(".chip").forEach((c) => c.classList.remove("is-on"));
+          draft.sources = [];
+          renderSources();
+          updateWords();
+        }
         // 交出去了就不用再留草稿
         try {
           localStorage.removeItem(draftKey);

@@ -1133,3 +1133,32 @@ label.btn {
   letter-spacing: 0.08em;
   color: var(--warn);
 }
+
+/* —— 修改模式提示条 —— */
+.draft__edit {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--line-gold);
+  background: rgba(196, 162, 101, 0.1);
+}
+
+.draft__edit-text {
+  font-size: 12px;
+  color: var(--plum-deep);
+}
+
+.draft__edit .btn {
+  height: 26px;
+  font-size: 12px;
+}
+
+/* 作品清单里的「修改」按钮，低调但可点 */
+.mine-row__edit {
+  height: 24px;
+  padding: 0 8px;
+  font-size: 11.5px;
+  color: var(--plum);
+}

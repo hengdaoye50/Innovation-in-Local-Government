@@ -61,6 +61,7 @@ export const api = {
   get: (path, opts) => request(path, { ...opts, method: "GET" }),
   post: (path, body, opts) => request(path, { ...opts, method: "POST", body }),
   patch: (path, body, opts) => request(path, { ...opts, method: "PATCH", body }),
+  put: (path, body, opts) => request(path, { ...opts, method: "PUT", body }),
   del: (path, opts) => request(path, { ...opts, method: "DELETE" }),
 };
 
@@ -87,6 +88,8 @@ export const cases = {
   // 自己的作品：含审核中与已退回，学生要知道被退回的理由
   mine: (limit = 50) => api.get(`/api/cases?mine=1&limit=${limit}`),
   create: (payload) => api.post("/api/cases", payload),
+  // 作者修改自己被退回/审核中的作品
+  update: (id, payload) => api.put(`/api/cases/${encodeURIComponent(id)}`, payload),
   setStatus: (id, status) => api.patch(`/api/cases/${encodeURIComponent(id)}`, { status }),
 };
 
