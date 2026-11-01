@@ -1,0 +1,83 @@
+/* —— 地图图层切换：案例 / 调研 —— */
+
+.atlas__layers {
+  position: absolute;
+  left: max(24px, calc((100vw - var(--shell)) / 2 + var(--gutter)));
+  top: 18px;
+  z-index: 6;
+  display: flex;
+  gap: 0;
+  border: 1px solid rgba(196, 162, 101, 0.28);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: rgba(30, 18, 28, 0.5);
+}
+
+.layer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: rgba(253, 248, 240, 0.62);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+
+.layer-btn + .layer-btn {
+  border-left: 1px solid rgba(196, 162, 101, 0.22);
+}
+
+.layer-btn b {
+  font-weight: 400;
+  font-size: 10.5px;
+  opacity: 0.7;
+}
+
+.layer-btn:hover {
+  color: rgba(253, 248, 240, 0.9);
+}
+
+/* 选中层：案例是烫金，调研是冷色，与地图上的光点呼应 */
+.layer-btn.is-on[data-layer="case"] {
+  background: rgba(196, 162, 101, 0.18);
+  color: #f0dda6;
+}
+
+.layer-btn.is-on[data-layer="field"] {
+  background: rgba(92, 149, 176, 0.26);
+  color: #cfe6f2;
+}
+
+/* 调研层的图例点：冷色，与地图上的光点同色系 */
+.legend__dot--field {
+  background: #8ec5dc;
+  box-shadow: 0 0 0 2px rgba(142, 197, 220, 0.18);
+}
+
+/* 调研层的地图：把经纬网与刻度也带一点冷色，整体才像另一版底图 */
+.map-svg.is-field .grat-line {
+  stroke: rgba(142, 197, 220, 0.14);
+}
+
+.map-svg.is-field .grat-label {
+  fill: rgba(180, 216, 232, 0.66);
+}
+
+.map-svg.is-field .prov__top {
+  stroke: rgba(158, 205, 228, 0.42);
+}
+
+.map-svg.is-field .node__dot {
+  stroke: rgba(16, 34, 44, 0.5);
+}
+
+@media (max-width: 900px) {
+  .atlas__layers {
+    left: var(--gutter);
+    top: 10px;
+  }
+}

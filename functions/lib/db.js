@@ -47,6 +47,72 @@ export function rowToCase(row) {
   };
 }
 
+/* ————————— 调研足迹 ————————— */
+
+function rowToSurvey(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    title: row.title,
+    province: row.province,
+    city: row.city || "",
+    district: row.district || "",
+    lng: row.lng,
+    lat: row.lat,
+    body: row.body,
+    author: maskName(row.author_name) || "同学",
+    authorId: row.author_id,
+    visitedAt: row.visited_at || "",
+    status: row.status,
+    createdAt: row.created_at,
+  };
+}
+
+export async function listSurveys(env, { limit = 60 } = {}) {
+  const { results } = await env.DB.prepare(
+    `SELECT * FROM surveys WHERE status = 'published'
+     ORDER BY COALESCE(visited_at, created_at) DESC LIMIT ?`
+  )
+    .bind(Math.min(200, Math.max(1, Number(limit) || 60)))
+    .all();
+  return (results || []).map(rowToSurvey);
+}
+
+export async function getSurvey(env, id) {
+  const row = await env.DB.prepare("SELECT * FROM surveys WHERE id = ?").bind(id).first();
+  return rowToSurvey(row);
+}
+
+export async function insertSurvey(env, data) {
+  await env.DB.prepare(
+    `INSERT INTO surveys (id, title, province, city, district, lng, lat, body,
+       author_id, author_name, visited_at, status, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', ?)`
+  )
+    .bind(
+      data.id,
+      data.title,
+      data.province,
+      data.city || null,
+      data.district || null,
+      data.lng ?? null,
+      data.lat ?? null,
+      data.body,
+      data.authorId,
+      data.authorName,
+      data.visitedAt || null,
+      data.now
+    )
+    .run();
+}
+
+export async function hideSurvey(env, id) {
+  const result = await env.DB.prepare("UPDATE surveys SET status = 'hidden' WHERE id = ?")
+    .bind(id)
+    .run();
+  return result.meta?.changes > 0;
+}
+
 export function rowToSlide(row) {
   if (!row) return null;
   return {

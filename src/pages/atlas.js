@@ -1,11 +1,11 @@
 /** 地图屏 —— 首屏 */
-import { esc, mountCounters, qs } from "../lib/dom.js";
+import { esc, mountCounters, qs, qsa } from "../lib/dom.js";
 import { createMap } from "../components/map.js";
 import { ICONS } from "../components/chrome.js";
 import { getState, setState } from "../lib/store.js";
 import { navigate } from "../lib/router.js";
 import { DEMO_CASES } from "../lib/demo.js";
-import { cases as casesApi } from "../lib/api.js";
+import { cases as casesApi, surveys as surveysApi } from "../lib/api.js";
 
 export function atlasSection() {
   return `
@@ -36,7 +36,16 @@ export function atlasSection() {
       <div class="atlas__stage">
         <div class="map-canvas" data-pending="1"></div>
 
-        <div class="atlas__legend" aria-hidden="true">
+        <div class="atlas__layers" role="group" aria-label="地图图层">
+          <button class="layer-btn is-on" type="button" data-layer="case">
+            案例<b class="mono" data-layer-count>0</b>
+          </button>
+          <button class="layer-btn" type="button" data-layer="field">
+            调研<b class="mono" data-layer-count-field>0</b>
+          </button>
+        </div>
+
+        <div class="atlas__legend" aria-hidden="true" data-legend>
           <div class="legend__row"><span class="legend__dot"></span>单个案例</div>
           <div class="legend__row"><span class="legend__dot legend__dot--lg"></span>多案例同城</div>
           <div class="legend__row"><span class="legend__line"></span>省级边界</div>
@@ -80,13 +89,19 @@ export async function mountAtlas(root) {
   let focusNode = null;
   const zoomReadout = qs("[data-zoom-readout]", section);
 
+  /** 当前图层：case（案例） / field（调研足迹） */
+  let layer = "case";
+  let caseList = [];
+  let fieldList = null;
+
   const map = createMap(canvasHost, {
     onSelect: (item, extra) => {
       if (extra?.list?.length) {
         openDrawer(extra.list, extra.node || item);
         return;
       }
-      if (item?.id) navigate(`/case/${item.id}`);
+      if (!item?.id) return;
+      navigate(layer === "field" ? `/field/${item.id}` : `/case/${item.id}`);
     },
     onFocus: (node, info) => {
       focusNode = node;
@@ -247,6 +262,10 @@ export async function mountAtlas(root) {
   }
   setState({ cases: list, casesLoaded: true });
 
+  caseList = list;
+  const caseCountEl = qs("[data-layer-count]", section);
+  if (caseCountEl) caseCountEl.textContent = String(list.length);
+
   updateStats(root, list);
   mountCounters(section);
 
@@ -261,6 +280,54 @@ export async function mountAtlas(root) {
       err && err.stack ? err.stack : err
     ).slice(0, 700)}</div>`;
   }
+
+  /* —————— 图层切换：案例 / 调研足迹 —————— */
+
+  const fieldCountEl = qs("[data-layer-count-field]", section);
+  const layerButtons = qsa("[data-layer]", section);
+  const legendEl = qs("[data-legend]", section);
+
+  // 两层说的是两件事，图例文案要跟着换
+  const LEGENDS = {
+    case: `
+      <div class="legend__row"><span class="legend__dot"></span>单个案例</div>
+      <div class="legend__row"><span class="legend__dot legend__dot--lg"></span>多案例同城</div>
+      <div class="legend__row"><span class="legend__line"></span>省级边界</div>`,
+    field: `
+      <div class="legend__row"><span class="legend__dot legend__dot--field"></span>一次调研</div>
+      <div class="legend__row"><span class="legend__dot legend__dot--lg legend__dot--field"></span>多次调研同一地</div>
+      <div class="legend__row"><span class="legend__line"></span>省级边界</div>`,
+  };
+
+  async function switchLayer(next) {
+    if (next === layer) return;
+    layer = next;
+    layerButtons.forEach((btn) => btn.classList.toggle("is-on", btn.dataset.layer === next));
+    if (legendEl) legendEl.innerHTML = LEGENDS[next];
+    if (hint) hint.innerHTML = defaultHint;
+    closeFocusCard();
+
+    if (next === "field") {
+      if (!fieldList) {
+        try {
+          const res = await surveysApi.list(200);
+          fieldList = Array.isArray(res?.items) ? res.items : [];
+        } catch {
+          fieldList = [];
+        }
+        if (fieldCountEl) fieldCountEl.textContent = String(fieldList.length);
+      }
+      map.setLayer("field");
+      map.setData(fieldList);
+    } else {
+      map.setLayer("case");
+      map.setData(caseList);
+    }
+  }
+
+  layerButtons.forEach((btn) => {
+    btn.addEventListener("click", () => switchLayer(btn.dataset.layer));
+  });
 
   return map;
 }

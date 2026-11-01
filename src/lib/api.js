@@ -103,6 +103,13 @@ export const slides = {
   detail: (id) => api.get(`/api/slides/${encodeURIComponent(id)}`),
 };
 
+export const surveys = {
+  list: (limit = 60) => api.get(`/api/surveys?limit=${limit}`),
+  detail: (id) => api.get(`/api/surveys/${encodeURIComponent(id)}`),
+  create: (payload) => api.post("/api/surveys", payload),
+  remove: (id) => api.del(`/api/surveys/${encodeURIComponent(id)}`),
+};
+
 export const posts = {
   list: (params = {}) => {
     const q = new URLSearchParams(

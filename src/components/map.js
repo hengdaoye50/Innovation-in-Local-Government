@@ -28,6 +28,8 @@ const SIDE_STEP = 5;
 const LIFT = 20;
 
 const SIDE_COLORS = ["#0c070c", "#150b14", "#1f101d", "#2b1426"];
+// 调研层的侧壁：同深度换成冷色，浮雕厚度不变，只是底图换了调子
+const SIDE_COLORS_FIELD = ["#071013", "#0c1820", "#122630", "#193240"];
 
 const PAD_X = 24;
 // 上部留白大于底部：省面下方还有侧壁和投影阴影（合计约 34 单位），
@@ -55,6 +57,8 @@ export function createMap(container, { onSelect, onHover, onFocus, onView } = {}
   let gRoot = null;
   let gNodes = null;
   let gLinks = null;
+  /** 省份面图层；换图层配色时要能拿到，所以要放在外层 */
+  let gTops = null;
   let gFocus = null;
   let gAtlas = null;
   let projection = null;
@@ -339,6 +343,30 @@ export function createMap(container, { onSelect, onHover, onFocus, onView } = {}
         svgEl("stop", { offset: "45%", "stop-color": "#D4AF37", "stop-opacity": 0.3 }),
         svgEl("stop", { offset: "100%", "stop-color": "#D4AF37", "stop-opacity": 0 }),
       ]),
+      /* —— 调研层：同一张制图台，换一版冷色底图 —— */
+      svgEl(
+        "linearGradient",
+        { id: "provFillField", x1: "0.15", y1: "0", x2: "0.6", y2: "1" },
+        stops([
+          ["0%", "#3d6b86", 0.62],
+          ["42%", "#2b5468", 0.52],
+          ["100%", "#1b3a49", 0.6],
+        ])
+      ),
+      svgEl(
+        "linearGradient",
+        { id: "provFillFieldHover", x1: "0.15", y1: "0", x2: "0.6", y2: "1" },
+        stops([
+          ["0%", "#5e93ad", 0.88],
+          ["45%", "#457c96", 0.8],
+          ["100%", "#2f6480", 0.84],
+        ])
+      ),
+      svgEl("radialGradient", { id: "nodeGlowField" }, [
+        svgEl("stop", { offset: "0%", "stop-color": "#8ec5dc", "stop-opacity": 0.42 }),
+        svgEl("stop", { offset: "55%", "stop-color": "#5c95b0", "stop-opacity": 0.1 }),
+        svgEl("stop", { offset: "100%", "stop-color": "#5c95b0", "stop-opacity": 0 }),
+      ]),
     ]);
   }
 
@@ -490,7 +518,7 @@ export function createMap(container, { onSelect, onHover, onFocus, onView } = {}
     const gLand = svgEl("g", { class: "map-land" });
     const gShadow = svgEl("g", { class: "map-shadow" });
     const gSides = svgEl("g", { class: "map-sides" });
-    const gTops = svgEl("g", { class: "map-tops" });
+    gTops = svgEl("g", { class: "map-tops" });
 
     const drawn = [];
     for (const { feature, name } of shapes) {
@@ -519,11 +547,13 @@ export function createMap(container, { onSelect, onHover, onFocus, onView } = {}
 
     for (const { d, name } of drawn) {
       for (let i = DEPTH; i >= 1; i -= 1) {
+        const depth = DEPTH - i;
         gSides.append(
           svgEl("path", {
             d,
             class: "prov__side",
-            fill: SIDE_COLORS[DEPTH - i] || SIDE_COLORS[0],
+            "data-depth": depth,
+            fill: sideColor(depth),
             transform: `translate(0 ${i * SIDE_STEP})`,
           })
         );
@@ -532,17 +562,17 @@ export function createMap(container, { onSelect, onHover, onFocus, onView } = {}
     }
 
     for (const { d, name } of drawn) {
-      const top = svgEl("path", { d, class: "prov__top", fill: "url(#provFill)" });
+      const top = svgEl("path", { d, class: "prov__top", fill: topFill() });
       top.setAttribute("data-name", name);
 
       top.addEventListener("pointerenter", () => {
         if (atlasKey) return;
         top.classList.add("is-hover");
-        top.setAttribute("fill", "url(#provFillHover)");
+        top.setAttribute("fill", topFill(true));
       });
       top.addEventListener("pointerleave", () => {
         top.classList.remove("is-hover");
-        top.setAttribute("fill", "url(#provFill)");
+        top.setAttribute("fill", topFill());
       });
 
       gTops.append(top);
@@ -686,6 +716,47 @@ export function createMap(container, { onSelect, onHover, onFocus, onView } = {}
 
   /* ————————— 节点 ————————— */
 
+  /** 当前图层：case（案例，紫金） / field（调研，冷色） */
+  let currentLayer = "case";
+
+  // 渐变在 SVG 里由 id 引用；CSS 里写 url(#id) 会按样式表路径解析而失效，只能走属性
+  const topFill = (hover = false) =>
+    currentLayer === "field"
+      ? hover
+        ? "url(#provFillFieldHover)"
+        : "url(#provFillField)"
+      : hover
+        ? "url(#provFillHover)"
+        : "url(#provFill)";
+
+  const sideColor = (depth) => {
+    const palette = currentLayer === "field" ? SIDE_COLORS_FIELD : SIDE_COLORS;
+    return palette[depth] || palette[0];
+  };
+
+  /** 换层后把已有元素的配色刷一遍 */
+  function applyLayerColors() {
+    gTops?.querySelectorAll(".prov__top").forEach((top) => {
+      top.setAttribute("fill", topFill(top.classList.contains("is-hover")));
+    });
+    // 侧壁按层深逐级换色，否则紫黑色的厚边会留在冷色底图下面
+    gRoot?.querySelectorAll(".prov__side").forEach((side) => {
+      side.setAttribute("fill", sideColor(Number(side.dataset.depth) || 0));
+    });
+    gNodes?.querySelectorAll(".node__dot").forEach((dot) => {
+      dot.setAttribute("fill", currentLayer === "field" ? "#8ec5dc" : "#d4af37");
+    });
+    gNodes?.querySelectorAll(".node__core").forEach((core) => {
+      core.setAttribute("fill", currentLayer === "field" ? "#e8f4fa" : "#fff6d8");
+    });
+    gNodes?.querySelectorAll(".node__halo").forEach((halo) => {
+      halo.setAttribute(
+        "fill",
+        currentLayer === "field" ? "url(#nodeGlowField)" : "url(#nodeGlow)"
+      );
+    });
+  }
+
   // 全图视角下按市聚合、放大后展开到区县。全国 2840 个区县，
   // 案例攒到上千条时全图会有近千个点，只剩一团亮斑，看不出哪片密。
   const DISTRICT_NODE_LIMIT = 150;
@@ -782,13 +853,17 @@ export function createMap(container, { onSelect, onHover, onFocus, onView } = {}
         svgEl("circle", {
           class: "node__halo",
           r: (node.r * 2.15).toFixed(1),
-          fill: "url(#nodeGlow)",
+          fill: currentLayer === "field" ? "url(#nodeGlowField)" : "url(#nodeGlow)",
         }),
-        svgEl("circle", { class: "node__dot", r: node.r.toFixed(1), fill: "#d4af37" }),
+        svgEl("circle", {
+          class: "node__dot",
+          r: node.r.toFixed(1),
+          fill: currentLayer === "field" ? "#8ec5dc" : "#d4af37",
+        }),
         svgEl("circle", {
           class: "node__core",
           r: (node.r * 0.42).toFixed(1),
-          fill: "#fff6dc",
+          fill: currentLayer === "field" ? "#e8f4fa" : "#fff6dc",
         })
       );
       lift.append(body);
@@ -1069,6 +1144,13 @@ export function createMap(container, { onSelect, onHover, onFocus, onView } = {}
       districtNodeCount = aggregate(cases, "district").length;
       if (atlasKey) exitAtlas();
       renderNodes();
+    },
+    /** 图层：case（案例，紫金） / field（调研，冷色） */
+    setLayer(layer) {
+      currentLayer = layer === "field" ? "field" : "case";
+      if (!svg) return;
+      svg.classList.toggle("is-field", currentLayer === "field");
+      applyLayerColors();
     },
     resetView,
     zoomIn() {

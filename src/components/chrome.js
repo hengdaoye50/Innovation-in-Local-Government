@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { label: "协作工作台", target: "studio" },
   { label: "课堂展示", target: "slides" },
   { label: "文献共读", target: "blog" },
+  { label: "调研足迹", target: "field" },
 ];
 
 export const SITE = {
@@ -163,6 +164,7 @@ export function mountFooter() {
           <a href="#studio">协作工作台</a>
           <a href="#slides">课堂展示</a>
           <a href="#blog">文献共读</a>
+          <a href="#field">调研足迹</a>
         </div>
       </div>
       <div class="footer__bottom">

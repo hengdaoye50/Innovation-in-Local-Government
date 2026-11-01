@@ -1,0 +1,150 @@
+/* —— 调研足迹 —— */
+
+.field-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 32px;
+  gap: 24px;
+  align-items: start;
+  padding: 26px 8px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), padding-left var(--dur) var(--ease);
+}
+
+.field-row:hover {
+  background: rgba(52, 92, 120, 0.05);
+  padding-left: 14px;
+}
+
+/* 调研用冷色编号，与案例的烫金区分开 */
+.field-row__index {
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: 1.3;
+  color: #4a7c96;
+  letter-spacing: 0.04em;
+}
+
+.field-row__index i {
+  margin-left: 5px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-style: normal;
+  letter-spacing: 0.08em;
+  vertical-align: 0.32em;
+  opacity: 0.55;
+}
+
+.field-row__meta {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.field-row__place {
+  font-size: 12px;
+  color: #3f6b83;
+  letter-spacing: 0.04em;
+}
+
+.field-row__title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--ink);
+  margin: 0 0 6px;
+}
+
+.field-row__excerpt {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--ink-2);
+}
+
+.field-row__go {
+  color: var(--ink-3);
+  justify-self: end;
+  padding-top: 6px;
+  transition: color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+
+.field-row__go svg {
+  width: 12px;
+  height: 8px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.2;
+}
+
+.field-row:hover .field-row__go {
+  color: #3f6b83;
+  transform: translateX(3px);
+}
+
+/* 游记正文：比案例宽一档行距，不加段落编号，读起来像印出来的旅行笔记 */
+.field__prose {
+  max-width: 34em;
+}
+
+.field__prose p {
+  margin: 0 0 1.5em;
+  font-family: Georgia, "Songti SC", "Noto Serif SC", serif;
+  font-size: 16.5px;
+  line-height: 2.05;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+
+.field__prose p:last-child {
+  margin-bottom: 0;
+}
+
+/* 提交表单 */
+.field-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 8px;
+}
+
+.field-row3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.field-form__body {
+  min-height: 300px;
+  line-height: 1.95;
+}
+
+.field-form__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line-2);
+}
+
+@media (max-width: 900px) {
+  .field-row {
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 14px;
+  }
+  .field-row__go {
+    display: none;
+  }
+  .field-row3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
