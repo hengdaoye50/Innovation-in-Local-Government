@@ -4,6 +4,7 @@ import "./styles/map.css";
 import "./styles/studio.css";
 import "./styles/boards.css";
 import "./styles/detail.css";
+import "./styles/reading.css";
 import "./styles/auth.css";
 
 import { mountNav, mountFooter } from "./components/chrome.js";
@@ -16,6 +17,7 @@ import { atlasSection, mountAtlas } from "./pages/atlas.js";
 import { studioSection, mountStudio } from "./pages/studio.js";
 import { slidesSection, mountSlides } from "./pages/slides.js";
 import { blogSection, mountBlog } from "./pages/blog.js";
+import { mountReading } from "./pages/reading.js";
 import { mountCaseDetail } from "./pages/case.js";
 import { mountSlideDetail, mountPostDetail } from "./pages/detail.js";
 import { mountAuth } from "./pages/login.js";
@@ -80,6 +82,11 @@ async function renderPost({ id }) {
   await mountPostDetail(app.querySelector("#detail-root"), id);
 }
 
+async function renderReading({ id }) {
+  app.innerHTML = `<main id="detail-root" class="detail-page"></main>`;
+  await mountReading(app.querySelector("#detail-root"), id);
+}
+
 async function renderLogin() {
   document.body.classList.add("page-auth");
   app.innerHTML = `<main id="detail-root"></main>`;
@@ -110,6 +117,7 @@ route("/", renderHome);
 route("/case/:id", renderCase);
 route("/slide/:id", renderSlide);
 route("/post/:id", renderPost);
+route("/reading/:id", renderReading);
 route("/login", renderLogin);
 route("/admin", renderAdmin);
 setNotFound(renderNotFound);

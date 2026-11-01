@@ -1,7 +1,5 @@
-/** 拓展材料展板 */
-import { esc, mountReveal, formatDate } from "../lib/dom.js";
-import { posts as postsApi } from "../lib/api.js";
-import { DEMO_POSTS } from "../lib/demo.js";
+/** 文献共读展板（原拓展材料） */
+import { mountReveal } from "../lib/dom.js";
 
 export function blogSection() {
   return `
@@ -9,14 +7,15 @@ export function blogSection() {
       <div class="shell">
         <div class="screen-head reveal">
           <div class="screen-head__text">
-            <div class="screen-ordinal">04 / 拓展材料</div>
-            <h2 id="blog-title">拓展材料</h2>
-            <p class="lede">课程推荐的文章、论文与方法笔记。</p>
+            <div class="screen-ordinal">04 / 文献共读</div>
+            <h2 id="blog-title">文献共读</h2>
+            <p class="lede">
+              课堂上一起读的方法论文献。可以在正文上划线、写边注，文末有整篇的脉络图和讨论区。
+            </p>
           </div>
         </div>
 
-        <div class="blog-list" data-blog-list>
-          <div class="skeleton" style="height: 140px"></div>
+        <div class="reading-list" data-reading-list>
           <div class="skeleton" style="height: 140px"></div>
         </div>
       </div>
@@ -27,50 +26,49 @@ export function blogSection() {
 export async function mountBlog(root) {
   const section = root.querySelector("#blog");
   if (!section) return;
-  const listEl = section.querySelector("[data-blog-list]");
+  const listEl = section.querySelector("[data-reading-list]");
 
-  let list = [];
-  let demo = false;
+  let items = [];
   try {
-    const res = await postsApi.list({ limit: 20 });
-    list = Array.isArray(res?.items) ? res.items : Array.isArray(res) ? res : [];
+    const res = await fetch("./data/readings/index.json");
+    const data = await res.json();
+    items = Array.isArray(data?.items) ? data.items : [];
   } catch {
-    list = [];
-  }
-  if (!list.length) {
-    list = DEMO_POSTS;
-    demo = true;
+    items = [];
   }
 
-  listEl.innerHTML = list.map((post, i) => rowHtml(post, i, demo, list.length)).join("");
-  listEl.querySelectorAll("[data-post]").forEach((node) => {
+  if (!items.length) {
+    listEl.innerHTML = `<div class="empty">还没有入库的文献。</div>`;
+    return;
+  }
+
+  listEl.innerHTML = items.map((r, i) => rowHtml(r, i, items.length)).join("");
+  listEl.querySelectorAll("[data-reading]").forEach((node) => {
     node.addEventListener("click", () => {
-      window.location.hash = `/post/${node.dataset.post}`;
+      window.location.hash = `/reading/${node.dataset.reading}`;
     });
   });
   mountReveal(section);
 }
 
-function rowHtml(post, index, demo, total) {
-  const tags = (post.tags || [])
-    .map((t) => `<span class="tag tag--quiet">${esc(t)}</span>`)
-    .join("");
+function rowHtml(reading, index, total) {
   return `
-    <article class="blog-row reveal" data-post="${esc(post.id)}" tabindex="0" role="link"
-      aria-label="${esc(post.title)}">
-      <div class="blog-row__index mono">${String(index + 1).padStart(2, "0")}<i>/ ${String(
-        total || 0
-      ).padStart(2, "0")}</i></div>
-      <div class="blog-row__main">
-        <div class="blog-row__meta">
-          ${tags}
-          ${demo ? `<span class="tag tag--quiet">示例</span>` : ""}
-          <span class="meta">${formatDate(post.publishedAt)}</span>
+    <article class="reading-row reveal" data-reading="${reading.id}" tabindex="0" role="link"
+      aria-label="${reading.titleZh}">
+      <div class="reading-row__index mono">${String(index + 1).padStart(2, "0")}<i>/ ${String(
+    total
+  ).padStart(2, "0")}</i></div>
+      <div class="reading-row__main">
+        <div class="reading-row__meta">
+          <span class="meta">${reading.author}</span>
+          <span class="meta mono">${reading.sections} 节 · ${reading.paragraphs} 段</span>
         </div>
-        <h3 class="blog-row__title">${esc(post.title)}</h3>
-        <p class="blog-row__excerpt">${esc(post.excerpt || "")}</p>
+        <h3 class="reading-row__title">${reading.titleZh}</h3>
+        <p class="reading-row__origin">${reading.title}</p>
       </div>
-      <div class="blog-row__author meta">${esc(post.author || "")}</div>
+      <span class="reading-row__go" aria-hidden="true">
+        <svg viewBox="0 0 12 8"><path d="M1 4h10M8 1l3 3-3 3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
     </article>
   `;
 }

@@ -7,7 +7,7 @@ import { ok, fail, methodNotAllowed, readJson, handleError, randomId, clientIp, 
 import { getSession, isStaff, isReadOnly, checkBindings } from "../lib/auth.js";
 import { listComments, insertComment } from "../lib/db.js";
 
-const VALID_TYPES = new Set(["case", "slide", "post"]);
+const VALID_TYPES = new Set(["case", "slide", "post", "reading"]);
 const MAX_LENGTH = 1200;
 
 export async function onRequest(context) {

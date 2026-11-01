@@ -12,7 +12,7 @@ const NAV_ITEMS = [
   { label: "案例地图", target: "atlas" },
   { label: "协作工作台", target: "studio" },
   { label: "课堂展示", target: "slides" },
-  { label: "拓展材料", target: "blog" },
+  { label: "文献共读", target: "blog" },
 ];
 
 export const SITE = {
@@ -162,7 +162,7 @@ export function mountFooter() {
           <a href="#atlas">案例地图</a>
           <a href="#studio">协作工作台</a>
           <a href="#slides">课堂展示</a>
-          <a href="#blog">拓展材料</a>
+          <a href="#blog">文献共读</a>
         </div>
       </div>
       <div class="footer__bottom">
@@ -180,7 +180,7 @@ export function mountFooter() {
 export const ICONS = {
   reset: `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 6.2A6 6 0 1 1 2 9.6" stroke-linecap="round"/><path d="M2.2 2.6v3.8h3.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   rotate: `<svg viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="8" rx="6" ry="2.6"/><path d="M8 1.8v12.4" stroke-linecap="round" opacity=".45"/><path d="M2.6 5.4c1 1.6 3 2.6 5.4 2.6s4.4-1 5.4-2.6" stroke-linecap="round" opacity=".6"/></svg>`,
-  zoom: `<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.6"/><path d="M10.4 10.4L14 14" stroke-linecap="round"/><path d="M4.8 7h4.4" stroke-linecap="round"/></svg>`,
-  zoomOut: `<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.6"/><path d="M10.4 10.4L14 14" stroke-linecap="round"/><path d="M4.8 7h4.4" stroke-linecap="round"/><path d="M7 4.8v4.4" stroke-linecap="round" opacity=".45"/></svg>`,
+  zoom: `<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.6"/><path d="M10.4 10.4L14 14" stroke-linecap="round"/><path d="M4.8 7h4.4" stroke-linecap="round"/><path d="M7 4.8v4.4" stroke-linecap="round"/></svg>`,
+  zoomOut: `<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.6"/><path d="M10.4 10.4L14 14" stroke-linecap="round"/><path d="M4.8 7h4.4" stroke-linecap="round"/></svg>`,
   arrowDown: `<svg viewBox="0 0 14 6" aria-hidden="true"><path d="M1 1l6 4 6-4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
 };

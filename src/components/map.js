@@ -61,6 +61,8 @@ export function createMap(container, { onSelect, onHover, onFocus, onView } = {}
   /** 刻度标签：{ el, lng, lat, axis }，位置在 updateGraticuleLabels 里按视角重算 */
   let gratLabels = [];
   let gratLabelLayer = null;
+  /** 附表要画的要素（九段线 + 移出主图的岛礁），由 buildLand 填充 */
+  let insetFeatures = [];
   let pathGen = null;
   let cases = [];
   let lastNodes = [];
@@ -547,8 +549,9 @@ export function createMap(container, { onSelect, onHover, onFocus, onView } = {}
     }
 
     // 附图装的是九段线 + 移出主图的南海岛礁（西沙/中沙/南沙并进海南，东沙并进广东）。
-    // 按国内地图出版的做法缩成一小块，既不缺版图要素，也不让它们拖累主图构图。
-    const insetFeatures = [...islands];
+    // 它不进 gRoot：主图有 rotateX 透视、还跟着缩放拖动，附图挤在里面既难定位、
+    // 又会被视口裁掉一条。改成独立的定位层，位置交给 CSS，见 buildInsetLayer。
+    insetFeatures = [...islands];
     if (southernPolys.length) {
       insetFeatures.push({
         type: "Feature",
@@ -557,59 +560,57 @@ export function createMap(container, { onSelect, onHover, onFocus, onView } = {}
       });
     }
 
-    const gInset = svgEl("g", { class: "map-inset" });
-    if (insetFeatures.length) {
-      const collection = { type: "FeatureCollection", features: insetFeatures };
-      const b = pathGen.bounds(collection);
-      const w = Math.max(1, b[1][0] - b[0][0]);
-      const h = Math.max(1, b[1][1] - b[0][1]);
-      // 附图尺寸固定，线宽由 non-scaling-stroke 保持恒定，不随缩放变细
-      const boxW = 64;
-      const boxH = 92;
-      const s = Math.min(boxW / w, boxH / h) * 0.86;
-      // 位置按实测反推：舞台 rotateX(14deg) scale(1.04) 后越靠右放得越大，
-      // 登录页那种满宽面板里，右边距不够就会被视口裁掉；左边又要留出东海海面，
-      // 不贴着浙江福建的海岸线
-      const boxX = VIEW_W - boxW - 56;
-      // 放在东侧海面（长江口以东）：右下角放不下 —— 舞台有 rotateX(14deg) 透视，
-      // viewBox 底边落到屏幕可视区之外还被底部渐变遮住，贴底的附图必被切；
-      // 而 y<500 才避开台湾（561~622, 501~568），x>588 才避开浙江/江苏/上海东岸
-      const boxY = 380;
-      const tx = boxX + (boxW - w * s) / 2 - b[0][0] * s;
-      const ty = boxY + (boxH - h * s) / 2 - b[0][1] * s;
-
-      const inner = svgEl("g", {
-        transform: `translate(${tx.toFixed(1)} ${ty.toFixed(1)}) scale(${s.toFixed(3)})`,
-      });
-      for (const feature of insetFeatures) {
-        const d = pathGen(feature);
-        if (!d) continue;
-        const isIsland = feature.properties?.name === "南海诸岛";
-        inner.append(
-          svgEl("path", { d, class: isIsland ? "island-fill" : "island-line" })
-        );
-      }
-
-      gInset.append(
-        svgEl("rect", {
-          x: boxX,
-          y: boxY,
-          width: boxW,
-          height: boxH,
-          rx: 1.5,
-          class: "inset-frame",
-        }),
-        inner
-      );
-    }
-
     gLinks = svgEl("g", { class: "map-links" });
     gNodes = svgEl("g", { class: "map-nodes" });
     gFocus = svgEl("g", { class: "map-focus" });
     gAtlas = svgEl("g", { class: "map-atlas" });
 
     gLand.append(gShadow, gSides, gTops);
-    gRoot.append(buildGraticule(), gLand, gInset, gLinks, gNodes, gAtlas, gFocus);
+    gRoot.append(buildGraticule(), gLand, gLinks, gNodes, gAtlas, gFocus);
+  }
+
+  /**
+   * 南海诸岛附图：舞台右下角一块独立的小图。
+   * 用自己的投影把九段线与岛礁 fit 进自己的 viewBox，
+   * 不随主图缩放、不受透视影响，位置和大小完全由 CSS 决定。
+   */
+  function buildInsetLayer() {
+    if (!insetFeatures || !insetFeatures.length) return null;
+    const W = 78;
+    const H = 104;
+
+    const inset = svgEl("svg", {
+      viewBox: `0 0 ${W} ${H}`,
+      class: "map-inset-svg",
+      role: "img",
+      "aria-label": "南海诸岛附图",
+    });
+
+    const proj = geoConicEqualArea().parallels([25, 47]).rotate([-105, 0]);
+    const path = geoPath(proj).digits(1);
+    const collection = { type: "FeatureCollection", features: insetFeatures };
+    const b = path.bounds(collection);
+    const w = Math.max(1, b[1][0] - b[0][0]);
+    const h = Math.max(1, b[1][1] - b[0][1]);
+    const k = Math.min(W / w, H / h) * 0.84;
+    const tx = (W - w * k) / 2 - b[0][0] * k;
+    const ty = (H - h * k) / 2 - b[0][1] * k;
+
+    const inner = svgEl("g", {
+      transform: `translate(${tx.toFixed(1)} ${ty.toFixed(1)}) scale(${k.toFixed(3)})`,
+    });
+    for (const feature of insetFeatures) {
+      const d = path(feature);
+      if (!d) continue;
+      const isIsland = feature.properties?.name === "南海诸岛";
+      inner.append(svgEl("path", { d, class: isIsland ? "island-fill" : "island-line" }));
+    }
+
+    inset.append(
+      svgEl("rect", { x: 0.5, y: 0.5, width: W - 1, height: H - 1, rx: 3, class: "inset-frame" }),
+      inner
+    );
+    return inset;
   }
 
   /**
@@ -1045,6 +1046,8 @@ export function createMap(container, { onSelect, onHover, onFocus, onView } = {}
     container.append(stage);
 
     buildLand(geo);
+    const insetSvg = buildInsetLayer();
+    if (insetSvg) stage.append(insetSvg);
     renderNodes();
     bindPanZoom();
     applyView();

@@ -1,0 +1,312 @@
+/* —— 文献共读 —— */
+
+/* 第四屏的文献列表：一行一条，左侧编号、右侧箭头 */
+.reading-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 32px;
+  gap: 24px;
+  align-items: center;
+  padding: 26px 8px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), padding-left var(--dur) var(--ease);
+}
+
+.reading-row:hover {
+  background: rgba(196, 162, 101, 0.05);
+  padding-left: 14px;
+}
+
+.reading-row__index {
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: 1.3;
+  color: var(--gold);
+  letter-spacing: 0.04em;
+}
+
+.reading-row__index i {
+  margin-left: 5px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-style: normal;
+  letter-spacing: 0.08em;
+  vertical-align: 0.32em;
+  opacity: 0.55;
+}
+
+.reading-row__meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.reading-row__title {
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--ink);
+  margin: 0 0 6px;
+}
+
+.reading-row__origin {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-3);
+  margin: 0;
+}
+
+.reading-row__go {
+  color: var(--ink-3);
+  justify-self: end;
+  transition: color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+
+.reading-row__go svg {
+  width: 12px;
+  height: 8px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.2;
+}
+
+.reading-row:hover .reading-row__go {
+  color: var(--plum);
+  transform: translateX(3px);
+}
+
+/* —— 阅读页 —— */
+.reading__origin {
+  margin: 10px 0 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--ink-3);
+}
+
+.reading__body {
+  min-width: 0;
+}
+
+.reading__section + .reading__section {
+  margin-top: 54px;
+}
+
+.reading__section-title {
+  position: relative;
+  margin: 0 0 22px;
+  padding-left: 18px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.reading__section-title::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 8px;
+  height: 1px;
+  background: var(--gold);
+}
+
+.reading__section-no {
+  margin-right: 8px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+  vertical-align: 0.35em;
+}
+
+.reading__section-origin {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--ink-3);
+}
+
+/* 正文段落：英文长句用衬线更好读，行距也放宽一档 */
+.reading__para {
+  margin: 0 0 1.15em;
+  font-family: Georgia, "Songti SC", "Noto Serif SC", serif;
+  font-size: 16.5px;
+  line-height: 1.95;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+
+.reading__para:last-child {
+  margin-bottom: 0;
+}
+
+/* 章节导航 */
+.reading__toc-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.reading__toc-list a {
+  display: flex;
+  gap: 8px;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  transition: color var(--dur-fast) var(--ease);
+}
+
+.reading__toc-list a:hover {
+  color: var(--plum);
+}
+
+.reading__toc-list .mono {
+  flex: none;
+  font-size: 10px;
+  color: var(--gold);
+  padding-top: 1px;
+}
+
+/* —— 思维导图 —— */
+.reading__mindmap {
+  margin-top: 72px;
+  padding-top: 32px;
+  border-top: 1px solid var(--line);
+}
+
+.reading__mindmap-head .h3 {
+  margin: 8px 0 6px;
+}
+
+.reading__mindmap-body {
+  margin-top: 26px;
+}
+
+.mindmap {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+
+/* 根节点：整篇文章要回答的问题，用一枚带金边的块压住左侧 */
+.mindmap__root {
+  position: relative;
+  padding: 16px 18px;
+  border: 1px solid var(--line-gold);
+  border-radius: var(--radius-sm);
+  background: var(--paper-raised);
+  box-shadow: var(--edge-light), var(--shadow-sm);
+  font-family: var(--font-display);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--plum-deep);
+}
+
+/* 根节点右侧伸出主干 */
+.mindmap__root::after {
+  content: "";
+  position: absolute;
+  right: -28px;
+  top: 50%;
+  width: 28px;
+  height: 1px;
+  background: var(--line-gold);
+}
+
+.mindmap__branches {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  border-left: 1px solid var(--line-gold);
+  padding-left: 26px;
+}
+
+.mindmap__branch {
+  position: relative;
+}
+
+/* 每个分支从主干上接出来 */
+.mindmap__branch::before {
+  content: "";
+  position: absolute;
+  left: -26px;
+  top: 12px;
+  width: 20px;
+  height: 1px;
+  background: var(--line-gold);
+}
+
+.mindmap__branch-title {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.mindmap__points {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mindmap__points li {
+  position: relative;
+  padding-left: 14px;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--ink-2);
+}
+
+.mindmap__points li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 0.72em;
+  width: 4px;
+  height: 1px;
+  background: var(--line-strong);
+}
+
+.reading__discuss {
+  margin-top: 64px;
+  padding-top: 8px;
+}
+
+@media (max-width: 900px) {
+  .reading-row {
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 14px;
+  }
+  .reading-row__go {
+    display: none;
+  }
+  .mindmap {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+  .mindmap__root::after,
+  .mindmap__branch::before {
+    display: none;
+  }
+  .mindmap__branches {
+    border-left: 0;
+    padding-left: 0;
+  }
+}
