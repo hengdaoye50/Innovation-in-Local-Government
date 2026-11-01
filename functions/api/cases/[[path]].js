@@ -19,6 +19,7 @@ import {
 import { getSession, isStaff, isReadOnly, checkBindings } from "../../lib/auth.js";
 import {
   listCases,
+  listMyCases,
   getCase,
   insertCase,
   updateCaseStatus,
@@ -56,6 +57,14 @@ export async function onRequest(context) {
 async function listHandler(request, env) {
   const url = new URL(request.url);
   const status = url.searchParams.get("status") || "";
+
+  // ?mine=1 走「我的作品」：不限状态，但只能是自己的
+  if (url.searchParams.get("mine")) {
+    const session = await getSession(env, request);
+    if (!session) return fail("请先登录", 401);
+    const mine = await listMyCases(env, session.id, url.searchParams.get("limit") || 50);
+    return ok({ items: mine });
+  }
 
   // 未指定状态时只看已发布；指定其它状态需要教师身份
   let effectiveStatus = "published";

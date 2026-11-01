@@ -277,6 +277,11 @@
   color: var(--warn);
 }
 
+.tag--err {
+  border-color: rgba(163, 32, 32, 0.4);
+  color: var(--err);
+}
+
 /* —— 卡片 —— */
 .card {
   position: relative;

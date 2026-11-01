@@ -1037,3 +1037,99 @@ label.btn {
     line-height: 1.6;
   }
 }
+
+/* —— 草稿恢复提示 —— */
+.draft__restore {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(196, 162, 101, 0.07);
+}
+
+.draft__restore-text {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.draft__restore .btn {
+  height: 26px;
+  font-size: 12px;
+}
+
+/* —— 我的作品 —— */
+.studio__mine {
+  margin-top: 40px;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+}
+
+.studio__mine-head {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.studio__mine-head .h3 {
+  margin: 0;
+}
+
+.studio__mine-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.mine-row {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.mine-row:last-child {
+  border-bottom: 0;
+}
+
+.mine-row__meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 7px;
+}
+
+.mine-row__title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.mine-row__title:hover {
+  color: var(--plum);
+}
+
+/* 退回理由：和 AI 评语同一套引文样式，一眼看出这是要改的地方 */
+.mine-row__review {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-left: 1px solid var(--warn);
+  background: rgba(176, 106, 30, 0.06);
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: var(--ink-2);
+}
+
+.mine-row__review b {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--warn);
+}

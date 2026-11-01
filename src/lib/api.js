@@ -84,6 +84,8 @@ export const cases = {
     return api.get(`/api/cases${q ? `?${q}` : ""}`);
   },
   detail: (id) => api.get(`/api/cases/${encodeURIComponent(id)}`),
+  // 自己的作品：含审核中与已退回，学生要知道被退回的理由
+  mine: (limit = 50) => api.get(`/api/cases?mine=1&limit=${limit}`),
   create: (payload) => api.post("/api/cases", payload),
   setStatus: (id, status) => api.patch(`/api/cases/${encodeURIComponent(id)}`, { status }),
 };

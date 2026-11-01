@@ -102,6 +102,20 @@ const CASE_COLUMNS = `id, title, province, city, district, lng, lat, domains, su
   sources_json, author_id, author_name, status, ai_review, ai_score, year,
   created_at, updated_at`;
 
+/**
+ * 某个作者自己的全部作品，含审核中与已退回。
+ * 学生需要看到「为什么被退回」，否则质检意见只留在后台，等于没反馈。
+ */
+export async function listMyCases(env, authorId, limit = 50) {
+  const { results } = await env.DB.prepare(
+    `SELECT ${CASE_COLUMNS} FROM cases WHERE author_id = ?
+     ORDER BY created_at DESC LIMIT ?`
+  )
+    .bind(authorId, Math.min(100, Math.max(1, Number(limit) || 50)))
+    .all();
+  return (results || []).map(rowToCase);
+}
+
 export async function listCases(env, { status, province, domain, q, limit = 100, offset = 0 } = {}) {
   const where = [];
   const binds = [];

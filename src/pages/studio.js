@@ -241,6 +241,16 @@ export function studioSection() {
             </div>
           </aside>
         </div>
+
+        <section class="studio__mine" aria-labelledby="mine-title">
+          <header class="studio__mine-head">
+            <h3 class="h3" id="mine-title">我的作品</h3>
+            <span class="meta">含审核中与已退回，退回理由就在这里看</span>
+          </header>
+          <div class="studio__mine-list" data-mine-list>
+            <div class="skeleton" style="height:56px"></div>
+          </div>
+        </section>
       </div>
     </section>
   `;
@@ -653,6 +663,35 @@ export function mountStudio(root) {
 
   const draft = { tags: new Set(), sources: [] };
 
+  /* —————— 草稿落盘：写一半刷新不至于全丢 —————— */
+  const draftKey = `studio-draft:${getState().user?.id || "anon"}`;
+  let pendingGeoRestore = null;
+
+  function collectDraft() {
+    return {
+      title: titleInput.value,
+      province: provinceSel.value,
+      city: citySel.value,
+      district: districtSel.value,
+      tags: [...draft.tags],
+      sources: draft.sources,
+      body: bodyInput.value,
+      savedAt: Date.now(),
+    };
+  }
+
+  const persistDraft = debounce(() => {
+    const data = collectDraft();
+    const isEmpty =
+      !data.title.trim() && !data.body.trim() && !data.tags.length && !data.sources.length;
+    try {
+      if (isEmpty) localStorage.removeItem(draftKey);
+      else localStorage.setItem(draftKey, JSON.stringify(data));
+    } catch {
+      // 隐私模式或存储配额满时忽略，不能因为存不了就把编辑打断
+    }
+  }, 700);
+
   const geo = { provinces: [], cities: [], districts: [] };
   fetch("/data/cities.json")
     .then((r) => r.json())
@@ -665,10 +704,31 @@ export function mountStudio(root) {
         geo.provinces
           .map((p) => `<option value="${esc(p.name)}">${esc(p.name)}</option>`)
           .join("");
+      // 恢复草稿要等省份选项就位，否则 select.value 设不进去
+      if (pendingGeoRestore) {
+        applyGeo(pendingGeoRestore);
+        pendingGeoRestore = null;
+      }
     })
     .catch(() => {
       provinceSel.innerHTML = `<option value="">数据加载失败</option>`;
     });
+
+  /** 把草稿里的省市区填回去，逐级触发 change 让下级选项重建 */
+  function applyGeo(data) {
+    if (!data.province) return;
+    if (!geo.provinces.length) {
+      pendingGeoRestore = data;
+      return;
+    }
+    provinceSel.value = data.province;
+    provinceSel.dispatchEvent(new Event("change"));
+    if (data.city) {
+      citySel.value = data.city;
+      citySel.dispatchEvent(new Event("change"));
+    }
+    if (data.district) districtSel.value = data.district;
+  }
 
   /** 重置某个下拉为「请选择」占位 */
   function resetSelect(select, placeholder = "请选择") {
@@ -771,6 +831,126 @@ export function mountStudio(root) {
     draft.sources.push({ url: "" });
     renderSources();
   });
+
+  /* —————————— 草稿：自动保存与恢复 —————————— */
+
+  // 编辑区的任何改动都触发一次落盘，输入框用 debounce 兜住频率
+  section.addEventListener("input", persistDraft);
+  section.addEventListener("change", persistDraft);
+  section.addEventListener("click", (event) => {
+    if (event.target.closest("[data-domain], [data-add-source], [data-source-del]")) persistDraft();
+  });
+
+  function readStoredDraft() {
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      const hasContent =
+        data && (data.title?.trim() || data.body?.trim() || data.tags?.length || data.sources?.length);
+      return hasContent ? data : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function applyDraft(data) {
+    titleInput.value = data.title || "";
+    bodyInput.value = data.body || "";
+    draft.tags = new Set(data.tags || []);
+    tagBox.querySelectorAll("[data-domain]").forEach((chip) => {
+      chip.classList.toggle("is-on", draft.tags.has(chip.dataset.domain));
+    });
+    draft.sources = Array.isArray(data.sources) ? data.sources : [];
+    renderSources();
+    applyGeo(data);
+    updateWords();
+  }
+
+  const stored = readStoredDraft();
+  if (stored) {
+    const bar = el("div", { class: "draft__restore" });
+    const when = new Date(stored.savedAt || Date.now());
+    const stamp = `${String(when.getMonth() + 1).padStart(2, "0")}-${String(
+      when.getDate()
+    ).padStart(2, "0")} ${String(when.getHours()).padStart(2, "0")}:${String(
+      when.getMinutes()
+    ).padStart(2, "0")}`;
+    bar.innerHTML = `
+      <span class="draft__restore-text">上次有未提交的草稿（${stamp}）</span>
+      <button class="btn btn--quiet btn--sm" type="button" data-restore>恢复</button>
+      <button class="btn btn--quiet btn--sm" type="button" data-discard>丢弃</button>
+    `;
+    qs(".draft__lede", section)?.after(bar);
+    bar.querySelector("[data-restore]").addEventListener("click", () => {
+      applyDraft(stored);
+      bar.remove();
+      toast("草稿已恢复");
+    });
+    bar.querySelector("[data-discard]").addEventListener("click", () => {
+      try {
+        localStorage.removeItem(draftKey);
+      } catch {
+        /* 忽略 */
+      }
+      bar.remove();
+    });
+  }
+
+  /* —————————— 我的作品 —————————— */
+
+  const STATUS_LABEL = {
+    pending: { text: "审核中", cls: "tag--warn" },
+    published: { text: "已发布", cls: "tag--ok" },
+    rejected: { text: "已退回", cls: "tag--err" },
+    hidden: { text: "已下架", cls: "tag--quiet" },
+  };
+
+  function timeAgo(iso) {
+    const diff = Date.now() - new Date(iso).getTime();
+    const day = 86400000;
+    if (!Number.isFinite(diff)) return "";
+    if (diff < 3600000) return `${Math.max(1, Math.round(diff / 60000))} 分钟前`;
+    if (diff < day) return `${Math.round(diff / 3600000)} 小时前`;
+    if (diff < day * 30) return `${Math.round(diff / day)} 天前`;
+    return new Date(iso).toISOString().slice(0, 10);
+  }
+
+  async function loadMine() {
+    const host = qs("[data-mine-list]", section);
+    if (!host) return;
+    let items = [];
+    try {
+      const res = await casesApi.mine();
+      items = Array.isArray(res?.items) ? res.items : [];
+    } catch {
+      items = [];
+    }
+    if (!items.length) {
+      host.innerHTML = `<div class="empty">还没有提交过作品。写完一篇，提交后会出现在这里。</div>`;
+      return;
+    }
+    host.innerHTML = items
+      .map((c) => {
+        const st = STATUS_LABEL[c.status] || STATUS_LABEL.pending;
+        return `
+        <article class="mine-row">
+          <div class="mine-row__meta">
+            <span class="tag ${st.cls}">${st.text}</span>
+            <span class="meta mono">${zhLength(c.body || c.summary || "")} 字</span>
+            <span class="meta">${timeAgo(c.createdAt)}</span>
+          </div>
+          <a class="mine-row__title" href="#/case/${esc(c.id)}">${esc(c.title)}</a>
+          ${
+            c.status === "rejected" && c.aiReview
+              ? `<p class="mine-row__review"><b>退回理由</b>${esc(c.aiReview)}</p>`
+              : ""
+          }
+        </article>`;
+      })
+      .join("");
+  }
+  loadMine();
 
   /* —————————— 文件导入 —————————— */
 
@@ -977,6 +1157,12 @@ export function mountStudio(root) {
         draft.sources = [];
         renderSources();
         updateWords();
+        // 交出去了就不用再留草稿
+        try {
+          localStorage.removeItem(draftKey);
+        } catch {
+          /* 忽略 */
+        }
       } else {
         // 未通过时保留内容，方便学生按提示就地修改
         const reason =
@@ -985,6 +1171,8 @@ export function mountStudio(root) {
         statusText.dataset.state = "err";
         toast("质检未通过，按提示修改后可重新提交", { type: "error" });
       }
+      // 无论过没过，作品清单都要刷新：退回的理由就显示在那里
+      loadMine();
     } catch (err) {
       statusText.textContent = err.message || "提交失败";
       statusText.dataset.state = "err";
