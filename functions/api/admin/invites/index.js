@@ -53,21 +53,50 @@ export async function onRequest(context) {
       }
 
       const note = String(body.note || "").trim().slice(0, 60);
+      // 批量上限 200：一个班一次发完够用，也挡住误操作把表刷爆
+      const count = Math.min(200, Math.max(1, Number(body.count) || 1));
 
-      for (let attempt = 0; attempt < 5; attempt += 1) {
-        const code = randomInviteCode();
+      if (count === 1) {
+        for (let attempt = 0; attempt < 5; attempt += 1) {
+          const code = randomInviteCode();
+          try {
+            await env.DB.prepare(
+              "INSERT INTO invites (code, role, note, created_by, created_at) VALUES (?, ?, ?, ?, ?)"
+            )
+              .bind(code, wanted, note || null, session.id, new Date().toISOString())
+              .run();
+            return ok({ code, role: wanted, note, count: 1 });
+          } catch (err) {
+            if (attempt === 4) throw err;
+          }
+        }
+        return fail("生成失败，请重试", 500);
+      }
+
+      // 批量：先在内存里生成互不重复的码，再用 batch 一次写入（D1 batch 是事务性的）。
+      // 万一撞上已有记录整批回滚，重试时换一批码。
+      const now = new Date().toISOString();
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const codes = new Set();
+        while (codes.size < count) codes.add(randomInviteCode());
+        const list = [...codes];
         try {
-          await env.DB.prepare(
-            "INSERT INTO invites (code, role, note, created_by, created_at) VALUES (?, ?, ?, ?, ?)"
-          )
-            .bind(code, wanted, note || null, session.id, new Date().toISOString())
-            .run();
-          return ok({ code, role: wanted, note });
+          await env.DB.batch(
+            list.map((code) =>
+              env.DB.prepare(
+                "INSERT INTO invites (code, role, note, created_by, created_at) VALUES (?, ?, ?, ?, ?)"
+              ).bind(code, wanted, note || null, session.id, now)
+            )
+          );
+          return ok({
+            items: list.map((code) => ({ code, role: wanted, note })),
+            count: list.length,
+          });
         } catch (err) {
-          if (attempt === 4) throw err;
+          if (attempt === 2) throw err;
         }
       }
-      return fail("生成失败，请重试", 500);
+      return fail("批量生成失败，请重试", 500);
     }
 
     return methodNotAllowed(["GET", "POST"]);

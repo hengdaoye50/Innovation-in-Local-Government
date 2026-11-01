@@ -521,13 +521,33 @@ async function renderInvites(panel, me) {
             maxlength="60"
             placeholder="备注（可选），比如「第 3 组」「行管 2201 班」"
           />
-          <div class="invite-maker__actions">
-            <button class="btn btn--primary btn--sm" data-new-invite="student">生成学生邀请码</button>
-            ${
-              isAdmin
-                ? `<button class="btn btn--gold btn--sm" data-new-invite="teacher">生成教师邀请码</button>`
-                : ""
-            }
+          <div class="invite-maker__row">
+            <label class="invite-maker__count">
+              <span class="field__label">数量</span>
+              <input
+                class="input"
+                type="number"
+                min="1"
+                max="200"
+                step="1"
+                value="1"
+                inputmode="numeric"
+                data-invite-count
+              />
+            </label>
+            <div class="invite-maker__actions">
+              <button class="btn btn--primary btn--sm" data-new-invite="student">
+                生成学生邀请码
+              </button>
+              ${
+                isAdmin
+                  ? `<button class="btn btn--gold btn--sm" data-new-invite="teacher">生成教师邀请码</button>`
+                  : ""
+              }
+              <button class="btn btn--ghost btn--sm" data-export-invites type="button">
+                导出表格
+              </button>
+            </div>
           </div>
         </div>
 
@@ -543,7 +563,9 @@ async function renderInvites(panel, me) {
             邀请码 6 位、一次性。角色由邀请码决定——教师邀请码注册出来的账号
             直接拥有后台权限。<br /><br />
             备注只给你自己看，用来记这个码给了谁。<b>作废</b>会让未使用的码立刻失效，
-            已使用的码保留作账号来历，不能作废。
+            已使用的码保留作账号来历，不能作废。<br /><br />
+            给一个班发码时把<b>数量</b>改成人头数（一次最多 200），生成后点<b>导出表格</b>，
+            导出的是当前这张列表，CSV 用 Excel 直接打开，备注列可以填班级或学号段。
             ${isAdmin ? "" : "<br /><br />你是教师角色，只能签发学生邀请码。"}
           </p>
         </section>
@@ -553,6 +575,9 @@ async function renderInvites(panel, me) {
 
   const listEl = qs("[data-invite-list]", panel);
   const noteInput = qs("[data-invite-note]", panel);
+  const countInput = qs("[data-invite-count]", panel);
+  /** 当前列表快照，导出表格时直接用它，不再请求一次 */
+  let currentInvites = [];
 
   function statusOf(i) {
     if (i.revoked) return { text: "已作废", cls: "tag--quiet" };
@@ -569,6 +594,7 @@ async function renderInvites(panel, me) {
       listEl.innerHTML = `<div class="empty">${esc(err.message || "读取失败")}</div>`;
       return;
     }
+    currentInvites = items;
 
     if (!items.length) {
       listEl.innerHTML = `<div class="empty">还没有生成邀请码。学生需要凭邀请码才能注册。</div>`;
@@ -651,10 +677,16 @@ async function renderInvites(panel, me) {
     btn.addEventListener("click", async () => {
       const role = btn.dataset.newInvite;
       const note = noteInput.value.trim();
+      const count = Math.min(200, Math.max(1, Number(countInput?.value) || 1));
       btn.disabled = true;
       try {
-        const res = await adminApi.createInvite(role, note);
-        toast(`${role === "teacher" ? "教师" : "学生"}邀请码 ${res?.code || ""} 已生成`);
+        const res = await adminApi.createInvite(role, note, count);
+        const label = role === "teacher" ? "教师" : "学生";
+        toast(
+          count > 1
+            ? `已生成 ${res?.count || count} 个${label}邀请码，记得导出表格`
+            : `${label}邀请码 ${res?.code || ""} 已生成`
+        );
         noteInput.value = "";
         load();
       } catch (err) {
@@ -663,6 +695,42 @@ async function renderInvites(panel, me) {
         btn.disabled = false;
       }
     });
+  });
+
+  // 导出：CSV 带 BOM，Excel 双击打开不乱码；字段全部加引号，备注里有逗号也不会串列
+  qs("[data-export-invites]", panel)?.addEventListener("click", () => {
+    if (!currentInvites.length) {
+      toast("还没有邀请码可以导出", { type: "error" });
+      return;
+    }
+    const rows = [["邀请码", "角色", "备注", "状态", "使用者", "生成时间"]];
+    for (const i of currentInvites) {
+      const status = i.revoked ? "已作废" : i.used ? "已使用" : "未使用";
+      rows.push([
+        i.code,
+        i.role === "teacher" ? "教师" : "学生",
+        i.note || "",
+        status,
+        i.usedBy || "",
+        (i.createdAt || "").slice(0, 10),
+      ]);
+    }
+    const csv =
+      "\uFEFF" +
+      rows
+        .map((r) => r.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(","))
+        .join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const stamp = new Date().toISOString().slice(0, 10);
+    link.href = url;
+    link.download = `邀请码-${stamp}-${currentInvites.length}个.csv`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast(`已导出 ${currentInvites.length} 个邀请码`);
   });
 
   load();

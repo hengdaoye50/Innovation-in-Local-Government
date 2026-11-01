@@ -651,24 +651,49 @@
 /* —— 邀请码 —— */
 .invite-maker {
   display: flex;
-  gap: 10px;
-  align-items: center;
+  flex-direction: column;
+  gap: 12px;
   padding: 16px 22px;
   border-bottom: 1px solid var(--line);
-  flex-wrap: wrap;
 }
 
 .invite-maker .input {
-  flex: 1;
-  min-width: 200px;
   font-size: 14px;
   padding: 8px 12px;
+}
+
+/* 数量与按钮同排：数量窄到只放得下三位数，按钮靠右 */
+.invite-maker__row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.invite-maker__count {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: none;
+}
+
+.invite-maker__count .field__label {
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  margin: 0;
+}
+
+.invite-maker__count .input {
+  width: 76px;
+  font-family: var(--font-mono);
+  text-align: center;
 }
 
 .invite-maker__actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  margin-left: auto;
 }
 
 .admin__invites {
