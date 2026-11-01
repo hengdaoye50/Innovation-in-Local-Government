@@ -52,6 +52,7 @@ export function atlasSection() {
           <button class="ctrl" data-map="reset" title="复位视角" aria-label="复位视角">
             ${ICONS.reset}
           </button>
+          <span class="ctrl ctrl--readout mono" data-zoom-readout aria-live="off">×1.0</span>
         </div>
 
         <div class="atlas__hint" data-atlas-hint>
@@ -77,6 +78,7 @@ export async function mountAtlas(root) {
   const defaultHint = hint?.innerHTML || "";
 
   let focusNode = null;
+  const zoomReadout = qs("[data-zoom-readout]", section);
 
   const map = createMap(canvasHost, {
     onSelect: (item, extra) => {
@@ -93,6 +95,10 @@ export async function mountAtlas(root) {
         return;
       }
       showFocusCard(node, info);
+    },
+    // 缩放读数：像制图软件那样把当前倍率摆在控制组里
+    onView: ({ k }) => {
+      if (zoomReadout) zoomReadout.textContent = `×${k.toFixed(1)}`;
     },
   });
 

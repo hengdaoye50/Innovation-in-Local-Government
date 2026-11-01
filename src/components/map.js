@@ -50,7 +50,7 @@ function svgEl(tag, attrs = {}, children = []) {
   return node;
 }
 
-export function createMap(container, { onSelect, onHover, onFocus } = {}) {
+export function createMap(container, { onSelect, onHover, onFocus, onView } = {}) {
   let svg = null;
   let gRoot = null;
   let gNodes = null;
@@ -58,6 +58,9 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
   let gFocus = null;
   let gAtlas = null;
   let projection = null;
+  /** 刻度标签：{ el, lng, lat, axis }，位置在 updateGraticuleLabels 里按视角重算 */
+  let gratLabels = [];
+  let gratLabelLayer = null;
   let pathGen = null;
   let cases = [];
   let lastNodes = [];
@@ -99,6 +102,9 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
       clearTimeout(zoomSettleTimer);
       zoomSettleTimer = setTimeout(() => gNodes?.classList.remove("is-zooming"), 180);
     }
+    // 刻度尺、缩放读数这类仪器读数要跟着视角走
+    updateGraticuleLabels();
+    onView?.({ k: view.k, x: view.x, y: view.y });
   }
 
   function scheduleView() {
@@ -592,7 +598,78 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
     gAtlas = svgEl("g", { class: "map-atlas" });
 
     gLand.append(gShadow, gSides, gTops);
-    gRoot.append(gLand, gInset, gLinks, gNodes, gAtlas, gFocus);
+    gRoot.append(buildGraticule(), gLand, gInset, gLinks, gNodes, gAtlas, gFocus);
+  }
+
+  /**
+   * 经纬网与边缘刻度：制图台上那层底纹。
+   * 网格线跟着地图一起缩放（本来就该跟着），但刻度标签是「尺」，钉在画框上：
+   * 所以标签单独一层、不进 gRoot，位置在 applyView 里按当前视角重算，
+   * 对应的网格线移出视野就把标签收起来。
+   */
+  function buildGraticule() {
+    const lines = svgEl("g", { class: "grat-lines" });
+    gratLabels = [];
+
+    const toPath = (points) =>
+      points
+        .filter(Boolean)
+        .map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)},${p[1].toFixed(1)}`)
+        .join(" ");
+
+    // 10°N 落在南海，那里已被附图接管，主图不再标
+    const LATS = [20, 30, 40, 50];
+    const LNGS = [80, 90, 100, 110, 120, 130];
+
+    for (const lat of LATS) {
+      const pts = [];
+      for (let lng = 72; lng <= 140; lng += 2) pts.push(projection([lng, lat]));
+      lines.append(svgEl("path", { d: toPath(pts), class: "grat-line" }));
+
+      const el = svgEl("text", {
+        class: "grat-label",
+        "text-anchor": "start",
+        text: `${lat}°N`,
+      });
+      gratLabelLayer.append(el);
+      gratLabels.push({ el, lng: 72, lat, axis: "lat" });
+    }
+
+    for (const lng of LNGS) {
+      const pts = [];
+      for (let lat = 14; lat <= 56; lat += 2) pts.push(projection([lng, lat]));
+      lines.append(svgEl("path", { d: toPath(pts), class: "grat-line" }));
+
+      const el = svgEl("text", {
+        class: "grat-label",
+        "text-anchor": "middle",
+        text: `${lng}°E`,
+      });
+      gratLabelLayer.append(el);
+      gratLabels.push({ el, lng, lat: 52, axis: "lng" });
+    }
+
+    return lines;
+  }
+
+  /** 刻度标签跟着视角走，但钉在画框边缘 */
+  function updateGraticuleLabels() {
+    if (!gratLabelLayer || !projection) return;
+    for (const item of gratLabels) {
+      const p = projection([item.lng, item.lat]);
+      if (!p) {
+        item.el.style.display = "none";
+        continue;
+      }
+      const sx = p[0] * view.k + view.x;
+      const sy = p[1] * view.k + view.y;
+      const visible =
+        item.axis === "lat" ? sy > 96 && sy < VIEW_H - 46 : sx > 44 && sx < VIEW_W - 40;
+      item.el.style.display = visible ? "" : "none";
+      if (!visible) continue;
+      item.el.setAttribute("x", (item.axis === "lat" ? 6 : sx).toFixed(1));
+      item.el.setAttribute("y", (item.axis === "lat" ? sy : 44).toFixed(1));
+    }
   }
 
   /* ————————— 节点 ————————— */
@@ -926,7 +1003,9 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
     });
 
     gRoot = svgEl("g", { class: "map-root" });
-    svg.append(buildDefs(), gRoot);
+    // 刻度标签层不进 gRoot：它要钉在画框上，由 updateGraticuleLabels 重算位置
+    gratLabelLayer = svgEl("g", { class: "grat-labels" });
+    svg.append(buildDefs(), gRoot, gratLabelLayer);
     stage.append(svg);
     container.append(stage);
 

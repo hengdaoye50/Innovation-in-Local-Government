@@ -359,28 +359,92 @@
   color: var(--err) !important;
 }
 
-/* 思考模式下的占位提示：模型先思考十几秒才吐正文，
-   用虚线与脉动区分于正式回答，避免看起来像卡死 */
-.msg__bubble--thinking {
-  background: transparent !important;
-  border: 1px dashed var(--line-2) !important;
-  color: var(--ink-3) !important;
+/* —— 处理链：把「等结果」拆成看得见的三个动作 ——
+   等宽小字 + 细连接线，做成一排仪表读数，而不是一句「正在思考」 */
+.msg__bubble--steps {
+  background: transparent;
+  border: 1px solid var(--line);
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
 }
 
-.msg__bubble--thinking .msg__text {
-  font-style: italic;
-  letter-spacing: 0.02em;
-  animation: thinkpulse 1.9s ease-in-out infinite;
+.chat-steps {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
 }
 
-@keyframes thinkpulse {
+.chat-step {
+  position: relative;
+  padding-left: 18px;
+  color: var(--ink-3);
+  transition: color var(--dur) var(--ease);
+}
+
+/* 每个动作前面一个小方点：完成后实心，进行中脉冲，未开始空心 */
+.chat-step::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  margin-top: -2.5px;
+  border: 1px solid currentColor;
+  border-radius: 1px;
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+
+.chat-step + .chat-step::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 9px;
+  height: 1px;
+  background: var(--line-strong);
+}
+
+.chat-step.is-done {
+  color: var(--gold);
+}
+
+.chat-step.is-done::before {
+  background: currentColor;
+  border-color: currentColor;
+}
+
+.chat-step.is-active {
+  color: var(--plum);
+  font-weight: 500;
+}
+
+.chat-step.is-active::before {
+  background: currentColor;
+  border-color: currentColor;
+  animation: steppulse 1.4s ease-in-out infinite;
+}
+
+@keyframes steppulse {
   0%,
   100% {
-    opacity: 0.5;
+    box-shadow: 0 0 0 0 rgba(126, 12, 110, 0.4);
   }
-  50% {
-    opacity: 1;
+  60% {
+    box-shadow: 0 0 0 4px rgba(126, 12, 110, 0);
   }
+}
+
+.chat-steps__note {
+  margin-top: 6px;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  min-height: 14px;
 }
 
 .msg__sources {
@@ -800,19 +864,45 @@ label.btn {
   line-height: 1.85;
 }
 
-/* 字数进度压成一条 1px 的金线 */
+/* 字数进度压成一条 1px 的金线，下面挂一把刻度尺 */
 .draft__meter {
+  position: relative;
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  gap: 0;
   margin-top: -6px;
 }
 
 .draft__meter-bar {
-  flex: 1;
   height: 1px;
-  background: var(--line);
+  background: var(--line-2);
   overflow: hidden;
+}
+
+.draft__meter-scale {
+  position: relative;
+  height: 14px;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+}
+
+.draft__meter-mark {
+  position: absolute;
+  top: 3px;
+  transform: translateX(-50%);
+  padding-top: 4px;
+  border-top: 1px solid var(--line-strong);
+}
+
+.draft__meter-mark:first-child {
+  transform: none;
+  border-top-color: transparent;
+}
+
+.draft__meter-mark--end {
+  transform: translateX(-100%);
+  border-top-color: transparent;
 }
 
 .draft__meter-bar span {

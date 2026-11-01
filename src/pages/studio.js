@@ -208,6 +208,15 @@ export function studioSection() {
                 ></textarea>
                 <div class="draft__meter">
                   <div class="draft__meter-bar"><span data-word-bar></span></div>
+                  <div class="draft__meter-scale mono" aria-hidden="true">
+                    <span class="draft__meter-mark" style="left: 0%">0</span>
+                    <span class="draft__meter-mark" style="left: ${(WORD_MIN / WORD_MAX) * 100}%"
+                      >${WORD_MIN}</span
+                    >
+                    <span class="draft__meter-mark draft__meter-mark--end" style="left: 100%"
+                      >${WORD_MAX}</span
+                    >
+                  </div>
                 </div>
               </section>
 
@@ -486,29 +495,57 @@ export function mountStudio(root) {
     const typing = addTyping();
 
     let textNode = null;
-    let thinkingNode = null;
+    let stepsNode = null;
     let acc = "";
     abort = new AbortController();
 
-    const dropThinking = () => {
-      thinkingNode?.closest(".msg")?.remove();
-      thinkingNode = null;
+    const dropSteps = () => {
+      stepsNode?.remove();
+      stepsNode = null;
     };
+
+    // 处理链：把「等结果」变成看得见的三个动作，
+    // 顺序与后端编排一致（先检索、拿到来源后抓正文、再交给模型梳理）
+    const setSteps = (stage, note = "") => {
+      if (!stepsNode) {
+        stepsNode = el("div", { class: "msg msg--assistant" });
+        stepsNode.innerHTML = `
+          <div class="msg__avatar" aria-hidden="true">模</div>
+          <div class="msg__bubble msg__bubble--steps">
+            <div class="chat-steps">
+              <span class="chat-step" data-step="0">收到材料</span>
+              <span class="chat-step" data-step="1">检索来源</span>
+              <span class="chat-step" data-step="2">梳理成文</span>
+            </div>
+            <div class="chat-steps__note mono" data-steps-note></div>
+          </div>`;
+        log.append(stepsNode);
+      }
+      stepsNode.querySelectorAll("[data-step]").forEach((node) => {
+        const index = Number(node.dataset.step);
+        node.classList.toggle("is-done", index < stage);
+        node.classList.toggle("is-active", index === stage);
+      });
+      const noteNode = stepsNode.querySelector("[data-steps-note]");
+      if (noteNode) noteNode.textContent = note;
+      log.scrollTop = log.scrollHeight;
+    };
+
+    setSteps(1);
 
     try {
       await streamChat({
         messages: history,
         signal: abort.signal,
         onMeta: (meta) => {
-          // 思考模式：模型先思考十几秒才吐正文，先给个状态提示
-          if (meta?.thinking && !textNode && !thinkingNode) {
+          // 思考模式：模型先思考十几秒才吐正文，先把处理链推到「梳理成文」
+          if (meta?.thinking && !textNode) {
             typing.remove();
-            thinkingNode = addMessage("assistant", "正在梳理思路…");
-            thinkingNode.closest(".msg__bubble")?.classList.add("msg__bubble--thinking");
-            log.scrollTop = log.scrollHeight;
+            setSteps(2, "正在梳理");
           }
           if (meta?.sources?.length) {
-            const host = textNode || thinkingNode;
+            setSteps(2, `${meta.sources.length} 条来源`);
+            const host = textNode || stepsNode?.querySelector(".msg__bubble");
             if (host) {
               const box = el("div", {
                 class: "msg__sources",
@@ -521,7 +558,7 @@ export function mountStudio(root) {
                   )
                   .join(""),
               });
-              host.closest(".msg__bubble")?.append(box);
+              host.append(box);
             }
           }
         },
@@ -529,7 +566,7 @@ export function mountStudio(root) {
           acc = full;
           if (!textNode) {
             typing.remove();
-            dropThinking();
+            dropSteps();
             textNode = addMessage("assistant", "");
           }
           paintMessage(textNode, full);

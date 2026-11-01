@@ -295,6 +295,37 @@
 /* 分析态的连线、光环、脉冲都是装饰层，必须让点击穿透到下面的光点，
    否则选中点的大光晕会吃掉"再点一次进详情"的点击 */
 .map-atlas,
+/* —— 经纬网与边缘刻度：制图台底纹 —— */
+.map-graticule {
+  pointer-events: none;
+}
+
+.grat-line {
+  fill: none;
+  stroke: rgba(196, 162, 101, 0.13);
+  stroke-width: 0.5;
+  /* 缩放时线宽保持恒定，放大后不会变成粗带 */
+  vector-effect: non-scaling-stroke;
+}
+
+.grat-tick {
+  stroke: rgba(196, 162, 101, 0.34);
+  stroke-width: 0.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.grat-label {
+  fill: rgba(196, 162, 101, 0.6);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  /* 制图惯例：标注压在深色内容上时加一圈底色描边，保证读得清 */
+  paint-order: stroke;
+  stroke: rgba(26, 12, 24, 0.72);
+  stroke-width: 2.4px;
+  stroke-linejoin: round;
+}
+
 .map-links {
   pointer-events: none;
 }
@@ -577,9 +608,11 @@
 }
 
 .node__halo {
-  transition: transform 200ms var(--ease);
+  transition: transform 200ms var(--ease), opacity 320ms var(--ease);
   transform-box: fill-box;
   transform-origin: center;
+  /* 由 map.js 按点位密度调节：点多时整体减淡，避免光晕叠成一条亮带 */
+  opacity: var(--node-glow-op, 1);
 }
 
 .node__dot {
@@ -588,6 +621,7 @@
   transition: transform 200ms var(--ease), fill 200ms var(--ease);
   transform-box: fill-box;
   transform-origin: center;
+  opacity: var(--node-dot-op, 1);
 }
 
 .node__core {
@@ -711,12 +745,31 @@
   display: grid;
   place-items: center;
   border: 1px solid rgba(196, 162, 101, 0.28);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   color: rgba(253, 248, 240, 0.72);
   background: rgba(30, 18, 28, 0.42);
   backdrop-filter: blur(6px);
   transition: color var(--dur-fast) var(--ease),
     border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+
+/* 缩放读数：不是按钮，是仪表的数码窗口，等宽数字贴着控制组下沿 */
+.ctrl--readout {
+  width: 36px;
+  height: 22px;
+  border-color: transparent;
+  background: none;
+  backdrop-filter: none;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: rgba(196, 162, 101, 0.82);
+  cursor: default;
+}
+
+.ctrl--readout:hover {
+  border-color: transparent;
+  background: none;
+  color: rgba(196, 162, 101, 0.82);
 }
 
 .ctrl:hover {
