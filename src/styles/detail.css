@@ -80,6 +80,41 @@
   font-size: 17px;
   line-height: 1.92;
   color: var(--ink);
+  /* 装订文稿的样子：正文左侧一条栏线，段落序号落在栏线外侧 */
+  counter-reset: para;
+  padding-left: 34px;
+  position: relative;
+}
+
+.detail__body::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: var(--line-gold);
+  opacity: 0.5;
+}
+
+/* 只给正文段落编号：标题、列表、引用不参与，免得序号跳号 */
+.detail__body > p {
+  counter-increment: para;
+  position: relative;
+}
+
+.detail__body > p::before {
+  content: counter(para, decimal-leading-zero);
+  position: absolute;
+  left: -34px;
+  top: 0.42em;
+  width: 20px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+  opacity: 0.75;
 }
 
 /* —— Markdown 正文 —— */

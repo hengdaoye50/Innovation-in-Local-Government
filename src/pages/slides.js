@@ -47,7 +47,7 @@ export async function mountSlides(root) {
     demo = true;
   }
 
-  grid.innerHTML = list.map((s, i) => cardHtml(s, i, demo)).join("");
+  grid.innerHTML = list.map((s, i) => cardHtml(s, i, demo, list.length)).join("");
   grid.querySelectorAll("[data-slide]").forEach((node) => {
     node.addEventListener("click", () => {
       window.location.hash = `/slide/${node.dataset.slide}`;
@@ -56,13 +56,15 @@ export async function mountSlides(root) {
   mountReveal(section);
 }
 
-function cardHtml(slide, index, demo) {
+function cardHtml(slide, index, demo, total) {
   const score = Number(slide.aiScore) || null;
   return `
     <article class="slide-card reveal" data-slide="${esc(slide.id)}" tabindex="0" role="link"
       aria-label="${esc(slide.title)}">
       <div class="slide-card__cover">
-        <span class="slide-card__no mono">${String(index + 1).padStart(2, "0")}</span>
+        <span class="slide-card__no mono">${String(index + 1).padStart(2, "0")}<i>/ ${String(
+          total || 0
+        ).padStart(2, "0")}</i></span>
         <span class="slide-card__pages mono">${Number(slide.slides) || 0} 页</span>
         <div class="slide-card__cover-rule"></div>
       </div>

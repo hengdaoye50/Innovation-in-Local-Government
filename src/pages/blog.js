@@ -42,7 +42,7 @@ export async function mountBlog(root) {
     demo = true;
   }
 
-  listEl.innerHTML = list.map((post, i) => rowHtml(post, i, demo)).join("");
+  listEl.innerHTML = list.map((post, i) => rowHtml(post, i, demo, list.length)).join("");
   listEl.querySelectorAll("[data-post]").forEach((node) => {
     node.addEventListener("click", () => {
       window.location.hash = `/post/${node.dataset.post}`;
@@ -51,14 +51,16 @@ export async function mountBlog(root) {
   mountReveal(section);
 }
 
-function rowHtml(post, index, demo) {
+function rowHtml(post, index, demo, total) {
   const tags = (post.tags || [])
     .map((t) => `<span class="tag tag--quiet">${esc(t)}</span>`)
     .join("");
   return `
     <article class="blog-row reveal" data-post="${esc(post.id)}" tabindex="0" role="link"
       aria-label="${esc(post.title)}">
-      <div class="blog-row__index mono">${String(index + 1).padStart(2, "0")}</div>
+      <div class="blog-row__index mono">${String(index + 1).padStart(2, "0")}<i>/ ${String(
+        total || 0
+      ).padStart(2, "0")}</i></div>
       <div class="blog-row__main">
         <div class="blog-row__meta">
           ${tags}

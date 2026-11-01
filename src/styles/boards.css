@@ -59,6 +59,18 @@
   z-index: 1;
 }
 
+/* 总数用等宽小字、降一档亮度：像图录页码「03 / 12」里的分母 */
+.slide-card__no i,
+.blog-row__index i {
+  margin-left: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-style: normal;
+  letter-spacing: 0.08em;
+  vertical-align: 0.28em;
+  opacity: 0.58;
+}
+
 .slide-card__pages {
   font-size: 11px;
   letter-spacing: 0.1em;

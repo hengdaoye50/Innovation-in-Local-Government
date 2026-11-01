@@ -3,6 +3,9 @@ import { esc, el, qs, toast, zhLength, debounce, mountReveal } from "../lib/dom.
 import { streamChat, cases as casesApi } from "../lib/api.js";
 import { getState } from "../lib/store.js";
 
+/** 模型头像：一枚细线星芒（凹边四角星 + 中心点），比一个「模」字更像刻出来的标记 */
+const AI_GLYPH = `<div class="msg__avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.4c.6 4.2 3.4 7 7.6 7.6-4.2.6-7 3.4-7.6 7.6-.6-4.2-3.4-7-7.6-7.6 4.2-.6 7-3.4 7.6-7.6z" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linejoin="round"/><circle cx="12" cy="11" r="1.5" fill="currentColor"/></svg></div>`;
+
 const DOMAINS = [
   "数字治理",
   "营商环境",
@@ -377,7 +380,7 @@ export function mountStudio(root) {
   function addMessage(role, content = "", sources = null) {
     const node = el("div", { class: `msg msg--${role}` });
     node.innerHTML = `
-      ${role === "assistant" ? `<div class="msg__avatar" aria-hidden="true">模</div>` : ""}
+      ${role === "assistant" ? AI_GLYPH : ""}
       <div class="msg__bubble">
         <div class="msg__text"></div>
         ${
@@ -404,7 +407,7 @@ export function mountStudio(root) {
   function addTyping() {
     const node = el("div", { class: "msg msg--assistant" });
     node.innerHTML = `
-      <div class="msg__avatar" aria-hidden="true">模</div>
+      ${AI_GLYPH}
       <div class="msg__bubble msg__bubble--typing"><span></span><span></span><span></span></div>
     `;
     log.append(node);
@@ -510,7 +513,7 @@ export function mountStudio(root) {
       if (!stepsNode) {
         stepsNode = el("div", { class: "msg msg--assistant" });
         stepsNode.innerHTML = `
-          <div class="msg__avatar" aria-hidden="true">模</div>
+          ${AI_GLYPH}
           <div class="msg__bubble msg__bubble--steps">
             <div class="chat-steps">
               <span class="chat-step" data-step="0">收到材料</span>

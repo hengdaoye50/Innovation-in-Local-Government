@@ -209,12 +209,15 @@
   place-items: center;
   border: 1px solid var(--line-gold);
   border-radius: var(--radius-xs);
-  font-family: var(--font-display);
-  font-size: 12px;
   color: var(--plum-deep);
   background: var(--paper-raised);
   box-shadow: var(--edge-light), var(--shadow-xs);
   margin-top: 2px;
+}
+
+.msg__avatar svg {
+  width: 15px;
+  height: 15px;
 }
 
 /* 气泡按说话方分两侧形状：模型左上是直角，用户右上是直角，其余三边同档 */
