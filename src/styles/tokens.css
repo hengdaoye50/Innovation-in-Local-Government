@@ -47,6 +47,22 @@
   /* 控件的凹陷底色：比纸底略深，像按进纸里的一块 */
   --paper-inset: #f7efe2;
 
+  /* —— 纸页厚度 ——
+     抬升面顶边一道内高光、底边一道内暗线，模拟纸张边缘的反光与投影，
+     不加渐变，只用两条 1px 内描边 */
+  --edge-light: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --edge-dark: inset 0 -1px 0 rgba(31, 20, 28, 0.045);
+
+  /* —— 间距节奏：全部取 4 的倍数 —— */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
   /* —— 语义 —— */
   --ok: #3d7a5c;
   --warn: #b06a1e;
@@ -148,6 +164,14 @@ h4 {
   line-height: 1.25;
   color: var(--ink);
   letter-spacing: 0;
+  /* 标题避免末行只剩一两个字 */
+  text-wrap: balance;
+}
+
+/* 大字号衬线标题收紧一点字距，中文字面才不会显得松散 */
+h1,
+h2 {
+  letter-spacing: -0.01em;
 }
 
 p {
@@ -157,6 +181,7 @@ p {
 a {
   color: var(--plum);
   text-decoration: none;
+  text-underline-offset: 0.2em;
   transition: color var(--dur-fast) var(--ease);
 }
 
