@@ -251,6 +251,74 @@
   border-top: 1px solid var(--line);
 }
 
+/* —— 正文 + 边注栏：像一篇带边注的文稿 ——
+   正文在左、来源与归档信息在右，窄屏收成一栏、边注落到文末 */
+.detail__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 208px;
+  gap: 48px;
+  align-items: start;
+}
+
+.detail__margin {
+  position: sticky;
+  top: 88px;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  padding-left: 18px;
+  border-left: 1px solid var(--line-gold);
+}
+
+.detail__margin-block .eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+  margin-bottom: 8px;
+}
+
+.detail__margin-note {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--ink-3);
+}
+
+/* 边注栏里的来源列表收紧：没有序号栏位，字号更小 */
+.detail__margin .source-list {
+  margin-top: 0;
+}
+
+.detail__margin .source-list li {
+  padding: 8px 0;
+  padding-left: 0;
+  font-size: 11.5px;
+  line-height: 1.65;
+  border-bottom: 1px solid var(--line);
+}
+
+.detail__margin .source-list li::before {
+  content: none;
+}
+
+.detail__margin .source-list li:last-child {
+  border-bottom: 0;
+}
+
+@media (max-width: 900px) {
+  .detail__layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+  }
+  .detail__margin {
+    position: static;
+    padding-left: 0;
+    padding-top: 20px;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+}
+
 .source-list {
   margin: 16px 0 0;
   padding-left: 0;

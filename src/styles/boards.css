@@ -13,6 +13,56 @@
   gap: 24px;
 }
 
+/* —— 投影模式 ——
+   教室后排要看得清：卡片放大到两列、字号整体上调、低优先信息隐去。
+   不做全屏轮播，老师还要在页面上点开展位和讨论。 */
+.boards.is-podium .slides-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+}
+
+.boards.is-podium .slide-card__no {
+  font-size: 38px;
+}
+
+.boards.is-podium .slide-card__no i {
+  font-size: 12px;
+}
+
+.boards.is-podium .slide-card__title {
+  font-size: 26px;
+  line-height: 1.4;
+}
+
+.boards.is-podium .slide-card__desc {
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.boards.is-podium .slide-card__body {
+  padding: 22px 24px;
+}
+
+.boards.is-podium .slide-card__foot {
+  font-size: 14px;
+}
+
+.boards.is-podium .slide-card__cover {
+  height: 132px;
+}
+
+/* 投影时隐去期次与「示例」标签，留下的都是讲台上要念的信息 */
+.boards.is-podium .slide-card__meta .meta,
+.boards.is-podium .slide-card__meta .tag {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .boards.is-podium .slides-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .slide-card {
   position: relative;
   display: flex;

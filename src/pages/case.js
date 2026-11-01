@@ -69,29 +69,39 @@ export async function mountCaseDetail(root, id) {
           </div>
         </header>
 
-        <div class="detail__body md">
-          ${renderMarkdown(bodyText)}
-        </div>
+        <div class="detail__layout">
+          <div class="detail__body md">
+            ${renderMarkdown(bodyText)}
+          </div>
 
-        ${
-          sources.length
-            ? `<section class="detail__sources">
-                <div class="eyebrow">Sources · ${sources.length} 条来源</div>
-                <ol class="source-list">
-                  ${sources
-                    .map(
-                      (s) => `
-                    <li>
-                      <a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">
-                        ${esc(s.title || s.url)}
-                      </a>
-                    </li>`
-                    )
-                    .join("")}
-                </ol>
-              </section>`
-            : ""
-        }
+          <aside class="detail__margin" aria-label="边注">
+            <div class="detail__margin-block">
+              <div class="eyebrow">Sources</div>
+              ${
+                sources.length
+                  ? `<ol class="source-list">
+                      ${sources
+                        .map(
+                          (s) => `
+                        <li>
+                          <a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">
+                            ${esc(s.title || s.url)}
+                          </a>
+                        </li>`
+                        )
+                        .join("")}
+                    </ol>`
+                  : `<p class="detail__margin-note">未登记来源。</p>`
+              }
+            </div>
+            <div class="detail__margin-block">
+              <div class="eyebrow">Filed</div>
+              <p class="detail__margin-note mono">${esc(
+                (item.createdAt || "").slice(0, 10) || "—"
+              )} · ${words} 字</p>
+            </div>
+          </aside>
+        </div>
       </div>
 
       <div class="shell shell-narrow">

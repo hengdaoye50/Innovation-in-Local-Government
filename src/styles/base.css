@@ -103,6 +103,14 @@
   max-width: 46em;
 }
 
+.screen-head__aside {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .screen-ordinal {
   font-family: var(--font-display);
   font-size: 13px;

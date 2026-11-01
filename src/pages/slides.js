@@ -16,7 +16,12 @@ export function slidesSection() {
               同意、反驳，或者补上它漏掉的那一环。
             </p>
           </div>
-          <a class="btn btn--ghost" href="#/admin">教师上传展位</a>
+          <div class="screen-head__aside">
+            <button class="btn btn--quiet btn--sm" data-podium type="button" aria-pressed="false">
+              投影模式
+            </button>
+            <a class="btn btn--ghost" href="#/admin">教师上传展位</a>
+          </div>
         </div>
 
         <div class="slides-grid" data-slides-grid>
@@ -53,6 +58,15 @@ export async function mountSlides(root) {
       window.location.hash = `/slide/${node.dataset.slide}`;
     });
   });
+
+  // 投影模式：教室后排也要看得清，放大卡片、字号加倍、隐去次要信息
+  const podiumBtn = section.querySelector("[data-podium]");
+  podiumBtn?.addEventListener("click", () => {
+    const on = section.classList.toggle("is-podium");
+    podiumBtn.setAttribute("aria-pressed", String(on));
+    podiumBtn.textContent = on ? "退出投影" : "投影模式";
+  });
+
   mountReveal(section);
 }
 
