@@ -104,6 +104,8 @@ export async function mountAtlas(root) {
 
   function showFocusCard(node, info) {
     const related = info.related || [];
+    // 图上最多连 MAX_LINKS 条光路，剩下的只在文案里交代数量
+    const relatedTotal = Math.max(info.relatedTotal || 0, related.length);
     const tags = (node.domains || [])
       .slice(0, 3)
       .map((d) => `<span class="tag tag--quiet">${esc(d)}</span>`)
@@ -124,8 +126,12 @@ export async function mountAtlas(root) {
       <h3 class="map-focus-card__title">${esc(node.title)}</h3>
       ${tags ? `<div class="map-focus-card__tags">${tags}</div>` : ""}
       ${
-        related.length
-          ? `<div class="map-focus-card__related">同领域另有 <b>${related.length}</b> 个案例在这张图里${
+        relatedTotal
+          ? `<div class="map-focus-card__related">同领域另有 <b>${relatedTotal}</b> 个案例${
+              relatedTotal > related.length
+                ? `，图上连出最近的 ${related.length} 个`
+                : "在这张图里"
+            }${
               related.length > 3
                 ? `，如 ${related.slice(0, 2).map((r) => esc(r.city || r.province)).join("、")} 等`
                 : related.map((r) => ` · ${esc(r.city || r.province)}`).join("")
@@ -220,14 +226,18 @@ export async function mountAtlas(root) {
 
   // 数据：优先真实 API，失败回落示例数据
   let list = [];
-  try {
-    const res = await casesApi.list({ status: "published", limit: 400 });
-    list = Array.isArray(res?.items) ? res.items : Array.isArray(res) ? res : [];
-  } catch {
-    list = [];
-  }
-  if (!list.length) {
-    list = DEMO_CASES;
+  const stressCount = Number(new URLSearchParams(location.search).get("stress") || 0);
+  if (stressCount > 0) {
+    // ?stress=N 生成 N 条随机案例，用来检查案例攒多以后光点密度与浮层表现
+    list = await stressCases(stressCount);
+  } else {
+    try {
+      const res = await casesApi.list({ status: "published", limit: 400 });
+      list = Array.isArray(res?.items) ? res.items : Array.isArray(res) ? res : [];
+    } catch {
+      list = [];
+    }
+    if (!list.length) list = DEMO_CASES;
   }
   setState({ cases: list, casesLoaded: true });
 
@@ -249,8 +259,36 @@ export async function mountAtlas(root) {
   return map;
 }
 
-function updateStats(root, list) {
-  const totalNode = qs('[data-count-node="total"]', root);
+/**
+ * 压力测试数据：按区县随机撒 N 条案例。
+ * 地图光点按「省|市|区县」聚合，所以真正要压的是「大量区县同时有点」的情形，
+ * 以及某个区县被堆到几十条后、聚合点半径被拉爆的样子。
+ */
+async function stressCases(n) {
+  const res = await fetch("./data/cities.json");
+  const { districts } = await res.json();
+  const pool = (districts || []).filter((d) => d.lng && d.lat);
+  const domains = [...new Set(DEMO_CASES.flatMap((c) => c.domains || []))];
+  const out = [];
+  for (let i = 0; i < n; i += 1) {
+    const spot = pool[Math.floor(Math.random() * pool.length)];
+    out.push({
+      id: `stress-${i}`,
+      title: `压力测试案例 ${i + 1}`,
+      province: spot.province,
+      city: spot.city,
+      district: spot.name,
+      lng: spot.lng,
+      lat: spot.lat,
+      domains: [domains[i % domains.length] || "数字治理"],
+      year: "2024",
+      author: "压力测试",
+    });
+  }
+  return out;
+}
+
+function updateStats(root, list) {  const totalNode = qs('[data-count-node="total"]', root);
   const provNode = qs('[data-count-node="provinces"]', root);
   const authorNode = qs('[data-count-node="authors"]', root);
   const provinces = new Set(list.map((c) => c.province).filter(Boolean));

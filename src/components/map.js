@@ -311,8 +311,8 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
         ])
       ),
       svgEl("radialGradient", { id: "nodeGlow" }, [
-        svgEl("stop", { offset: "0%", "stop-color": "#D4AF37", "stop-opacity": 0.5 }),
-        svgEl("stop", { offset: "55%", "stop-color": "#D4AF37", "stop-opacity": 0.14 }),
+        svgEl("stop", { offset: "0%", "stop-color": "#D4AF37", "stop-opacity": 0.42 }),
+        svgEl("stop", { offset: "55%", "stop-color": "#D4AF37", "stop-opacity": 0.1 }),
         svgEl("stop", { offset: "100%", "stop-color": "#D4AF37", "stop-opacity": 0 }),
       ]),
       svgEl("radialGradient", { id: "nodeGlowStrong" }, [
@@ -623,7 +623,9 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
     return [...groups.values()].map((g) => ({
       ...g,
       count: g.items.length,
-      r: 4.4 + Math.min(5, (g.items.length / max) * 5),
+      // 半径按绝对数量开方，不做「除最大值」的归一化：
+      // 归一化会让一个热点把其他点全压到最小值，案例一多就看不出层级
+      r: 3.4 + Math.min(4.2, Math.sqrt(g.items.length) * 1.05),
       title: g.items.length === 1 ? g.items[0].title : `${g.items.length} 个案例`,
       author: g.items.length === 1 ? g.items[0].author : "",
       year: g.items.length === 1 ? g.items[0].year : "",
@@ -635,6 +637,12 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
     if (!gNodes || !projection) return;
     gNodes.replaceChildren();
     lastNodes = aggregate(cases);
+
+    // 点位密集时整体减淡：近千个光晕叠在一起会糊成一条发光带，
+    // 密度越高每个点越淡，靠「亮点数量」而不是「亮点亮度」表达聚集
+    const density = Math.min(1, Math.max(0, (lastNodes.length - 120) / 320));
+    gNodes.style.setProperty("--node-glow-op", (1 - density * 0.62).toFixed(2));
+    gNodes.style.setProperty("--node-dot-op", (1 - density * 0.22).toFixed(2));
 
     for (const node of lastNodes) {
       const point = projection([node.lng, node.lat]);
@@ -660,7 +668,7 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
       body.append(
         svgEl("circle", {
           class: "node__halo",
-          r: (node.r * 2.8).toFixed(1),
+          r: (node.r * 2.15).toFixed(1),
           fill: "url(#nodeGlow)",
         }),
         svgEl("circle", { class: "node__dot", r: node.r.toFixed(1), fill: "#d4af37" }),
@@ -731,15 +739,24 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
 
   /* ————————— 分析态 ————————— */
 
+  // 分析态最多连这么多条光路。案例攒到几百条后，同领域动辄上百个，
+  // 全连出来就是一张盖住地图的蜘蛛网，反而看不出关联在哪。
+  const MAX_LINKS = 18;
+  // 关联环比光路多留一些：环不占视线，能说明"还有这些点在同一主题下"
+  const MAX_RINGS = 60;
+
   function relatedOf(target) {
     return lastNodes
       .filter((n) => nodeKey(n) !== nodeKey(target))
       .map((n) => ({
         node: n,
         shared: n.domains.filter((d) => target.domains.includes(d)),
+        dist: Math.hypot((n.x || 0) - (target.x || 0), (n.y || 0) - (target.y || 0)),
       }))
       .filter((x) => x.shared.length > 0)
-      .sort((a, b) => b.shared.length - a.shared.length);
+      // 先按共享标签数（强关联优先），再按距离（近的先连），
+      // 这样连出来的是一簇一簇，而不是跨全国的发散线
+      .sort((a, b) => b.shared.length - a.shared.length || a.dist - b.dist);
   }
 
   function enterAtlas(node) {
@@ -753,10 +770,12 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
 
     const related = relatedOf(node);
     const relatedKeys = new Set(related.map((r) => nodeKey(r.node)));
+    const linked = related.slice(0, MAX_LINKS);
+    const linkedKeys = new Set(linked.map((r) => nodeKey(r.node)));
 
     // 光路：从选中点连向共享领域的光点，二次曲线避免直线穿过地图中央
     const linkGroup = svgEl("g", { class: "atlas-links" });
-    for (const { node: other, shared } of related) {
+    for (const { node: other, shared } of linked) {
       if (!Number.isFinite(other.x) || !Number.isFinite(other.y)) continue;
       const fx = node.x;
       const fy = node.y - LIFT;
@@ -781,7 +800,7 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
 
     // 关联光点标记：加一圈细环，说明它们被选中点拉进了同一张图
     const ringGroup = svgEl("g", { class: "atlas-rings" });
-    for (const { node: other } of related) {
+    for (const { node: other } of related.slice(0, MAX_RINGS)) {
       if (!Number.isFinite(other.x) || !Number.isFinite(other.y)) continue;
       ringGroup.append(
         svgEl("circle", {
@@ -815,16 +834,21 @@ export function createMap(container, { onSelect, onHover, onFocus } = {}) {
       })
     );
 
-    // DOM 图层同步状态：非关联点压暗
+    // DOM 图层同步状态：非关联点压暗。只把真正连了线的点算作关联，
+    // 否则几百个点都亮着，等于没做区分
     gNodes.querySelectorAll(".node").forEach((el) => {
       const key = el.getAttribute("data-key");
-      el.classList.toggle("is-dimmed", key !== atlasKey && !relatedKeys.has(key));
-      el.classList.toggle("is-related", relatedKeys.has(key));
+      el.classList.toggle("is-dimmed", key !== atlasKey && !linkedKeys.has(key));
+      el.classList.toggle("is-related", linkedKeys.has(key));
       el.classList.toggle("is-atlas-target", key === atlasKey);
     });
 
     const screen = toScreen(px, py);
-    onFocus?.(node, { ...screen, related: related.map((r) => r.node) });
+    onFocus?.(node, {
+      ...screen,
+      related: linked.map((r) => r.node),
+      relatedTotal: related.length,
+    });
   }
 
   function exitAtlas() {
