@@ -56,9 +56,14 @@ export async function onRequest(context) {
       const slideId = randomId("slide");
       const description = String(body.description || "").slice(0, 2000);
       const author = String(body.author || "").trim().slice(0, 40) || session.displayName;
-      // 可见性：private 只有上传者与管理员能看，默认公开
+      // 可见性：private 只有上传者与管理员能看，默认公开。
+      // 迁移没跑时不能悄悄降级成公开——那等于把以为私密的东西放出去了，
+      // 直接拒绝并说明原因，让人先去跑迁移。
       const allowPrivate = await hasSlideVisibility(env);
-      const visibility = body.visibility === "private" && allowPrivate ? "private" : "public";
+      if (body.visibility === "private" && !allowPrivate) {
+        return fail("私有展位暂不可用：数据库迁移未完成，请先执行 0007 迁移", 503);
+      }
+      const visibility = body.visibility === "private" ? "private" : "public";
 
       if (allowPrivate) {
         await env.DB.prepare(
