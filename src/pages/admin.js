@@ -279,6 +279,25 @@ async function renderSlides(panel) {
             <span class="field__label">描述</span>
             <textarea class="textarea" name="description" rows="4" placeholder="这次汇报想回答什么问题、用了什么材料、结论是什么。"></textarea>
           </label>
+          <div class="field">
+            <span class="field__label">可见范围</span>
+            <div class="admin__choice">
+              <label class="admin__choice-item">
+                <input type="radio" name="visibility" value="public" checked />
+                <span>
+                  <b>所有人可见</b>
+                  <i>展板、幻灯片、模型评语与教师纪要都对选课同学开放</i>
+                </span>
+              </label>
+              <label class="admin__choice-item">
+                <input type="radio" name="visibility" value="private" />
+                <span>
+                  <b>仅自己与管理员可见</b>
+                  <i>不出现在展板上，只有上传者账号和管理员能打开</i>
+                </span>
+              </label>
+            </div>
+          </div>
           <div class="admin__form-actions">
             <span class="field__hint" data-slide-status></span>
             <button class="btn btn--primary" type="submit">发布展位</button>
@@ -324,6 +343,11 @@ async function renderSlides(panel) {
             <span class="tag tag--quiet">${esc(s.course || "课程汇报")}</span>
             <span class="meta">${esc(s.term || "")}</span>
             <span class="meta">${esc(s.author || "")}</span>
+            ${
+              s.visibility === "private"
+                ? `<span class="tag tag--warn">仅自己可见</span>`
+                : ""
+            }
           </div>
           <a class="admin__row-title" href="#/slide/${esc(s.id)}">${esc(s.title)}</a>
         </div>
@@ -343,6 +367,7 @@ async function renderSlides(panel) {
       slides: Number(fd.get("slides")) || 0,
       fileUrl: String(fd.get("fileUrl") || "").trim(),
       description: String(fd.get("description") || "").trim(),
+      visibility: fd.get("visibility") === "private" ? "private" : "public",
     };
     if (!payload.title) {
       status.textContent = "请填写展位标题";

@@ -10,6 +10,18 @@ function parseJson(value, fallback) {
   }
 }
 
+/**
+ * 展示用姓名：只留姓氏加「同学」。
+ * 只处理像人名的（2-4 个汉字）；「第 3 组」这类组名、英文名、学号原样返回，
+ * 否则一个汇报小组会被显示成「第同学」。
+ */
+export function maskName(name) {
+  const text = String(name || "").trim();
+  if (!text) return "同学";
+  if (/^[\u4e00-\u9fa5]{2,4}$/.test(text)) return `${text[0]}同学`;
+  return text;
+}
+
 export function rowToCase(row) {
   if (!row) return null;
   return {
@@ -24,7 +36,7 @@ export function rowToCase(row) {
     summary: row.summary || "",
     body: row.body,
     sources: parseJson(row.sources_json, []),
-    author: row.author_name || "同学作品",
+    author: maskName(row.author_name) || "同学作品",
     authorId: row.author_id,
     status: row.status,
     aiReview: row.ai_review || "",
@@ -42,7 +54,7 @@ export function rowToSlide(row) {
     title: row.title,
     course: row.course || "",
     term: row.term || "",
-    author: row.author_name || "匿名",
+    author: maskName(row.author_name) || "同学",
     coverUrl: row.cover_url || "",
     fileUrl: row.file_url || "",
     description: row.description || "",
@@ -50,6 +62,9 @@ export function rowToSlide(row) {
     aiReview: row.ai_review || "",
     aiScore: row.ai_score,
     status: row.status,
+    // 未跑过 0007 迁移时列不存在，按公开处理
+    visibility: row.visibility === "private" ? "private" : "public",
+    authorId: row.author_id,
     createdAt: row.created_at,
   };
 }
@@ -177,9 +192,14 @@ export async function updateCaseStatus(env, id, status, aiReview, aiScore) {
   return result.meta?.changes > 0;
 }
 
-export async function listSlides(env, { limit = 24, course, term } = {}) {
+export async function listSlides(env, { limit = 24, course, term, viewerId = 0, isAdmin = false } = {}) {
   const where = ["status = 'published'"];
   const binds = [];
+  // 私有展位只对上传者本人与管理员可见（未跑 0007 迁移时列不存在，这里会退化成公开）
+  if (!isAdmin) {
+    where.push("(COALESCE(visibility, 'public') = 'public' OR author_id = ?)");
+    binds.push(viewerId);
+  }
   if (course) {
     where.push("course = ?");
     binds.push(course);

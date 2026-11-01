@@ -19,10 +19,14 @@ export async function onRequest(context) {
 
     if (!id && request.method === "GET") {
       const url = new URL(request.url);
+      // 私有展位要按访问者过滤，所以列表这里也要取会话
+      const session = await getSession(env, request);
       const items = await listSlides(env, {
         course: url.searchParams.get("course") || "",
         term: url.searchParams.get("term") || "",
         limit: url.searchParams.get("limit") || 24,
+        viewerId: session?.id || 0,
+        isAdmin: session?.role === "admin",
       });
       return ok({ items });
     }
@@ -30,6 +34,13 @@ export async function onRequest(context) {
     if (id && request.method === "GET") {
       const slide = await getSlide(env, id);
       if (!slide || slide.status !== "published") return fail("展位不存在", 404);
+
+      // 私有展位：只有上传者本人和管理员能打开，其余一律当作不存在
+      if (slide.visibility === "private") {
+        const session = await getSession(env, request);
+        const allowed = session && (session.role === "admin" || session.id === slide.authorId);
+        if (!allowed) return fail("展位不存在", 404);
+      }
       return ok(slide);
     }
 
@@ -44,11 +55,13 @@ export async function onRequest(context) {
       const slideId = randomId("slide");
       const description = String(body.description || "").slice(0, 2000);
       const author = String(body.author || "").trim().slice(0, 40) || session.displayName;
+      // 可见性：private 只有上传者与管理员能看，默认公开
+      const visibility = body.visibility === "private" ? "private" : "public";
 
       await env.DB.prepare(
         `INSERT INTO slides (id, title, course, term, author_id, author_name, cover_url,
-          file_url, description, slide_count, status, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', ?)`
+          file_url, description, slide_count, status, visibility, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', ?, ?)`
       )
         .bind(
           slideId,
@@ -61,6 +74,7 @@ export async function onRequest(context) {
           String(body.fileUrl || "").slice(0, 500),
           description,
           Number(body.slides) || 0,
+          visibility,
           new Date().toISOString()
         )
         .run();

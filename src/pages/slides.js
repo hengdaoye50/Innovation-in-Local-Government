@@ -86,6 +86,11 @@ function cardHtml(slide, index, demo, total) {
         <div class="slide-card__meta">
           <span class="tag tag--quiet">${esc(slide.course || "课堂汇报")}</span>
           ${slide.term ? `<span class="meta">${esc(slide.term)}</span>` : ""}
+          ${
+            slide.visibility === "private"
+              ? `<span class="tag tag--warn">仅自己可见</span>`
+              : ""
+          }
           ${demo ? `<span class="tag tag--quiet">示例</span>` : ""}
         </div>
         <h3 class="slide-card__title">${esc(slide.title)}</h3>

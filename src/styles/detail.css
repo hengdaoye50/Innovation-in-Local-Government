@@ -626,6 +626,65 @@
   gap: 12px;
 }
 
+/* 可见范围：两枚单选做成并排的说明卡，比原生 radio 更好读 */
+.admin__choice {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.admin__choice-item {
+  display: flex;
+  gap: 9px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--paper-raised);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+
+.admin__choice-item:hover {
+  border-color: var(--line-2);
+}
+
+.admin__choice-item:has(input:checked) {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(196, 162, 101, 0.1);
+}
+
+.admin__choice-item input {
+  margin: 3px 0 0;
+  accent-color: var(--plum);
+  flex: none;
+}
+
+.admin__choice-item span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.admin__choice-item b {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.admin__choice-item i {
+  font-size: 11.5px;
+  font-style: normal;
+  line-height: 1.6;
+  color: var(--ink-3);
+}
+
+@media (max-width: 720px) {
+  .admin__choice {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .admin__md {
   min-height: 260px;
   font-family: var(--font-mono);
