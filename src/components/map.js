@@ -64,6 +64,10 @@ export function createMap(container, { onSelect, onHover, onFocus, onView } = {}
   let pathGen = null;
   let cases = [];
   let lastNodes = [];
+  /** 当前聚合粒度；案例不多时始终是 district */
+  let nodeLevel = "district";
+  /** 按区县聚合后的点位数，用来判断要不要启用缩放分级 */
+  let districtNodeCount = 0;
   let tooltip = null;
   let destroyed = false;
 
@@ -105,6 +109,13 @@ export function createMap(container, { onSelect, onHover, onFocus, onView } = {}
     // 刻度尺、缩放读数这类仪器读数要跟着视角走
     updateGraticuleLabels();
     onView?.({ k: view.k, x: view.x, y: view.y });
+
+    // 缩放跨过阈值时切聚合粒度。阈值两侧留了回差（1.4 / 1.7），
+    // 否则在临界点上滚轮会让点位来回重绘、闪个不停
+    if (districtNodeCount > DISTRICT_NODE_LIMIT && pickLevel() !== nodeLevel) {
+      if (atlasKey) exitAtlas();
+      renderNodes();
+    }
   }
 
   function scheduleView() {
@@ -674,31 +685,47 @@ export function createMap(container, { onSelect, onHover, onFocus, onView } = {}
 
   /* ————————— 节点 ————————— */
 
-  function aggregate(list) {
+  // 全图视角下按市聚合、放大后展开到区县。全国 2840 个区县，
+  // 案例攒到上千条时全图会有近千个点，只剩一团亮斑，看不出哪片密。
+  const DISTRICT_NODE_LIMIT = 150;
+  const ZOOM_IN_LEVEL = 1.7;
+  const ZOOM_OUT_LEVEL = 1.4;
+
+  /**
+   * @param {Array} list 案例
+   * @param {"district"|"city"} level 聚合粒度
+   */
+  function aggregate(list, level = "district") {
+    const byCity = level === "city";
     const groups = new Map();
     for (const item of list) {
       if (!item || !item.lng || !item.lat) continue;
-      // 按区县聚合：同城不同区的案例落点不同，放大后能分开；
-      // 只有同一区县内的多条案例才合并成一个点
-      const key = `${item.province}|${item.city || ""}|${item.district || ""}`;
+      // 区县级：同城不同区的案例落点不同，放大后能分开，只有同区县才合并
+      const key = byCity
+        ? `${item.province}|${item.city || ""}`
+        : `${item.province}|${item.city || ""}|${item.district || ""}`;
       if (!groups.has(key)) {
         groups.set(key, {
           province: item.province,
           city: item.city || "",
-          district: item.district || "",
-          lng: item.lng,
-          lat: item.lat,
+          district: byCity ? "" : item.district || "",
+          lng: 0,
+          lat: 0,
           items: [],
           domains: [],
         });
       }
       const g = groups.get(key);
       g.items.push(item);
+      // 累加到后面取均值：市级聚合时落点应是该市案例的中心，不是第一条的位置
+      g.lng += item.lng;
+      g.lat += item.lat;
       for (const d of item.domains || []) if (!g.domains.includes(d)) g.domains.push(d);
     }
-    const max = Math.max(1, ...[...groups.values()].map((g) => g.items.length));
     return [...groups.values()].map((g) => ({
       ...g,
+      lng: g.lng / g.items.length,
+      lat: g.lat / g.items.length,
       count: g.items.length,
       // 半径按绝对数量开方，不做「除最大值」的归一化：
       // 归一化会让一个热点把其他点全压到最小值，案例一多就看不出层级
@@ -710,10 +737,18 @@ export function createMap(container, { onSelect, onHover, onFocus, onView } = {}
     }));
   }
 
+  /** 当前该用哪种聚合粒度：点少就一直用区县，点多才按缩放分级 */
+  function pickLevel() {
+    if (districtNodeCount <= DISTRICT_NODE_LIMIT) return "district";
+    if (nodeLevel === "district") return view.k < ZOOM_OUT_LEVEL ? "city" : "district";
+    return view.k >= ZOOM_IN_LEVEL ? "district" : "city";
+  }
+
   function renderNodes() {
     if (!gNodes || !projection) return;
     gNodes.replaceChildren();
-    lastNodes = aggregate(cases);
+    nodeLevel = pickLevel();
+    lastNodes = aggregate(cases, nodeLevel);
 
     // 点位密集时整体减淡：近千个光晕叠在一起会糊成一条发光带，
     // 密度越高每个点越淡，靠「亮点数量」而不是「亮点亮度」表达聚集
@@ -1028,6 +1063,7 @@ export function createMap(container, { onSelect, onHover, onFocus, onView } = {}
     init,
     setData(list) {
       cases = Array.isArray(list) ? list : [];
+      districtNodeCount = aggregate(cases, "district").length;
       if (atlasKey) exitAtlas();
       renderNodes();
     },
