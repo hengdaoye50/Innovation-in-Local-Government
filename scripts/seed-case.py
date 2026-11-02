@@ -1,0 +1,105 @@
+"""
+把 examples/ 里的示例稿灌进线上案例库（一次性工具，用于课程前期铺几条真实案例）。
+产物是一条 INSERT 语句的 SQL 文件，交给 wrangler d1 execute --file 执行。
+
+用法：
+  python scripts/seed-case.py > .wrangler/seed.sql
+  npx wrangler d1 execute innovation-localgov --remote --file .wrangler/seed.sql
+"""
+import io
+import json
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+
+# 每条案例的元数据；正文从 markdown 读，标题取一级标题
+CASES = [
+    {
+        "id": "case_shenzhen_minyi",
+        "file": "examples/sample-case.md",
+        "province": "广东省",
+        "city": "深圳市",
+        "district": "福田区",
+        "lng": 114.051,
+        "lat": 22.541,
+        "domains": ["数字治理", "基层治理"],
+        "author_id": 1,
+        "author_name": "张同学",
+        "year": "2024",
+        # 数字口径以国家数据局的典型案例为准（537 个渠道 / 4177 项清单 / 98% 一次分拨），
+        # 人民日报另有一篇写 557 个渠道，正文统一采用一条口径，来源也给这一条
+        "sources": [
+            {
+                "title": "深圳：推进民生诉求综合服务改革 探索城市治理现代化新路（国家数据局·城市全域数字化转型典型案例）",
+                "url": "https://www.nda.gov.cn/sjj/ywpd/szsh/0110/20250110160028970541877_pc.html",
+            },
+            {
+                "title": "「一键下单」，民生诉求速办（人民日报，2024-08-27）",
+                "url": "http://politics.people.com.cn/n1/2024/0827/c1001-40306567.html",
+            },
+        ],
+    },
+]
+
+
+def sql_quote(value: str) -> str:
+    return "'" + str(value).replace("'", "''") + "'"
+
+
+def build(case: dict) -> str:
+    raw = (ROOT / case["file"]).read_text(encoding="utf-8").strip()
+    lines = raw.split("\n")
+    title = lines[0].lstrip("# ").strip()
+    body = "\n".join(lines[1:]).strip()
+    summary = " ".join(body.split())[:160]
+    now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+    columns = [
+        "id", "title", "province", "city", "district", "lng", "lat",
+        "domains", "summary", "body", "sources_json",
+        "author_id", "author_name", "status", "year", "created_at", "updated_at",
+    ]
+    values = [
+        sql_quote(case["id"]),
+        sql_quote(title),
+        sql_quote(case["province"]),
+        sql_quote(case["city"]),
+        sql_quote(case["district"]),
+        str(case["lng"]),
+        str(case["lat"]),
+        sql_quote(json.dumps(case["domains"], ensure_ascii=False)),
+        sql_quote(summary),
+        sql_quote(body),
+        sql_quote(json.dumps(case["sources"], ensure_ascii=False)),
+        str(case["author_id"]),
+        sql_quote(case["author_name"]),
+        sql_quote("published"),
+        sql_quote(case["year"]),
+        sql_quote(now),
+        sql_quote(now),
+    ]
+
+    # 重复执行不报错，也顺便把内容更新成最新的一版
+    updates = ", ".join(
+        f"{c} = excluded.{c}" for c in columns if c not in ("id", "created_at")
+    )
+    return (
+        f"INSERT INTO cases ({', '.join(columns)})\n"
+        f"VALUES ({', '.join(values)})\n"
+        f"ON CONFLICT(id) DO UPDATE SET {updates};\n"
+    )
+
+
+def main() -> None:
+    out = "".join(build(c) for c in CASES)
+    out_file = ROOT / ".wrangler" / "seed-cases.sql"
+    out_file.parent.mkdir(parents=True, exist_ok=True)
+    out_file.write_text(out, encoding="utf-8")
+    print(f"wrote {out_file} ({len(CASES)} case(s))", file=sys.stderr)
+    print(out)
+
+
+if __name__ == "__main__":
+    main()
