@@ -1186,3 +1186,27 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* 文件选择：默认控件太窄，撑满一栏并留出点击区 */
+.admin__file {
+  padding: 8px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.admin__file::file-selector-button {
+  margin-right: 12px;
+  padding: 5px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--paper-raised);
+  color: var(--plum);
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+
+.admin__file::file-selector-button:hover {
+  background: rgba(126, 12, 110, 0.05);
+  border-color: var(--plum);
+}

@@ -23,6 +23,34 @@ export async function onRequest(context) {
       return await fileHandler(env, request, id);
     }
 
+    // /api/slides/:id/file  PUT：上传演示文件（只收 PDF）
+    if (id && sub === "file" && request.method === "PUT") {
+      const session = await getSession(env, request);
+      if (!isStaff(session)) return fail("只有教师可以上传演示文件", 403);
+
+      const slide = await getSlide(env, id);
+      if (!slide) return fail("展位不存在", 404);
+
+      const type = request.headers.get("content-type") || "";
+      if (!type.includes("application/pdf")) {
+        return fail("演示文件只收 PDF，请把 PPT 另存为 PDF 再上传", 415);
+      }
+
+      const buf = await request.arrayBuffer();
+      if (!buf.byteLength) return fail("文件是空的");
+      // KV 单值上限 25MB，留点余量
+      if (buf.byteLength > 20 * 1024 * 1024) {
+        return fail("PDF 超过 20MB，请压缩后再传", 413);
+      }
+
+      await env.SESSIONS.put(`slidefile:${id}`, buf);
+      await env.DB.prepare("UPDATE slides SET file_url = ? WHERE id = ?")
+        .bind(`/api/slides/${id}/file`, id)
+        .run();
+
+      return ok({ bytes: buf.byteLength, fileUrl: `/api/slides/${id}/file` });
+    }
+
     // /api/slides/:id/review：重跑一次模型评语（教师用，也能救回一直「待评」的展位）
     if (id && sub === "review" && request.method === "POST") {
       const session = await getSession(env, request);

@@ -407,8 +407,16 @@ async function renderSlides(panel) {
             </label>
           </div>
           <label class="field">
-            <span class="field__label">幻灯片链接（可选）</span>
-            <input class="input" name="fileUrl" placeholder="https:// 或站内路径，留空则展位只保留文字" />
+            <span class="field__label">演示文件（可选）</span>
+            <input class="input admin__file" name="file" type="file" accept="application/pdf,.pdf" />
+            <span class="field__hint">
+              只收 <b>PDF</b>。PPT 请先在 PowerPoint 里「另存为 PDF」再上传——
+              浏览器没法内嵌预览 pptx，转成 PDF 才能直接在展位里翻页。单份不超过 20MB。
+            </span>
+          </label>
+          <label class="field">
+            <span class="field__label">外部链接（可选）</span>
+            <input class="input" name="fileUrl" placeholder="已经有在线文档链接时填这里，比如腾讯文档、飞书文档" />
           </label>
           <label class="field">
             <span class="field__label">描述</span>
@@ -483,12 +491,38 @@ async function renderSlides(panel) {
                 ? `<span class="tag tag--warn">仅自己可见</span>`
                 : ""
             }
+            ${s.aiScore ? `<span class="meta mono">AI ${s.aiScore}</span>` : ""}
           </div>
           <a class="admin__row-title" href="#/slide/${esc(s.id)}">${esc(s.title)}</a>
+        </div>
+        <div class="admin__row-actions">
+          <button class="btn btn--quiet btn--sm" type="button" data-review="${esc(s.id)}">
+            ${s.aiReview ? "重新评语" : "生成评语"}
+          </button>
         </div>
       </article>`
       )
       .join("");
+
+    // 评语是异步生成的，直接写库建出来的展位会一直「待评」，这里给个手动补的入口
+    listEl.querySelectorAll("[data-review]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        btn.disabled = true;
+        btn.textContent = "生成中…";
+        try {
+          const res = await api.post(
+            `/api/slides/${encodeURIComponent(btn.dataset.review)}/review`,
+            {}
+          );
+          toast(`评语已生成（AI ${res?.score ?? "—"}）`);
+          loadList();
+        } catch (err) {
+          toast(err.message || "生成失败", { type: "error" });
+          btn.disabled = false;
+          btn.textContent = "生成评语";
+        }
+      });
+    });
   }
 
   form.addEventListener("submit", async (event) => {
@@ -514,7 +548,29 @@ async function renderSlides(panel) {
     status.textContent = "发布中…";
     status.dataset.state = "";
     try {
-      await api.post("/api/slides", payload);
+      const created = await api.post("/api/slides", payload);
+
+      // 有文件就先建记录拿 id，再把 PDF 传上去；上传失败不影响展位本身
+      const file = fd.get("file");
+      if (file && file.size) {
+        if (file.type && !file.type.includes("pdf")) {
+          throw new Error("只收 PDF，请把 PPT 另存为 PDF 再上传");
+        }
+        status.textContent = "上传演示文件…";
+        const res = await fetch(`/api/slides/${encodeURIComponent(created.id)}/file`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/pdf" },
+          credentials: "same-origin",
+          body: file,
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(
+            `展位已发布，但文件没传上去：${data?.error?.message || data?.message || res.status}`
+          );
+        }
+      }
+
       status.textContent = "已发布";
       status.dataset.state = "ok";
       form.reset();
