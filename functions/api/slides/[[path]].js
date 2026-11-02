@@ -12,10 +12,16 @@ export async function onRequest(context) {
   const { request, env, params } = context;
   const segments = Array.isArray(params.path) ? params.path : [params.path].filter(Boolean);
   const id = segments[0] || "";
+  const sub = segments[1] || "";
 
   try {
     const missing = checkBindings(env);
     if (missing) return fail(missing, 503);
+
+    // /api/slides/:id/file：把存在 KV 里的演示文件原样吐回去
+    if (id && sub === "file" && request.method === "GET") {
+      return await fileHandler(env, request, id);
+    }
 
     if (!id && request.method === "GET") {
       const url = new URL(request.url);
@@ -128,4 +134,31 @@ export async function onRequest(context) {
   } catch (err) {
     return handleError(err);
   }
+}
+
+/**
+ * 演示文件：上传时转成 PDF 存进 KV（键 slidefile:<id>），这里原样返回。
+ * 存 PDF 而不是 pptx，是因为浏览器能直接内嵌预览，不需要第三方服务。
+ */
+async function fileHandler(env, request, id) {
+  const slide = await getSlide(env, id);
+  if (!slide || slide.status !== "published") return fail("展位不存在", 404);
+
+  // 私有展位的文件也要按人拦，否则拿到 id 就能绕过列表直接下载
+  if (slide.visibility === "private") {
+    const session = await getSession(env, request);
+    const allowed = session && (session.role === "admin" || session.id === slide.authorId);
+    if (!allowed) return fail("展位不存在", 404);
+  }
+
+  const data = await env.SESSIONS.get(`slidefile:${id}`, "arrayBuffer");
+  if (!data) return fail("这个展位还没有上传演示文件", 404);
+
+  return new Response(data, {
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `inline; filename="${id}.pdf"`,
+      "Cache-Control": "public, max-age=3600",
+    },
+  });
 }

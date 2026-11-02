@@ -23,9 +23,9 @@ SLIDES = [
             "以及这次搬迁如何把分散的服务网点重新归集。每页都标注了资料来源，"
             "包括极目新闻、海报新闻、人民日报与人民网的相关报道。"
         ),
-        # 26MB 的 pptx 没法直接放进 KV，展位先只留文字与页数；
-        # 详情页会显示「以现场演示为主」的占位说明
-        "file_url": "",
+        # 原 pptx 26MB 超 KV 单值上限，用 PowerPoint 转成 1.8MB 的 PDF 存进 KV，
+        # file_url 指向读取接口，详情页 iframe 内嵌预览
+        "file_url": "/api/slides/slide_xian_shangban/file",
         "cover_url": "",
     }
 ]
