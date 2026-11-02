@@ -521,8 +521,9 @@
   color: var(--paper);
 }
 
-.nav.is-dark .nav__seal {
-  color: var(--gold);
+/* 深色舞台上院徽靠纸白圆底托住，不用改色也不用反白 */
+.nav.is-dark .nav__emblem {
+  box-shadow: 0 1px 3px rgba(8, 4, 10, 0.45);
 }
 
 .nav.is-dark .nav__link {
@@ -627,11 +628,21 @@
   color: var(--ink);
 }
 
-.nav__seal {
-  width: 22px;
-  height: 22px;
+/* 院徽放在纸白圆底上：纸色导航里像一枚印章，深色制图台上也不至于糊进背景。
+   34px 是能看清「周政」二字的临界值，再小内部线条会糊成一团 */
+.nav__emblem {
+  width: 34px;
+  height: 34px;
   flex: none;
-  color: var(--plum);
+  border-radius: 50%;
+  background: var(--paper-raised);
+  padding: 1px;
+  box-shadow: 0 1px 2px rgba(31, 20, 28, 0.12);
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+.nav__brand:hover .nav__emblem {
+  transform: scale(1.04);
 }
 
 .nav__links {
@@ -765,6 +776,16 @@
   justify-content: space-between;
   gap: 40px;
   flex-wrap: wrap;
+}
+
+/* 页脚用学院汉字标牌，压在平台名之上，形成「学院 → 平台」的层级 */
+.footer__wordmark {
+  display: block;
+  width: 100%;
+  max-width: 300px;
+  height: auto;
+  margin-bottom: 18px;
+  opacity: 0.9;
 }
 
 .footer__brand {

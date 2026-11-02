@@ -2,12 +2,6 @@
 import { el, esc, qs } from "../lib/dom.js";
 import { getState, subscribe } from "../lib/store.js";
 
-const SEAL = `<svg class="nav__seal" viewBox="0 0 24 24" aria-hidden="true">
-  <rect x="2.5" y="2.5" width="19" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.1"/>
-  <path d="M6.5 16.5V9.2l5.5 4.1 5.5-4.1v7.3" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M6.5 7.2h11" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" opacity=".55"/>
-</svg>`;
-
 const NAV_ITEMS = [
   { label: "案例地图", target: "atlas" },
   { label: "协作工作台", target: "studio" },
@@ -29,7 +23,7 @@ export function mountNav(actions = {}) {
   host.innerHTML = `
     <div class="nav__inner">
       <a class="nav__brand" href="#/" aria-label="${esc(SITE.name)} 首页">
-        ${SEAL}
+        <img class="nav__emblem" src="./brand/zhou-emblem.png" alt="" width="34" height="34" />
         <span class="nav__brand-full">${esc(SITE.name)}</span>
         <span class="nav__brand-short">${esc(SITE.short)}</span>
       </a>
@@ -153,6 +147,8 @@ export function mountFooter() {
     <div class="shell">
       <div class="footer__grid">
         <div>
+          <img class="footer__wordmark" src="./brand/zhou-wordmark.png"
+            alt="南开大学周恩来政府管理学院" />
           <div class="footer__brand">${esc(SITE.name)}</div>
           <p class="footer__note">
             由 ${esc(SITE.course)} 课程共建。案例由学生从公开新闻出发、

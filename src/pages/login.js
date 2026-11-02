@@ -8,6 +8,9 @@ export function mountAuth(root) {
   root.innerHTML = `
     <div class="auth">
       <div class="auth__panel">
+        <a class="auth__lockup" href="#/" aria-label="南开大学周恩来政府管理学院">
+          <img src="./brand/zhou-lockup.png" alt="南开大学周恩来政府管理学院" />
+        </a>
         <a class="auth__brand" href="#/">
           <span class="auth__brand-mark">${SITE.name}</span>
           <span class="auth__brand-sub">${SITE.course}</span>

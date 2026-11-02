@@ -18,9 +18,26 @@
   margin-left: auto;
 }
 
+/* 登录页顶部放学院联用标志：校徽、院徽、汉字标牌一次到位，
+   比单放院徽更能说明这是谁开的课 */
+.auth__lockup {
+  display: block;
+  margin-bottom: 34px;
+}
+
+.auth__lockup img {
+  display: block;
+  width: 100%;
+  max-width: 330px;
+  height: auto;
+  opacity: 0.95;
+}
+
 .auth__brand {
   display: block;
   margin-bottom: 48px;
+  padding-top: 26px;
+  border-top: 1px solid var(--line);
 }
 
 .auth__brand-mark {
