@@ -1,6 +1,7 @@
 /** 全站共享外壳：顶栏、页脚、印章图标 */
 import { el, esc, qs } from "../lib/dom.js";
 import { getState, subscribe } from "../lib/store.js";
+import { currentPath, navigate, scrollToSection } from "../lib/router.js";
 
 const NAV_ITEMS = [
   { label: "案例地图", target: "atlas" },
@@ -9,6 +10,25 @@ const NAV_ITEMS = [
   { label: "文献共读", target: "blog" },
   { label: "调研足迹", target: "field" },
 ];
+
+/** 待滚动的目标区块：从详情页、后台点导航时先回首页，渲染完再滚过去 */
+let pendingSection = "";
+
+export function flushPendingSection() {
+  const id = pendingSection;
+  pendingSection = "";
+  if (id) scrollToSection(id);
+}
+
+/**
+ * 顶栏和页脚指向的都是首页里的区块。不在首页时这些区块根本不存在，
+ * 直接让锚点生效会落到 404，所以统一走这里：能滚就滚，不能滚就先回首页。
+ */
+function goToSection(id) {
+  if (scrollToSection(id)) return;
+  pendingSection = id;
+  navigate("/");
+}
 
 export const SITE = {
   name: "公共政策分析课程协作平台",
@@ -58,8 +78,10 @@ export function mountNav(actions = {}) {
   const onScroll = () => {
     host.classList.toggle("is-solid", window.scrollY > 24);
     const atlas = document.getElementById("atlas");
-    // 首屏是深色制图台，顶栏需要反色才看得见
-    const overDark = !!atlas && window.scrollY < atlas.offsetHeight - 80;
+    // 首屏是深色制图台，顶栏需要反色才看得见。
+    // 只有首页才有 #atlas，别处必须回到浅色，否则白字压在纸底上等于消失
+    const onHome = currentPath() === "/";
+    const overDark = onHome && !!atlas && window.scrollY < atlas.offsetHeight - 80;
     host.classList.toggle("is-dark", overDark);
     updateActive();
   };
@@ -69,19 +91,10 @@ export function mountNav(actions = {}) {
   host.addEventListener("click", (event) => {
     const link = event.target.closest("[data-target]");
     if (!link) return;
-    const id = link.dataset.target;
-    const section = document.getElementById(id);
-    if (!section) return;
     event.preventDefault();
     links.classList.remove("is-open");
     toggle.setAttribute("aria-expanded", "false");
-    const top = section.getBoundingClientRect().top + window.scrollY - 64;
-    window.scrollTo({
-      top,
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? "auto"
-        : "smooth",
-    });
+    goToSection(link.dataset.target);
   });
 
   function updateActive() {
@@ -156,11 +169,11 @@ export function mountFooter() {
           </p>
         </div>
         <div class="footer__links">
-          <a href="#atlas">案例地图</a>
-          <a href="#studio">协作工作台</a>
-          <a href="#slides">课堂展示</a>
-          <a href="#blog">文献共读</a>
-          <a href="#field">调研足迹</a>
+          <a href="#atlas" data-target="atlas">案例地图</a>
+          <a href="#studio" data-target="studio">协作工作台</a>
+          <a href="#slides" data-target="slides">课堂展示</a>
+          <a href="#blog" data-target="blog">文献共读</a>
+          <a href="#field" data-target="field">调研足迹</a>
         </div>
       </div>
       <div class="footer__bottom">
@@ -170,6 +183,12 @@ export function mountFooter() {
     </div>
   `;
   host.querySelector("[data-footer-year]").textContent = String(new Date().getFullYear());
+  host.addEventListener("click", (event) => {
+    const link = event.target.closest("[data-target]");
+    if (!link) return;
+    event.preventDefault();
+    goToSection(link.dataset.target);
+  });
   document.body.append(host);
   return host;
 }

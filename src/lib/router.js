@@ -3,6 +3,7 @@
 const routes = [];
 let notFound = null;
 let onChange = null;
+let afterMount = null;
 
 export function route(pattern, handler) {
   const keys = [];
@@ -28,6 +29,14 @@ export function onRouteChange(fn) {
   onChange = fn;
 }
 
+/**
+ * 页面挂载完成后回调。页面渲染是异步的（要等数据与地图），
+ * 所以这里等 handler 返回的 promise 落定再回调，和 onChange 的「切换前」区分开。
+ */
+export function onRouteMounted(fn) {
+  afterMount = fn;
+}
+
 export function currentPath() {
   const hash = window.location.hash.replace(/^#/, "");
   return hash || "/";
@@ -50,11 +59,14 @@ export function resolve() {
       params[key] = decodeURIComponent(match[i + 1] || "");
     });
     onChange?.(path);
-    handler(params);
+    Promise.resolve(handler(params))
+      .catch((err) => console.warn(err))
+      .then(() => afterMount?.(path));
     return;
   }
   onChange?.(path);
   notFound?.(path);
+  Promise.resolve().then(() => afterMount?.(path));
 }
 
 export function start() {

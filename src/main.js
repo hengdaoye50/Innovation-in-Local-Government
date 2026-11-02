@@ -9,8 +9,16 @@ import "./styles/field.css";
 import "./styles/layers.css";
 import "./styles/auth.css";
 
-import { mountNav, mountFooter } from "./components/chrome.js";
-import { route, setNotFound, start, navigate, currentPath, onRouteChange } from "./lib/router.js";
+import { mountNav, mountFooter, flushPendingSection, SITE } from "./components/chrome.js";
+import {
+  route,
+  setNotFound,
+  start,
+  navigate,
+  currentPath,
+  onRouteChange,
+  onRouteMounted,
+} from "./lib/router.js";
 import { getState, setState } from "./lib/store.js";
 import { auth as authApi, api } from "./lib/api.js";
 import { toast } from "./lib/dom.js";
@@ -67,7 +75,6 @@ async function renderHome() {
   mapInstance = await mountAtlas(app);
   mountStudio(app);
   await Promise.all([mountSlides(app), mountBlog(app), mountField(app)]);
-  window.dispatchEvent(new CustomEvent("route:mounted", { detail: { page: "home" } }));
 }
 
 /* —————————————— 详情与独立页 —————————————— */
@@ -139,9 +146,20 @@ route("/login", renderLogin);
 route("/admin", renderAdmin);
 setNotFound(renderNotFound);
 
+/** 各路由的浏览器标题；详情页拿到数据后会自己覆盖成具体标题 */
+const PAGE_TITLES = {
+  "/": "案例地图",
+  "/login": "登录",
+  "/admin": "教师后台",
+  "/field/new": "记录一次调研",
+};
+
 onRouteChange((path) => {
   dispose();
   if (!path.startsWith("/login")) document.body.classList.remove("page-auth");
+  document.title = PAGE_TITLES[path]
+    ? `${PAGE_TITLES[path]} · ${SITE.name}`
+    : SITE.name;
   reportView(path);
 });
 
@@ -214,10 +232,12 @@ async function boot0() {
   mountFooter();
   start();
 
-  // 路由切换后刷新导航状态（含深色首屏的反色判断）
-  window.addEventListener("route:mounted", () => {
+  // 路由挂载完成后刷新导航状态（含深色首屏的反色判断），
+  // 并兑现「从别的页面点导航跳区块」时暂存的目标
+  onRouteMounted(() => {
     nav.refreshUser();
     nav.sync();
+    flushPendingSection();
   });
 
   hideBoot();
