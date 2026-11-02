@@ -14,7 +14,7 @@ const STATUS_LABEL = {
 };
 
 const COURSES = ["地方政府创新", "公共政策分析"];
-const TERMS = ["2025 秋", "2025 春", "2024 秋", "2024 春"];
+const TERMS = ["2026 秋", "2026 春", "2025 秋", "2025 春", "2024 秋", "2024 春"];
 
 export function mountAdmin(root) {
   const { user, authChecked } = getState();
