@@ -23,6 +23,27 @@ export async function onRequest(context) {
       return await fileHandler(env, request, id);
     }
 
+    // /api/slides/:id/review：重跑一次模型评语（教师用，也能救回一直「待评」的展位）
+    if (id && sub === "review" && request.method === "POST") {
+      const session = await getSession(env, request);
+      if (!isStaff(session)) return fail("只有教师可以发起评语", 403);
+
+      const slide = await getSlide(env, id);
+      if (!slide) return fail("展位不存在", 404);
+
+      const verdict = await reviewSlide(env, {
+        title: slide.title,
+        course: slide.course,
+        description: slide.description,
+      });
+      if (!verdict) return fail("模型没有返回评语，请检查服务端密钥", 503);
+
+      await env.DB.prepare("UPDATE slides SET ai_review = ?, ai_score = ? WHERE id = ?")
+        .bind(verdict.review, verdict.score, id)
+        .run();
+      return ok({ review: verdict.review, score: verdict.score });
+    }
+
     if (!id && request.method === "GET") {
       const url = new URL(request.url);
       // 私有展位要按访问者过滤，所以列表这里也要取会话
