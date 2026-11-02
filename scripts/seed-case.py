@@ -41,6 +41,30 @@ CASES = [
             },
         ],
     },
+    {
+        "id": "case_jiande_duibao",
+        "file": "examples/case-jiande-bancheng.md",
+        "province": "浙江省",
+        "city": "杭州市",
+        "district": "建德市",
+        "lng": 119.2791,
+        "lat": 29.4723,
+        "domains": ["公共服务"],
+        "author_id": 1,
+        "author_name": "张同学",
+        "year": "2025",
+        # 起源、国标时间线均取自新华网转浙江在线的报道；受理范围参照地方公开的受理须知
+        "sources": [
+            {
+                "title": "「办不成事」窗口迎来国家标准（新华网转浙江在线，2026-06-26）",
+                "url": "http://zj.news.cn/20260626/2de36ac34efb4bc882e26160f749be21/c.html",
+            },
+            {
+                "title": "「办不成事」反映窗口受理须知（常德市人民政府）",
+                "url": "https://www.changde.gov.cn/petition/notice?petitionletterboxid=10",
+            },
+        ],
+    },
 ]
 
 
