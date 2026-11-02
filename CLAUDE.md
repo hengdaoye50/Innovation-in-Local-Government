@@ -126,6 +126,11 @@ MPA课程AI辅学项目开发/
 - `author_role = 'ai'` 的记录是模型评语，不出现在普通留言流里，单独置顶展示。
 - 教师/助教留言带 `role` 标记，视觉上区分。
 
+**展位评语（`functions/lib/review.js` 的 `SLIDE_SYSTEM`）是公开反馈，口径固定为正向：**
+开口说这份汇报最值得看的地方且必须具体；顺着选题递一个「可以接着……」的延展方向；
+不写负面评价、不用「但是/然而/不足/欠缺」；**不打分**——分数会在班里排出高低，
+与这段评语的目的相冲（`ai_score` 对展位恒为 NULL，案例质检仍保留分数）。
+
 ## 数据模型（D1）
 
 ```text
@@ -152,7 +157,7 @@ posts      id, title, author, source_url, tags, body, cover_url, published_at
 - GitHub Actions 在 `main` push 时触发：`npm ci` → `npm run build` → `wrangler pages deploy dist`。
 - Pages 项目名 `innovation-localgov`，Functions 目录为仓库根 `functions/`。
 - D1 绑定名 `DB`；KV 绑定名 `SESSIONS`。
-- 必需 Secrets：`CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`、`FIREWORKS_API_KEY`、
+- 必需 Secrets：`CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`、`DEEPSEEK_API_KEY`、
   `AUTH_SECRET`、`SEARCH_API_KEY`（接入检索后）。
 
 ### 数据库迁移

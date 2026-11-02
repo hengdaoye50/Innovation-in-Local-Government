@@ -66,10 +66,10 @@ export async function onRequest(context) {
       });
       if (!verdict) return fail("模型没有返回评语，请检查服务端密钥", 503);
 
-      await env.DB.prepare("UPDATE slides SET ai_review = ?, ai_score = ? WHERE id = ?")
-        .bind(verdict.review, verdict.score, id)
+      await env.DB.prepare("UPDATE slides SET ai_review = ?, ai_score = NULL WHERE id = ?")
+        .bind(verdict.review, id)
         .run();
-      return ok({ review: verdict.review, score: verdict.score });
+      return ok({ review: verdict.review });
     }
 
     if (!id && request.method === "GET") {
@@ -169,8 +169,8 @@ export async function onRequest(context) {
         reviewSlide(env, { title, course: String(body.course || ""), description }).then(
           async (verdict) => {
             if (!verdict) return;
-            await env.DB.prepare("UPDATE slides SET ai_review = ?, ai_score = ? WHERE id = ?")
-              .bind(verdict.review, verdict.score, slideId)
+            await env.DB.prepare("UPDATE slides SET ai_review = ?, ai_score = NULL WHERE id = ?")
+              .bind(verdict.review, slideId)
               .run();
           }
         )

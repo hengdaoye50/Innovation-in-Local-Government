@@ -491,7 +491,6 @@ async function renderSlides(panel) {
                 ? `<span class="tag tag--warn">仅自己可见</span>`
                 : ""
             }
-            ${s.aiScore ? `<span class="meta mono">AI ${s.aiScore}</span>` : ""}
           </div>
           <a class="admin__row-title" href="#/slide/${esc(s.id)}">${esc(s.title)}</a>
         </div>
@@ -510,11 +509,8 @@ async function renderSlides(panel) {
         btn.disabled = true;
         btn.textContent = "生成中…";
         try {
-          const res = await api.post(
-            `/api/slides/${encodeURIComponent(btn.dataset.review)}/review`,
-            {}
-          );
-          toast(`评语已生成（AI ${res?.score ?? "—"}）`);
+          await api.post(`/api/slides/${encodeURIComponent(btn.dataset.review)}/review`, {});
+          toast("评语已生成");
           loadList();
         } catch (err) {
           toast(err.message || "生成失败", { type: "error" });

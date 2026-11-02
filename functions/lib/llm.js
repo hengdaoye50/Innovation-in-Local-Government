@@ -1,7 +1,6 @@
 /**
  * 模型调用
- * 默认 DeepSeek 官方 API，同时兼容 Fireworks —— 两者都是 OpenAI 兼容的
- * /chat/completions，差异只在 base、模型名和密钥变量名。
+ * 走 DeepSeek 官方 API（OpenAI 兼容的 /chat/completions）。
  * 前端永远不接触密钥，全部经此转发。
  */
 
@@ -16,31 +15,15 @@ const PROVIDERS = {
     // 2) reasoning token 会占用 max_tokens 预算，所以调用方的上限要放宽。
     extra: { thinking: { type: "enabled" }, reasoning_effort: "high" },
   },
-  fireworks: {
-    base: "https://api.fireworks.ai/inference/v1",
-    model: "accounts/fireworks/models/deepseek-v4p1-flash",
-    keyEnv: "FIREWORKS_API_KEY",
-    extra: {},
-  },
 };
 
 function resolve(env) {
-  const explicit = (env.LLM_PROVIDER || "").toLowerCase();
-  const name =
-    explicit && PROVIDERS[explicit]
-      ? explicit
-      : env.DEEPSEEK_API_KEY
-        ? "deepseek"
-        : env.FIREWORKS_API_KEY
-          ? "fireworks"
-          : "deepseek";
-
-  const preset = PROVIDERS[name];
+  const preset = PROVIDERS.deepseek;
   return {
-    name,
+    name: "deepseek",
     base: (env.LLM_BASE || preset.base).replace(/\/$/, ""),
     model: env.LLM_MODEL || preset.model,
-    key: env[preset.keyEnv] || env.DEEPSEEK_API_KEY || env.FIREWORKS_API_KEY || "",
+    key: env.DEEPSEEK_API_KEY || "",
     extra: preset.extra || {},
   };
 }

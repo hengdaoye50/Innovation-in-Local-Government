@@ -200,7 +200,6 @@ export const DEMO_SLIDES = [
     slides: 18,
     aiReview:
       "论证链条完整，问题意识清楚。可加强之处：排名机制可能导致「易解决诉求优先」，建议补充被排序挤出的事项类型。",
-    aiScore: 86,
   },
   {
     id: "demo-slide-2",
@@ -213,7 +212,6 @@ export const DEMO_SLIDES = [
     slides: 21,
     aiReview:
       "对照框架清晰。建议把「机会清单的回应率」作为可观测指标补充进来，否则难以判断政策是否产生了实际撮合。",
-    aiScore: 82,
   },
   {
     id: "demo-slide-3",
@@ -226,7 +224,6 @@ export const DEMO_SLIDES = [
     slides: 16,
     aiReview:
       "抓住了关键机制。若能补一个反例——某类部门主动共享的动机来源——论证会更立体。",
-    aiScore: 88,
   },
 ];
 

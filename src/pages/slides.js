@@ -71,7 +71,6 @@ export async function mountSlides(root) {
 }
 
 function cardHtml(slide, index, demo, total) {
-  const score = Number(slide.aiScore) || null;
   return `
     <article class="slide-card reveal" data-slide="${esc(slide.id)}" tabindex="0" role="link"
       aria-label="${esc(slide.title)}">
@@ -98,11 +97,7 @@ function cardHtml(slide, index, demo, total) {
       </div>
       <footer class="slide-card__foot">
         <span class="meta">${esc(slide.author || "匿名")}</span>
-        ${
-          score
-            ? `<span class="slide-card__score mono">AI ${score}</span>`
-            : `<span class="meta">待评</span>`
-        }
+        <span class="meta">${slide.aiReview ? "有评语" : "待评"}</span>
       </footer>
     </article>
   `;
