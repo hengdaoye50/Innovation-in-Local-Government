@@ -95,14 +95,6 @@ export async function mountAtlas(root) {
   let fieldList = null;
 
   const map = createMap(canvasHost, {
-    onSelect: (item, extra) => {
-      if (extra?.list?.length) {
-        openDrawer(extra.list, extra.node || item);
-        return;
-      }
-      if (!item?.id) return;
-      navigate(layer === "field" ? `/field/${item.id}` : `/case/${item.id}`);
-    },
     onFocus: (node, info) => {
       focusNode = node;
       if (!node || !info) {
@@ -187,7 +179,7 @@ export async function mountAtlas(root) {
     requestAnimationFrame(() => focusCard.classList.add("is-open"));
 
     if (hint) {
-      hint.innerHTML = `<span>再点光点或下方按钮进入案例 · 按 Esc 返回</span>`;
+      hint.innerHTML = `<span>点下方按钮进入案例 · 再点同一颗光点或按 Esc 收起</span>`;
     }
   }
 

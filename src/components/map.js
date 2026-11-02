@@ -52,7 +52,7 @@ function svgEl(tag, attrs = {}, children = []) {
   return node;
 }
 
-export function createMap(container, { onSelect, onHover, onFocus, onView } = {}) {
+export function createMap(container, { onHover, onFocus, onView } = {}) {
   let svg = null;
   let gRoot = null;
   let gNodes = null;
@@ -885,25 +885,14 @@ export function createMap(container, { onSelect, onHover, onFocus, onView } = {}
         lift
       );
 
-      const select = () => {
-        if (node.count === 1) onSelect?.(node.primary);
-        else onSelect?.(node.primary, { list: node.items, node });
-      };
-
       group.addEventListener("click", (event) => {
         event.stopPropagation();
-        if (atlasKey) {
-          // 分析态下的第二次点击：进详情（聚合点先弹列表）
-          select();
-          return;
-        }
-        enterAtlas(node);
+        toggleAtlas(node);
       });
       group.addEventListener("keydown", (event) => {
         if (event.key !== "Enter" && event.key !== " ") return;
         event.preventDefault();
-        if (atlasKey) select();
-        else enterAtlas(node);
+        toggleAtlas(node);
       });
       group.addEventListener("pointerenter", (event) => {
         if (atlasKey) return;
@@ -945,6 +934,16 @@ export function createMap(container, { onSelect, onHover, onFocus, onView } = {}
       // 先按共享标签数（强关联优先），再按距离（近的先连），
       // 这样连出来的是一簇一簇，而不是跨全国的发散线
       .sort((a, b) => b.shared.length - a.shared.length || a.dist - b.dist);
+  }
+
+  /**
+   * 光点点击只做一件事：展开预览或收起预览。点同一颗收起，点另一颗直接换目标。
+   * 进案例的动作交给浮卡上的按钮，不靠光点连击——否则第一次点想看关联、
+   * 第二次点就被带走了，而没有浮卡的地方（比如登录页）会点不动。
+   */
+  function toggleAtlas(node) {
+    if (atlasKey === nodeKey(node)) exitAtlas();
+    else enterAtlas(node);
   }
 
   function enterAtlas(node) {
