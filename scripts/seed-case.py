@@ -43,6 +43,33 @@ CASES = [
         ],
     },
     {
+        "id": "case_shanghai_mianshen",
+        "file": "examples/case-shanghai-mianshen.md",
+        "province": "上海市",
+        "city": "上海市",
+        "district": "黄浦区",
+        "lng": 121.4903,
+        "lat": 31.2228,
+        "domains": ["营商环境"],
+        "author_id": 1,
+        "author_name": "张同学",
+        "year": "2026",
+        "sources": [
+            {
+                "title": "《上海市加快打造国际一流营商环境行动方案（2026 年）》解读（上海市政府）",
+                "url": "https://www.shanghai.gov.cn/wzjd/20260122/00ae93bb37684c60a8c4fb3b5f2b12e5.html",
+            },
+            {
+                "title": "从「企业找政策」到「政策追企业」——黑龙江构筑营商新模式（新华网）",
+                "url": "https://www.news.cn/politics/20250819/bc9eac9dca57401a9a5cc30e6804a159/c.html",
+            },
+            {
+                "title": "龙华「免申即享」改革：一事项一算法（深圳市龙华区）",
+                "url": "https://www.szlhq.gov.cn/gkmlpt/content/12/12186/post_12186503.html",
+            },
+        ],
+    },
+    {
         "id": "case_dingxi_caili",
         "file": "examples/case-dingxi-caili.md",
         "province": "甘肃省",
