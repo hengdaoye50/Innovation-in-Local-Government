@@ -174,6 +174,122 @@ CASES = [
             },
         ],
     },
+    {
+        "id": "case_ninghai_36tiao",
+        "file": "examples/case-ninghai-qingdan.md",
+        "province": "浙江省",
+        "city": "宁波市",
+        "district": "宁海县",
+        "lng": 121.4326,
+        "lat": 29.2998,
+        "domains": ["政务公开"],
+        "author_id": 1,
+        "author_name": "张同学",
+        "year": "2014",
+        # 信访量与干部、村民两端的例子取自人民日报调查；清单结构与「三委会」修订取自司法部转载的澎湃报道
+        "sources": [
+            {
+                "title": "宁海「小清单」解决乡村治理大问题（人民日报，2018-08-26）",
+                "url": "https://www.xinhuanet.com/politics/2018-08/26/c_1123328981.htm",
+            },
+            {
+                "title": "浙江宁波：小微权力清单让乡村权力在阳光下运行（澎湃新闻，司法部转载）",
+                "url": "https://www.moj.gov.cn/pub/sfbgw/zwgkztzl/xxxcgcxjpfzsx/fzsxmtgz/fzxcjsjcx/202011/t20201116_173108.html",
+            },
+            {
+                "title": "「36条」清单确保「小微权力」在阳光下运行（中央社会工作部，2024-12-23）",
+                "url": "https://www.zyshgzb.gov.cn/n1/2024/1223/c459874-40387770.html",
+            },
+        ],
+    },
+    {
+        "id": "case_guangdong_tingke",
+        "file": "examples/case-guangdong-tingke.md",
+        "province": "广东省",
+        "city": "广州市",
+        "district": "越秀区",
+        "lng": 113.2807,
+        "lat": 23.1256,
+        "domains": ["应急管理"],
+        "author_id": 1,
+        "author_name": "张同学",
+        "year": "2014",
+        # 通知与指引条款以中国天气网广东站所载全文为准；后续演化（广州分「延迟上学」与「停课」两档）见广州教育口径
+        "sources": [
+            {
+                "title": "广东省教育厅 广东省气象局关于建立教育系统应对台风暴雨停课安排工作机制的通知（附停课安排指引全文）",
+                "url": "http://gd.weather.com.cn/jzrzt/2013/07/2165361.shtml",
+            },
+            {
+                "title": "广东台风暴雨极端天气停课安排指引正式实施（羊城晚报，中新网转载，2014-08-01）",
+                "url": "https://www.chinanews.com.cn/sh/2014/08-01/6450926.shtml",
+            },
+            {
+                "title": "暴雨、台风期间何时停课停学？指引来了（广州教育）",
+                "url": "https://m.itouchtv.cn/article/2d430d1fdcf34e9563db80c5e1a46ec4",
+            },
+        ],
+    },
+    {
+        "id": "case_nanjing_xiaoxihu",
+        "file": "examples/case-nanjing-xiaoxihu.md",
+        "province": "江苏省",
+        "city": "南京市",
+        "district": "秦淮区",
+        "lng": 118.7861,
+        "lat": 32.0338,
+        "domains": ["城市更新"],
+        "author_id": 1,
+        "author_name": "张同学",
+        "year": "2015",
+        # 规划单元与技术做法取自东南大学团队自述；居民个案与联合国奖项取自中新网
+        "sources": [
+            {
+                "title": "践行人民城市理念——南京小西湖街区保护与再生实践（东南大学建筑学院）",
+                "url": "https://arch.seu.edu.cn/2021/1008/c9118a385754/page.htm",
+            },
+            {
+                "title": "南京小西湖历史风貌街区：走入国际视野的老城微更新（中新网，2023-06-18）",
+                "url": "https://www.chinanews.com/sh/2023/06-18/10027194.shtml",
+            },
+            {
+                "title": "新华社撰文：「老城南」赓续千年文脉赋能城市更新（秦淮区人民政府转载）",
+                "url": "http://www.njqh.gov.cn/ywdt/tpxw/202601/t20260112_5762594.html",
+            },
+        ],
+    },
+    {
+        "id": "case_shanghai_yangjing",
+        "file": "examples/case-shanghai-yangjing.md",
+        "province": "上海市",
+        "city": "上海市",
+        "district": "浦东新区",
+        "lng": 121.5677,
+        "lat": 31.2459,
+        "domains": ["社会组织"],
+        "author_id": 1,
+        "author_name": "张同学",
+        "year": "2013",
+        # 机构属性与社区规模取自街道公开简介；筹款与参与式预算数据取自文汇报报道；资助额度取自基金会公开征集公告
+        "sources": [
+            {
+                "title": "上海洋泾社区公益基金会简介（浦东新区人民政府）",
+                "url": "https://www.pudong.gov.cn/zwgk/gysy-yjjdzdgz/2022/290/153961.html",
+            },
+            {
+                "title": "从社区规划师到社区基金会，社会组织创新赋能基层治理（文汇报，2024-05-01）",
+                "url": "https://www.scf.org.cn/csjjh/n3421/n3424/n3426/u1ai301674.html",
+            },
+            {
+                "title": "一日捐资助项目申请（上海洋泾社区公益基金会）",
+                "url": "http://yjcf.org/application/107",
+            },
+            {
+                "title": "全国七成社区基金会在上海，将推动全市 211 个街镇全覆盖（第一财经，2018-09-27）",
+                "url": "https://www.yicai.com/news/100033168.html",
+            },
+        ],
+    },
 ]
 
 
