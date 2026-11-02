@@ -43,6 +43,33 @@ CASES = [
         ],
     },
     {
+        "id": "case_wuxi_hezhang",
+        "file": "examples/case-wuxi-hezhang.md",
+        "province": "江苏省",
+        "city": "无锡市",
+        "district": "梁溪区",
+        "lng": 120.3017,
+        "lat": 31.5747,
+        "domains": ["生态治理"],
+        "author_id": 1,
+        "author_name": "张同学",
+        "year": "2007",
+        "sources": [
+            {
+                "title": "现代河长从这里走向全国——江苏无锡市河长制实施十年调查（中国水利报）",
+                "url": "https://www.chinawater.com.cn/newscenter/kx/201612/t20161209_453237.html",
+            },
+            {
+                "title": "且看「河长」如何治水（人民周刊，2016-12-30）",
+                "url": "https://paper.people.com.cn/rmzk/html/2016-12/30/content_1749944.htm",
+            },
+            {
+                "title": "中共中央办公厅 国务院办公厅印发《关于全面推行河长制的意见》",
+                "url": "https://www.mee.gov.cn/zcwj/zyygwj/201912/t20191225_751541.shtml",
+            },
+        ],
+    },
+    {
         "id": "case_shanghai_mianshen",
         "file": "examples/case-shanghai-mianshen.md",
         "province": "上海市",
