@@ -43,6 +43,33 @@ CASES = [
         ],
     },
     {
+        "id": "case_zhejiang_qianwan",
+        "file": "examples/case-zhejiang-qianwan.md",
+        "province": "浙江省",
+        "city": "杭州市",
+        "district": "淳安县",
+        "lng": 119.0443,
+        "lat": 29.6042,
+        "domains": ["乡村振兴"],
+        "author_id": 1,
+        "author_name": "张同学",
+        "year": "2023",
+        "sources": [
+            {
+                "title": "十组数据解码浙江「千村示范、万村整治」工程二十年（新华每日电讯，2023-04-13）",
+                "url": "http://www.news.cn/local/2023-04/13/c_1129517573.htm",
+            },
+            {
+                "title": "农业农村部、国家发展改革委关于深入学习浙江「千村示范、万村整治」工程经验的通知",
+                "url": "https://www.mee.gov.cn/zcwj/zyygwj/201912/t20191226_751594.shtml",
+            },
+            {
+                "title": "中共中央 国务院关于学习运用「千村示范、万村整治」工程经验有力有效推进乡村全面振兴的意见（2024 年中央一号文件）",
+                "url": "http://www.news.cn/20240203/a1fa4c7f4d5d4bbd9c5b47766be8cb05/c.html",
+            },
+        ],
+    },
+    {
         "id": "case_beijing_chuishao",
         "file": "examples/case-beijing-chuishao.md",
         "province": "北京市",
