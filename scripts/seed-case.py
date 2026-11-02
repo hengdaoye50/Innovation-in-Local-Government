@@ -24,7 +24,8 @@ CASES = [
         "district": "福田区",
         "lng": 114.051,
         "lat": 22.541,
-        "domains": ["数字治理", "基层治理"],
+        # 一标签一篇：基层治理归北京吹哨报到，这条只留数字治理
+        "domains": ["数字治理"],
         "author_id": 1,
         "author_name": "张同学",
         "year": "2024",
@@ -38,6 +39,33 @@ CASES = [
             {
                 "title": "「一键下单」，民生诉求速办（人民日报，2024-08-27）",
                 "url": "http://politics.people.com.cn/n1/2024/0827/c1001-40306567.html",
+            },
+        ],
+    },
+    {
+        "id": "case_beijing_chuishao",
+        "file": "examples/case-beijing-chuishao.md",
+        "province": "北京市",
+        "city": "北京市",
+        "district": "平谷区",
+        "lng": 117.1123,
+        "lat": 40.1448,
+        "domains": ["基层治理"],
+        "author_id": 1,
+        "author_name": "张同学",
+        "year": "2018",
+        "sources": [
+            {
+                "title": "街乡吹哨 部门报到——北京市推进党建引领基层治理体制机制创新（人民网，2018-12-10）",
+                "url": "http://dangjian.people.com.cn/n1/2018/1210/c117092-30453404.html",
+            },
+            {
+                "title": "吹哨报到（北京市人民政府·首都之窗政策问答）",
+                "url": "https://www.beijing.gov.cn/zhengce/zcjd/zcwd/csbd/index.html",
+            },
+            {
+                "title": "「十四五」规划《纲要》名词解释之 139：街乡吹哨、部门报到（国家发改委）",
+                "url": "https://www.ndrc.gov.cn/fggz/fzzlgh/gjfzgh/202112/t20211224_1309403.html",
             },
         ],
     },
