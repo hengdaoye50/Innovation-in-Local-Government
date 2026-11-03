@@ -188,7 +188,7 @@ async function mountSettings(root) {
   let tintId = current ? current.tint.id : 1;
 
   function renderPicker() {
-    const initial = (user?.displayName || user?.username || "?").slice(0, 1);
+    const initial = [...(user?.displayName || user?.username || "?")][0] || "?";
     picker.innerHTML = [
       `<button type="button" class="avatar-opt ${markId === 0 ? "is-on" : ""}"
         data-mark="0" aria-label="用首字母" aria-pressed="${markId === 0}">
@@ -220,7 +220,10 @@ async function mountSettings(root) {
 
   async function saveProfile(patch) {
     const nameInput = profileForm.querySelector("[name=displayName]");
-    const displayName = patch.displayName ?? nameInput.value;
+    // 换头像时用当前的昵称，不要顺手把输入框里改了一半的名字一起提交
+    const displayName =
+      patch.displayName ??
+      (patch.avatar !== undefined ? getState().user?.displayName : nameInput.value);
     const avatar = patch.avatar ?? (markId === 0 ? "" : `m${markId}:${tintId}`);
     try {
       const res = await authApi.updateProfile(displayName, avatar);
@@ -229,6 +232,7 @@ async function mountSettings(root) {
       root.querySelectorAll("[data-me-name]").forEach((node) => {
         node.textContent = res.user.displayName;
       });
+      if (nameInput) nameInput.value = res.user.displayName;
       toast(patch.avatar !== undefined ? "头像已更新" : "昵称已保存");
       return true;
     } catch (err) {

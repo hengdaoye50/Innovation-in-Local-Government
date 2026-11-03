@@ -113,9 +113,9 @@ export function mountNav(actions = {}) {
   }
 
   renderUser(host, actions);
-  // 个人页改完昵称或头像后，顶栏要立刻跟着变，不必等下一次路由挂载
-  const unsubscribe = subscribe(() => renderUser(host, actions));
-  host._unsubscribe = unsubscribe;
+  // 个人页改完昵称或头像后，顶栏要立刻跟着变，不必等下一次路由挂载。
+  // 顶栏一开机挂一次、整页期间不再重建，所以不需要保存退订。
+  subscribe(() => renderUser(host, actions));
 
   return {
     refreshUser: () => renderUser(host, actions),
@@ -142,7 +142,8 @@ function renderUser(host, actions) {
     slot.innerHTML = `<a class="nav__link" href="#/login">登录</a>`;
     return;
   }
-  const initial = (user.displayName || user.username || "?")[0];
+  // 用展开取首字符：直接 [0] 会把 emoji 之类的代理对切成半个字
+  const initial = [...(user.displayName || user.username || "?")][0] || "?";
   // 选过预设头像就画标记，没选过仍是首字母章
   const mark = avatarSvg(user.avatar, 16);
   // 观察员只读：顶栏不该出现「开始撰写」这个入口，点了也只会被拦

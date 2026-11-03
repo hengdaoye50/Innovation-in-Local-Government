@@ -181,6 +181,9 @@ async function updateProfile({ request, env }) {
   const session = await getSession(env, request);
   if (!session) return fail("请先登录", 401);
 
+  const limit = rateLimit(`profile:${session.id}`, { limit: 20, windowMs: 10 * 60_000 });
+  if (!limit.allowed) return fail("操作过于频繁，请稍后再试", 429);
+
   const body = await readJson(request, 4_000);
   const name = validateDisplayName(body.displayName);
   if (!name.ok) return fail(name.message);
@@ -190,6 +193,22 @@ async function updateProfile({ request, env }) {
   await env.DB.prepare("UPDATE users SET display_name = ?, avatar = ? WHERE id = ?")
     .bind(name.value, avatar.value, session.id)
     .run();
+
+  // 署名是提交时抄进 cases / comments 的，改名之后要跟着改，
+  // 否则「我的作品」换了名字，地图上还挂着旧名。
+  // display_name 一个字段能同时管昵称与署名，是因为全文只有这一处真名来源。
+  if (name.value !== session.displayName) {
+    await env.DB.batch([
+      env.DB.prepare("UPDATE cases SET author_name = ? WHERE author_id = ?").bind(
+        name.value,
+        session.id
+      ),
+      env.DB.prepare("UPDATE comments SET author_name = ? WHERE author_id = ?").bind(
+        name.value,
+        session.id
+      ),
+    ]);
+  }
 
   return ok({
     user: {

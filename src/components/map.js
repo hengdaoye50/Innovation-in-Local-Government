@@ -849,8 +849,10 @@ export function createMap(container, { onHover, onFocus, onView, compact = false
         class: "node",
         transform: `translate(${node.x.toFixed(1)} ${node.y.toFixed(1)})`,
         style: `--i:${enterRank.get(nodeKey(node)) ?? 0}`,
-        tabindex: "0",
-        role: "button",
+        // 紧凑模式是登录页那种装饰性门面，整块在 aria-hidden 里：
+        // 里面的光点不能再进 Tab 序列，否则读屏软件会遇到「隐藏区域里的可聚焦元素」
+        tabindex: compact ? "-1" : "0",
+        role: compact ? null : "button",
         "data-key": nodeKey(node),
         "aria-label": `${placeLabel(node, " ")}：${node.title}`,
       });
