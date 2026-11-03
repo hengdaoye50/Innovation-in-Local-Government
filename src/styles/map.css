@@ -1014,8 +1014,16 @@
   .stat__label {
     font-size: 10px;
   }
+  /* 竖屏下不要硬撑满一屏：地图宽度受限，撑高只会上下各留一大片空场。
+     地图屏收到「标题 + 舞台」的自然高度，让下一屏露出来一点，
+     比留一块 260px 的纯深色带更像一页翻得下去的东西。 */
+  .atlas {
+    min-height: 0;
+  }
   .atlas__stage {
-    min-height: 46vh;
+    flex: none;
+    height: clamp(320px, 46vh, 430px);
+    min-height: 0;
     margin-top: 0;
   }
   .atlas__legend {
@@ -1031,13 +1039,13 @@
   .atlas__hint {
     display: none;
   }
-  /* 竖屏时控件挪到左上，附图回到右下角，尺寸收一档；
-     底边留够，别骑在舞台底部那道渐隐上 */
+  /* 竖屏时控件挪到左上，附图收到右下角：
+     底部渐隐占 64px，附图要整个坐在它上面，不然会被渐隐吃掉一半 */
   .map-inset-svg {
-    right: var(--gutter);
-    bottom: 34px;
-    width: 62px;
-    height: 82px;
+    right: 10px;
+    bottom: 76px;
+    width: 52px;
+    height: 70px;
   }
   .atlas__drawer {
     left: var(--gutter);

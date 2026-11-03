@@ -198,6 +198,13 @@
   box-shadow: var(--edge-light), var(--shadow-sm);
 }
 
+/* 开关类按钮的按下态：淡紫底 + 紫边，和胶囊选中态同一套语言 */
+.btn--ghost.is-on {
+  border-color: var(--plum);
+  background: rgba(126, 12, 110, 0.08);
+  color: var(--plum-deep);
+}
+
 .btn--quiet {
   color: var(--ink-2);
   padding: 0 12px;

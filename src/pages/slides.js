@@ -17,7 +17,7 @@ export function slidesSection() {
             </p>
           </div>
           <div class="screen-head__aside">
-            <button class="btn btn--quiet btn--sm" data-podium type="button" aria-pressed="false">
+            <button class="btn btn--ghost btn--sm" data-podium type="button" aria-pressed="false">
               投影模式
             </button>
             <a class="btn btn--ghost" href="#/admin">教师上传展位</a>
@@ -64,6 +64,7 @@ export async function mountSlides(root) {
   podiumBtn?.addEventListener("click", () => {
     const on = section.classList.toggle("is-podium");
     podiumBtn.setAttribute("aria-pressed", String(on));
+    podiumBtn.classList.toggle("is-on", on);
     podiumBtn.textContent = on ? "退出投影" : "投影模式";
   });
 
