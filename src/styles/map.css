@@ -133,6 +133,20 @@
   height: 100%;
 }
 
+/* 浮尘层：压在地图之上、图例与控件之下。参数与限制见 DESIGN.md 7.6 */
+.atlas__dust {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  transition: opacity 640ms var(--ease);
+}
+
+/* 分析态时光路是主角，浮尘退到 40% */
+.atlas__dust.is-dimmed {
+  opacity: 0.4;
+}
+
 /* —— SVG 浮雕地图 —— */
 /* 3D 舞台：给地图一层透视倾斜，看起来像斜放在桌上的沙盘 */
 .map-stage {

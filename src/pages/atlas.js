@@ -1,6 +1,7 @@
 /** 地图屏 —— 首屏 */
 import { esc, mountCounters, qs, qsa } from "../lib/dom.js";
 import { createMap } from "../components/map.js";
+import { mountDust } from "../components/dust.js";
 import { ICONS } from "../components/chrome.js";
 import { getState, setState } from "../lib/store.js";
 import { navigate } from "../lib/router.js";
@@ -94,9 +95,15 @@ export async function mountAtlas(root) {
   let caseList = [];
   let fieldList = null;
 
+  // 舞台里的浮尘（DESIGN.md 7.6）：只在这一屏、只做极淡的上浮与轻微视差
+  const stageEl = section.querySelector(".atlas__stage");
+  const dust = mountDust(stageEl);
+
   const map = createMap(canvasHost, {
     onFocus: (node, info) => {
       focusNode = node;
+      // 分析态时光路是主角，浮尘退到 40%
+      dust?.setDimmed(!!node);
       if (!node || !info) {
         closeFocusCard();
         return;
@@ -320,6 +327,13 @@ export async function mountAtlas(root) {
   layerButtons.forEach((btn) => {
     btn.addEventListener("click", () => switchLayer(btn.dataset.layer));
   });
+
+  // 浮尘跟着这一屏走：销毁时一并停掉，别留着 raf 在后台转
+  const destroyMap = map.destroy.bind(map);
+  map.destroy = () => {
+    dust?.destroy();
+    destroyMap();
+  };
 
   return map;
 }
