@@ -469,15 +469,43 @@
 }
 
 /* —— 进入视口动效 —— */
+/* 路由切换后新页面淡入。只淡入不做淡出：先让旧页消失再淡入会多出一帧空白 */
+#app > main {
+  animation: pagein var(--dur-page) var(--ease) both;
+}
+
+@keyframes pagein {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 同组元素错峰进场：--i 由 mountReveal 按父容器内的顺序写入，最多算到 6 */
 .reveal {
   opacity: 0;
   transform: translateY(12px);
   transition: opacity var(--dur-slow) var(--ease), transform var(--dur-slow) var(--ease);
+  transition-delay: calc(var(--i, 0) * var(--reveal-step));
 }
 
 .reveal.is-in {
   opacity: 1;
   transform: none;
+}
+
+/* 屏标题走遮罩上升：像墨落在纸上，而不是元素飘进来 */
+.screen-head h2 {
+  clip-path: inset(0 0 100% 0);
+  transition: clip-path var(--dur-slow) var(--ease);
+  transition-delay: calc(var(--i, 0) * var(--reveal-step) + 60ms);
+}
+
+.screen-head.is-in h2,
+.screen-head:not(.reveal) h2 {
+  clip-path: inset(0 0 -12% 0);
 }
 
 @media (prefers-reduced-motion: reduce) {

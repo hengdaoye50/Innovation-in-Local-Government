@@ -1138,6 +1138,19 @@
   background: var(--gold);
   border-radius: 1px 1px 0 0;
   opacity: 0.75;
+  /* 柱子从底部长出，按列错峰；--i 由 admin.js 按列序写入 */
+  transform-origin: bottom;
+  animation: bargrow var(--dur) var(--ease) both;
+  animation-delay: calc(min(var(--i, 0), 8) * 40ms);
+}
+
+@keyframes bargrow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
 }
 
 .stats__bar-day {

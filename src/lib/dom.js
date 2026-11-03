@@ -49,6 +49,15 @@ export function mountReveal(root = document) {
     targets.forEach((node) => node.classList.add("is-in"));
     return;
   }
+  // 同组错峰：同一父容器里连续的 .reveal 按顺序拿一个序号，最多算到 6。
+  // 序号写进 --i，间隔由 CSS 的 --reveal-step 统一控制。
+  for (const node of targets) {
+    const siblings = [...(node.parentElement?.children || [])].filter((n) =>
+      n.classList.contains("reveal")
+    );
+    const order = siblings.indexOf(node);
+    if (order > 0) node.style.setProperty("--i", String(Math.min(order, 6)));
+  }
   const io = new IntersectionObserver(
     (entries) => {
       for (const entry of entries) {

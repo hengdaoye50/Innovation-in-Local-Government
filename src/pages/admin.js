@@ -220,8 +220,8 @@ async function renderStats(panel) {
           ? `<div class="stats__bars">
               ${trendDays
                 .map(
-                  (d) => `
-                <div class="stats__bar-item" title="${d.day}">
+                  (d, i) => `
+                <div class="stats__bar-item" style="--i:${i}" title="${d.day}">
                   <span class="stats__bar-users mono">${d.users || ""}</span>
                   <div class="stats__bar" style="height:${
                     d.views ? Math.max(4, Math.round((d.views / maxViews) * 96)) : 0

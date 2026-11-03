@@ -828,6 +828,14 @@ export function createMap(container, { onHover, onFocus, onView } = {}) {
     gNodes.style.setProperty("--node-glow-op", (1 - density * 0.62).toFixed(2));
     gNodes.style.setProperty("--node-dot-op", (1 - density * 0.22).toFixed(2));
 
+    // 光点按纬度从北到南编号，进场时依次点亮（见 DESIGN.md 7.3）
+    const enterRank = new Map(
+      [...lastNodes]
+        .filter((n) => Number.isFinite(n.lat))
+        .sort((a, b) => b.lat - a.lat)
+        .map((n, i) => [nodeKey(n), i])
+    );
+
     for (const node of lastNodes) {
       const point = projection([node.lng, node.lat]);
       if (!point || !Number.isFinite(point[0]) || !Number.isFinite(point[1])) continue;
@@ -840,6 +848,7 @@ export function createMap(container, { onHover, onFocus, onView } = {}) {
       const group = svgEl("g", {
         class: "node",
         transform: `translate(${node.x.toFixed(1)} ${node.y.toFixed(1)})`,
+        style: `--i:${enterRank.get(nodeKey(node)) ?? 0}`,
         tabindex: "0",
         role: "button",
         "data-key": nodeKey(node),
@@ -1133,7 +1142,11 @@ export function createMap(container, { onHover, onFocus, onView } = {}) {
     container._keyHandler = onKey;
 
     container.dataset.ready = "1";
-    requestAnimationFrame(() => svg?.classList.add("is-in"));
+    requestAnimationFrame(() => {
+      svg?.classList.add("is-in");
+      // 光点只在第一次进场时按纬度依次点亮；之后缩放重绘不再重放
+      window.setTimeout(() => svg?.classList.add("is-entered"), 900);
+    });
   }
 
   return {

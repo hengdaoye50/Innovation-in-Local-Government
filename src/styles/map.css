@@ -162,6 +162,23 @@
   opacity: 1;
 }
 
+/* 光点按纬度从北到南依次点亮：--i 是纬度排名，间隔 22ms，整段不超过 900ms。
+   只在首次进场生效，缩放重绘不重放（is-entered 由 map.js 在进场结束后加上）。
+   只动透明度，不动 transform —— 光点的 transform 归分析态和尺寸补偿使用。 */
+.map-svg.is-in:not(.is-entered) .node {
+  animation: nodein var(--dur) var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 22ms);
+}
+
+@keyframes nodein {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 /* 进入分析态：倾斜归零，地图「立起来摊平」，正好是转场本身 */
 .map-svg.is-atlas {
   transform: none;

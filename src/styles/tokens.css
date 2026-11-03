@@ -103,6 +103,9 @@
   --dur-fast: 180ms;
   --dur: 260ms;
   --dur-slow: 320ms;
+  --dur-page: 140ms;
+  /* 同组进场元素的错峰间隔，见 DESIGN.md 7.2 */
+  --reveal-step: 60ms;
 
   /* —— 层级 —— */
   --z-nav: 100;
@@ -211,6 +214,21 @@ button {
 :focus-visible {
   outline: 2px solid var(--plum);
   outline-offset: 3px;
+}
+
+/* 全站动效兜底：系统开了「减少动态效果」就把动画与过渡压到即时。
+   个别组件自己再写降级也可以，但不能只靠个别组件兜。 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* 细滚动条 */
