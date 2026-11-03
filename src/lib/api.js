@@ -75,6 +75,12 @@ export const auth = {
   register: (username, password, invite) =>
     api.post("/api/auth/register", { username, password, invite }),
   logout: () => api.post("/api/auth/logout", {}),
+  // 改昵称与头像
+  updateProfile: (displayName, avatar) =>
+    api.patch("/api/auth/me", { displayName, avatar }),
+  // 改密码：成功后其它设备会被踢下线，当前设备换一张新会话
+  changePassword: (currentPassword, newPassword) =>
+    api.post("/api/auth/password", { currentPassword, newPassword }),
 };
 
 export const cases = {

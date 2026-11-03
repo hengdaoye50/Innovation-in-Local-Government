@@ -149,6 +149,122 @@
   color: var(--plum);
 }
 
+/* —— 账户设置 —— */
+.me__settings {
+  margin-top: clamp(32px, 5vw, 56px);
+  padding: 28px 26px;
+}
+
+.me__settings-head {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line-gold);
+}
+
+.me__settings-head .h3 {
+  margin: 0;
+}
+
+.me__settings-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 28px 48px;
+  align-items: start;
+}
+
+.me__setting {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.me__setting .btn {
+  align-self: flex-start;
+}
+
+.me__setting--password {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.me__pwd-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+/* —— 头像选择 —— */
+.avatar-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.avatar-opt {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper-raised);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+
+.avatar-opt:hover {
+  border-color: var(--plum);
+}
+
+/* 选中态用金环，和全站「金只做线与字」的用法一致 */
+.avatar-opt.is-on {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(196, 162, 101, 0.24);
+}
+
+.avatar-opt__letter {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--plum);
+}
+
+.avatar-tints {
+  display: flex;
+  gap: 8px;
+}
+
+.avatar-tints[hidden] {
+  display: none;
+}
+
+.avatar-tint {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--tint);
+  cursor: pointer;
+  transition: box-shadow var(--dur-fast) var(--ease);
+}
+
+.avatar-tint.is-on {
+  box-shadow: 0 0 0 2px var(--paper-raised), 0 0 0 3px var(--gold);
+}
+
+.avatar-mark {
+  display: block;
+}
+
 @media (max-width: 900px) {
   .me__grid {
     grid-template-columns: minmax(0, 1fr);
@@ -156,5 +272,10 @@
 
   .me__account {
     order: 2;
+  }
+
+  .me__settings-grid,
+  .me__pwd-row {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

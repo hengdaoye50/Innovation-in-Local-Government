@@ -1,6 +1,7 @@
 /** 全站共享外壳：顶栏、页脚、印章图标 */
 import { el, esc, qs } from "../lib/dom.js";
 import { getState, subscribe } from "../lib/store.js";
+import { avatarSvg } from "../lib/avatar.js";
 import { currentPath, navigate, scrollToSection } from "../lib/router.js";
 
 const NAV_ITEMS = [
@@ -112,6 +113,9 @@ export function mountNav(actions = {}) {
   }
 
   renderUser(host, actions);
+  // 个人页改完昵称或头像后，顶栏要立刻跟着变，不必等下一次路由挂载
+  const unsubscribe = subscribe(() => renderUser(host, actions));
+  host._unsubscribe = unsubscribe;
 
   return {
     refreshUser: () => renderUser(host, actions),
@@ -139,12 +143,14 @@ function renderUser(host, actions) {
     return;
   }
   const initial = (user.displayName || user.username || "?")[0];
+  // 选过预设头像就画标记，没选过仍是首字母章
+  const mark = avatarSvg(user.avatar, 16);
   // 观察员只读：顶栏不该出现「开始撰写」这个入口，点了也只会被拦
   const writeCta = host.querySelector("[data-write-cta]");
   if (writeCta) writeCta.hidden = user.role === "observer";
   slot.innerHTML = `
     <a class="nav-user" href="#/me" title="${esc(user.username)} · 个人页" aria-label="个人页">
-      <span class="nav-user__badge" data-role="${esc(user.role)}">${esc(initial)}</span>
+      <span class="nav-user__badge" data-role="${esc(user.role)}">${mark || esc(initial)}</span>
     </a>
     ${
       user.role === "admin" || user.role === "teacher"

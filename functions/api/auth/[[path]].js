@@ -1,9 +1,11 @@
 /**
  * /api/auth/*
- *   POST register  { username, password, invite }
- *   POST login     { username, password }
- *   POST logout
- *   GET  me
+ *   POST  register  { username, password, invite }
+ *   POST  login     { username, password }
+ *   POST  logout
+ *   POST  password  { currentPassword, newPassword }
+ *   GET   me
+ *   PATCH me        { displayName, avatar }
  */
 import {
   ok,
@@ -18,10 +20,13 @@ import {
 import {
   validateUsername,
   validatePassword,
+  validateDisplayName,
+  validateAvatar,
   hashPassword,
   verifyPassword,
   createSession,
   destroySession,
+  destroyUserSessions,
   sessionCookie,
   clearSessionCookie,
   tokenFromRequest,
@@ -40,7 +45,8 @@ export async function onRequest(context) {
     if (missing) return fail(missing, 503);
 
     if (action === "me") {
-      if (request.method !== "GET") return methodNotAllowed(["GET"]);
+      if (request.method === "PATCH") return await updateProfile({ request, env });
+      if (request.method !== "GET") return methodNotAllowed(["GET", "PATCH"]);
       const session = await getSession(env, request);
       return ok({ user: publicUser(session) });
     }
@@ -50,6 +56,7 @@ export async function onRequest(context) {
     if (action === "register") return await register(context);
     if (action === "login") return await login(context);
     if (action === "logout") return await logout(context);
+    if (action === "password") return await changePassword(context);
 
     return fail("未知的认证操作", 404);
   } catch (err) {
@@ -129,7 +136,7 @@ async function login({ request, env }) {
   if (!username || !password) return fail("请填写用户名与密码");
 
   const user = await env.DB.prepare(
-    "SELECT id, username, password_hash, display_name, role, status FROM users WHERE username = ?"
+    "SELECT id, username, password_hash, display_name, role, status, avatar FROM users WHERE username = ?"
   )
     .bind(username)
     .first();
@@ -157,6 +164,7 @@ async function login({ request, env }) {
       username: user.username,
       displayName: user.display_name || user.username,
       role: user.role,
+      avatar: user.avatar || "",
     },
   });
   return withCookie(res, sessionCookie(token));
@@ -166,4 +174,67 @@ async function logout({ request, env }) {
   const token = tokenFromRequest(request);
   await destroySession(env, token);
   return withCookie(ok({ loggedOut: true }), clearSessionCookie());
+}
+
+/** 改昵称与头像：只动这两列，其余字段一律不接 */
+async function updateProfile({ request, env }) {
+  const session = await getSession(env, request);
+  if (!session) return fail("请先登录", 401);
+
+  const body = await readJson(request, 4_000);
+  const name = validateDisplayName(body.displayName);
+  if (!name.ok) return fail(name.message);
+  const avatar = validateAvatar(body.avatar);
+  if (!avatar.ok) return fail(avatar.message);
+
+  await env.DB.prepare("UPDATE users SET display_name = ?, avatar = ? WHERE id = ?")
+    .bind(name.value, avatar.value, session.id)
+    .run();
+
+  return ok({
+    user: {
+      ...publicUser(session),
+      displayName: name.value,
+      avatar: avatar.value,
+    },
+  });
+}
+
+/**
+ * 改密码：先验当前密码，再按同一套强度规则校验新密码。
+ * 改完把该账号的所有会话作废，再给当前这台设备发一张新会话——
+ * 别的设备被踢下线，这里不至于被自己的操作踢掉。
+ */
+async function changePassword({ request, env }) {
+  const session = await getSession(env, request);
+  if (!session) return fail("请先登录", 401);
+
+  const limit = rateLimit(`pwd:${session.id}`, { limit: 6, windowMs: 10 * 60_000 });
+  if (!limit.allowed) return fail("尝试过于频繁，请稍后再试", 429);
+
+  const body = await readJson(request, 4_000);
+  const current = String(body.currentPassword || "");
+  const next = validatePassword(body.newPassword);
+  if (!next.ok) return fail(next.message);
+
+  const row = await env.DB.prepare("SELECT password_hash FROM users WHERE id = ?")
+    .bind(session.id)
+    .first();
+  if (!row) return fail("账号不存在", 404);
+  if (!(await verifyPassword(current, row.password_hash))) {
+    return fail("当前密码不正确", 401);
+  }
+
+  const hash = await hashPassword(next.value);
+  await env.DB.prepare("UPDATE users SET password_hash = ? WHERE id = ?")
+    .bind(hash, session.id)
+    .run();
+
+  await destroyUserSessions(env, session.id);
+  const token = await createSession(env, {
+    userId: session.id,
+    username: session.username,
+    role: session.role,
+  });
+  return withCookie(ok({ changed: true }), sessionCookie(token));
 }

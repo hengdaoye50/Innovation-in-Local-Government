@@ -155,7 +155,7 @@ export async function getSession(env, request) {
     return null;
   }
   const user = await env.DB.prepare(
-    "SELECT id, username, display_name, role, status FROM users WHERE id = ?"
+    "SELECT id, username, display_name, role, status, avatar FROM users WHERE id = ?"
   )
     .bind(payload.userId)
     .first();
@@ -166,7 +166,34 @@ export async function getSession(env, request) {
     username: user.username,
     displayName: user.display_name || user.username,
     role: user.role,
+    avatar: user.avatar || "",
   };
+}
+
+/**
+ * 作废某个用户的全部会话。改密码后要这么做：别处的登录都该断掉。
+ * KV 只能按前缀列，逐个读值判断归属——这门课的账号数量级下够用。
+ */
+export async function destroyUserSessions(env, userId) {
+  let cursor;
+  let removed = 0;
+  do {
+    const page = await env.SESSIONS.list({ prefix: SESSION_PREFIX, cursor });
+    for (const key of page.keys) {
+      const raw = await env.SESSIONS.get(key.name);
+      if (!raw) continue;
+      try {
+        if (JSON.parse(raw).userId === userId) {
+          await env.SESSIONS.delete(key.name);
+          removed += 1;
+        }
+      } catch {
+        /* 值坏了就当它不存在 */
+      }
+    }
+    cursor = page.list_complete ? null : page.cursor;
+  } while (cursor);
+  return removed;
 }
 
 export function isStaff(session) {
@@ -188,7 +215,25 @@ export function publicUser(session) {
     username: session.username,
     displayName: session.displayName,
     role: session.role,
+    avatar: session.avatar || "",
   };
+}
+
+/** 显示名：1–20 字，去掉首尾空白，不允许控制字符 */
+export function validateDisplayName(value) {
+  const text = String(value ?? "").replace(/\s+/g, " ").trim();
+  if (!text) return { ok: false, message: "昵称不能为空" };
+  if ([...text].length > 20) return { ok: false, message: "昵称最多 20 个字" };
+  if (/[\u0000-\u001f\u007f]/.test(text)) return { ok: false, message: "昵称含有不可见字符" };
+  return { ok: true, value: text };
+}
+
+/** 预设头像编号：m1–m8，可带 :1–:4 的配色；空值表示回到首字母章 */
+export function validateAvatar(value) {
+  const text = String(value ?? "").trim();
+  if (!text) return { ok: true, value: "" };
+  if (!/^m[1-8](:[1-4])?$/.test(text)) return { ok: false, message: "头像编号不合法" };
+  return { ok: true, value: text };
 }
 
 /** 缺少必要绑定时的统一报错 */
