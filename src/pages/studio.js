@@ -1,5 +1,5 @@
 /** 协作工作台 —— 对话检索 + 梗概撰写 + 提交 */
-import { esc, el, qs, toast, zhLength, debounce, mountReveal } from "../lib/dom.js";
+import { esc, el, qs, toast, zhWords, debounce, mountReveal } from "../lib/dom.js";
 import { streamChat, cases as casesApi } from "../lib/api.js";
 import { getState } from "../lib/store.js";
 
@@ -766,7 +766,7 @@ export function mountStudio(root) {
   });
 
   function updateWords() {
-    const n = zhLength(bodyInput.value);
+    const n = zhWords(bodyInput.value);
     wordCount.textContent = `${n} 字`;
     const ratio = Math.min(1, n / WORD_MAX);
     wordBar.style.width = `${ratio * 100}%`;
@@ -1003,7 +1003,7 @@ export function mountStudio(root) {
         <article class="mine-row">
           <div class="mine-row__meta">
             <span class="tag ${st.cls}">${st.text}</span>
-            <span class="meta mono">${zhLength(c.body || c.summary || "")} 字</span>
+            <span class="meta mono">${zhWords(c.body || c.summary || "")} 字</span>
             <span class="meta">${timeAgo(c.createdAt)}</span>
             ${
               editable
@@ -1054,7 +1054,7 @@ export function mountStudio(root) {
       if (!text) throw new Error("文件里没有可读取的文字");
 
       // 正文已有内容时追问，避免默默覆盖
-      if (zhLength(bodyInput.value) > 60) {
+      if (zhWords(bodyInput.value) > 60) {
         const ok = window.confirm("编辑器里已有正文，导入会覆盖它。继续吗？");
         if (!ok) {
           statusText.textContent = "";
@@ -1074,8 +1074,8 @@ export function mountStudio(root) {
       }
 
       updateWords();
-      statusText.textContent = `已导入 ${zhLength(text)} 字，请检查段落与来源`;
-      statusText.dataset.state = zhLength(text) >= WORD_MIN ? "ok" : "";
+      statusText.textContent = `已导入 ${zhWords(text)} 字，请检查段落与来源`;
+      statusText.dataset.state = zhWords(text) >= WORD_MIN ? "ok" : "";
       toast("文件已导入");
     } catch (err) {
       statusText.textContent = err.message || "读取失败";
@@ -1153,7 +1153,7 @@ export function mountStudio(root) {
     const problems = [];
     if (!titleInput.value.trim()) problems.push("标题");
     if (!provinceSel.value) problems.push("省份");
-    const n = zhLength(bodyInput.value);
+    const n = zhWords(bodyInput.value);
     if (n < WORD_MIN) problems.push(`正文需满 ${WORD_MIN} 字（当前 ${n}）`);
     // 上限只作提示不阻断：字数条会转色提醒，但不拦提交
     if (!draft.tags.size) problems.push("至少 1 个领域标签");

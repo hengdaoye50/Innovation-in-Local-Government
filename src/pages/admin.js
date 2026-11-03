@@ -2,7 +2,7 @@
 
 // 角色在界面与导出表格里的中文名，邀请码与用户列表共用
 const ROLE_LABEL = { student: "学生", teacher: "教师", observer: "观察员", admin: "管理员" };
-import { esc, qs, qsa, toast, timeAgo, formatDate, zhLength, mountReveal } from "../lib/dom.js";
+import { esc, qs, qsa, toast, timeAgo, formatDate, zhWords, mountReveal } from "../lib/dom.js";
 import { admin as adminApi, cases as casesApi, api } from "../lib/api.js";
 import { getState } from "../lib/store.js";
 
@@ -51,7 +51,7 @@ export function mountAdmin(root) {
         <button class="admin__tab is-on" data-tab="stats" role="tab">数据</button>
         <button class="admin__tab" data-tab="cases" role="tab">案例审核</button>
         <button class="admin__tab" data-tab="slides" role="tab">展位管理</button>
-        <button class="admin__tab" data-tab="posts" role="tab">文章管理</button>
+        <button class="admin__tab" data-tab="posts" role="tab">拓展材料</button>
         <button class="admin__tab" data-tab="invites" role="tab">邀请码</button>
         ${user.role === "admin" ? `<button class="admin__tab" data-tab="users" role="tab">用户管理</button>` : ""}
       </div>
@@ -120,7 +120,20 @@ async function renderStats(panel) {
   }
 
   const { active, totals, trend, ranking, hasData } = data || {};
-  const maxViews = Math.max(1, ...(trend || []).map((d) => d.views));
+  // 趋势只补有访问的日子会只剩一两根柱，看着像图没画完。
+  // 这里按最后一笔数据的日期往前铺满 14 天，没有访问的那天留空柱位。
+  const trendMap = new Map((trend || []).map((d) => [d.day, d]));
+  const anchor = (trend || []).length
+    ? new Date(`${trend[trend.length - 1].day}T00:00:00`)
+    : new Date();
+  const trendDays = Array.from({ length: 14 }, (_, i) => {
+    const day = new Date(anchor);
+    day.setDate(anchor.getDate() - (13 - i));
+    const key = formatDate(day);
+    const hit = trendMap.get(key);
+    return { day: key, views: hit?.views || 0, users: hit?.users || 0 };
+  });
+  const maxViews = Math.max(1, ...trendDays.map((d) => d.views));
 
   const rankBlock = (title, rows, type) => `
     <section class="card stats__rank">
@@ -203,17 +216,16 @@ async function renderStats(panel) {
         <span class="meta">柱高为当日浏览，数字为当日活跃人数</span>
       </header>
       ${
-        trend && trend.length
+        trendDays.length
           ? `<div class="stats__bars">
-              ${trend
+              ${trendDays
                 .map(
                   (d) => `
                 <div class="stats__bar-item" title="${d.day}">
-                  <span class="stats__bar-users mono">${d.users}</span>
-                  <div class="stats__bar" style="height:${Math.max(
-                    4,
-                    Math.round((d.views / maxViews) * 96)
-                  )}px"></div>
+                  <span class="stats__bar-users mono">${d.users || ""}</span>
+                  <div class="stats__bar" style="height:${
+                    d.views ? Math.max(4, Math.round((d.views / maxViews) * 96)) : 0
+                  }px"></div>
                   <span class="stats__bar-day mono">${d.day.slice(5)}</span>
                 </div>`
                 )
@@ -300,7 +312,7 @@ async function renderCases(panel) {
                 .filter((p, i, arr) => p && arr.indexOf(p) === i)
                 .map(esc)
                 .join(" · ")}</span>
-              <span class="meta mono">${zhLength(c.body || c.summary || "")} 字</span>
+              <span class="meta mono">${zhWords(c.body || c.summary || "")} 字</span>
               <span class="meta">${esc(timeAgo(c.createdAt))}</span>
             </div>
             <a class="admin__row-title" href="#/case/${esc(c.id)}">${esc(c.title)}</a>

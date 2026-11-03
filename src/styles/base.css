@@ -696,6 +696,49 @@
   height: 1.5px;
 }
 
+/* 登录用户标识：一枚首字母圆章。原来 nav-user 这几个类只有 HTML 没有样式，
+   顶栏上就是一枚孤零零的字母，看着像渲染坏了。 */
+.nav-user {
+  display: inline-flex;
+  align-items: center;
+}
+
+.nav-user__badge {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid rgba(126, 12, 110, 0.26);
+  background: var(--paper-raised);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--plum);
+}
+
+.nav.is-dark .nav-user__badge {
+  border-color: rgba(196, 162, 101, 0.45);
+  background: rgba(253, 248, 240, 0.1);
+  color: var(--gold);
+}
+
+.nav__role-mark {
+  padding: 2px 7px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--ink-3);
+}
+
+.nav.is-dark .nav__role-mark {
+  border-color: rgba(196, 162, 101, 0.3);
+  color: rgba(253, 248, 240, 0.72);
+}
+
 .nav__actions {
   display: flex;
   align-items: center;

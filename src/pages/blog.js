@@ -1,5 +1,5 @@
 /** 文献共读展板（原拓展材料） */
-import { mountReveal } from "../lib/dom.js";
+import { esc, mountReveal } from "../lib/dom.js";
 
 export function blogSection() {
   return `
@@ -43,18 +43,13 @@ export async function mountBlog(root) {
   }
 
   listEl.innerHTML = items.map((r, i) => rowHtml(r, i, items.length)).join("");
-  listEl.querySelectorAll("[data-reading]").forEach((node) => {
-    node.addEventListener("click", () => {
-      window.location.hash = `/reading/${node.dataset.reading}`;
-    });
-  });
   mountReveal(section);
 }
 
 function rowHtml(reading, index, total) {
   return `
-    <article class="reading-row reveal" data-reading="${reading.id}" tabindex="0" role="link"
-      aria-label="${reading.titleZh}">
+    <a class="reading-row reveal" href="#/reading/${esc(reading.id)}"
+      aria-label="${esc(reading.titleZh)}">
       <div class="reading-row__index mono">${String(index + 1).padStart(2, "0")}<i>/ ${String(
     total
   ).padStart(2, "0")}</i></div>
@@ -69,6 +64,6 @@ function rowHtml(reading, index, total) {
       <span class="reading-row__go" aria-hidden="true">
         <svg viewBox="0 0 12 8"><path d="M1 4h10M8 1l3 3-3 3" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </span>
-    </article>
+    </a>
   `;
 }

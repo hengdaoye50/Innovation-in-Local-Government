@@ -1,5 +1,5 @@
 /** 案例详情页 */
-import { esc, qs, formatDate, zhLength, mountReveal } from "../lib/dom.js";
+import { esc, qs, formatDate, zhWords, mountReveal } from "../lib/dom.js";
 import { cases as casesApi } from "../lib/api.js";
 import { renderMarkdown } from "../lib/markdown.js";
 import { createCommentBlock } from "../components/comments.js";
@@ -32,14 +32,14 @@ export async function mountCaseDetail(root, id) {
     .join("");
   const sources = (item.sources || []).filter((s) => s.url);
   const bodyText = item.body || item.summary || "";
-  const words = zhLength(bodyText);
+  const words = zhWords(bodyText);
   const related = DEMO_CASES.filter(
     (c) => c.id !== item.id && c.province === item.province
   ).slice(0, 3);
 
   root.innerHTML = `
     <article class="detail">
-      <div class="shell shell-narrow">
+      <div class="shell shell-narrow detail__wrap">
         <a class="detail__back" href="#/">
           <svg width="14" height="10" viewBox="0 0 14 10" fill="none" stroke="currentColor" stroke-width="1.2">
             <path d="M5.5 1L1.5 5l4 4M1.5 5H13" stroke-linecap="round" stroke-linejoin="round"/>
@@ -104,7 +104,7 @@ export async function mountCaseDetail(root, id) {
         </div>
       </div>
 
-      <div class="shell shell-narrow">
+      <div class="shell shell-narrow detail__wrap">
         <div data-comments-slot></div>
       </div>
 

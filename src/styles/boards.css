@@ -139,6 +139,22 @@
   z-index: 1;
 }
 
+/* 展位还没有封面图时，封面会是一块纯深色空场，像图片没加载出来。
+   压一枚极淡的图录编号当视觉落点，空场就有了理由。 */
+.slide-card__plate {
+  position: absolute;
+  right: 12px;
+  bottom: -14px;
+  font-family: var(--font-display);
+  font-size: 84px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: rgba(196, 162, 101, 0.14);
+  pointer-events: none;
+  user-select: none;
+}
+
 .slide-card__body {
   padding: 18px;
   flex: 1;

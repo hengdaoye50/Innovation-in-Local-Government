@@ -599,10 +599,13 @@
 /* 南海诸岛附图：舞台右下角一块独立小图。
    它不在主图 SVG 里，所以既不受 rotateX 透视，也不跟地图缩放拖动，
    位置和大小都在这里定，改数值即可微调。 */
+/* 附图与右下角的缩放控件共用同一条右边界：原来附图贴到画面边（right:28）,
+   而控件对齐版心，两条右边缘差了一百多像素，看着像没对齐的两套坐标。
+   竖向让附图坐在控件上方，右栏读起来是一列仪表。 */
 .map-inset-svg {
   position: absolute;
-  right: 28px;
-  bottom: 104px;
+  right: max(24px, calc((100vw - var(--shell)) / 2 + var(--gutter)));
+  bottom: 274px;
   width: 78px;
   height: 104px;
   z-index: 3;
@@ -985,6 +988,14 @@
   }
   .atlas__hint {
     display: none;
+  }
+  /* 竖屏时控件挪到左上，附图回到右下角，尺寸收一档；
+     底边留够，别骑在舞台底部那道渐隐上 */
+  .map-inset-svg {
+    right: var(--gutter);
+    bottom: 34px;
+    width: 62px;
+    height: 82px;
   }
   .atlas__drawer {
     left: var(--gutter);

@@ -38,13 +38,20 @@ const SYSTEM = `你是《地方政府创新》课程的助教，负责审核本�
 只输出 JSON，不要任何解释文字，格式：
 {"pass": true 或 false, "score": 0-100 的整数, "problems": ["具体问题，最多 3 条"], "comment": "给学生的 40-80 字评语，指出一处优点与一处可改进"}`;
 
-function zhLength(text) {
-  return String(text || "").replace(/\s/g, "").length;
+/**
+ * 与前端 src/lib/dom.js 的 zhWords 保持一致：汉字按字、拉丁字母与数字按词，标点不计。
+ * 前后端口径必须一致，否则学生看到的数字和质检判据会对不上。
+ */
+function zhWords(text) {
+  const s = String(text || "");
+  const cjk = (s.match(/[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/g) || []).length;
+  const latin = (s.match(/[A-Za-z0-9]+(?:[.'’-][A-Za-z0-9]+)*/g) || []).length;
+  return cjk + latin;
 }
 
 /** 结构化提示词里带上硬指标，让模型不必自己数 */
 function buildUserPrompt(data) {
-  const words = zhLength(data.body);
+  const words = zhWords(data.body);
   return `标题：${data.title}
 发生地：${data.province}${data.city ? ` · ${data.city}` : ""}
 领域标签：${(data.domains || []).join("、") || "未填"}
@@ -84,7 +91,7 @@ function parseModelJson(text) {
  * 模型不可用时退化为规则校验，保证提交链路不被卡死。
  */
 export async function reviewCase(env, data) {
-  const words = zhLength(data.body);
+  const words = zhWords(data.body);
   const linkCount = (data.sources || []).filter((s) => /^https?:\/\//.test(s.url || "")).length;
 
   // 硬性门槛：不满足则退回，学生改完可重提

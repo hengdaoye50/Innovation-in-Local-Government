@@ -252,11 +252,17 @@
 }
 
 /* —— 正文 + 边注栏：像一篇带边注的文稿 ——
-   正文在左、来源与归档信息在右，窄屏收成一栏、边注落到文末 */
+   正文在左、来源与归档信息在右，窄屏收成一栏、边注落到文末。
+   版心比通用 .shell-narrow 宽一档：正文要读到 680px 左右（按 17px 字算是 40 字一行），
+   208px 的边注栏放中文来源标题会挤到在数字里断行。 */
+.detail__wrap {
+  max-width: 1080px;
+}
+
 .detail__layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 208px;
-  gap: 48px;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 56px;
   align-items: start;
 }
 
@@ -1094,11 +1100,24 @@
 }
 
 .stats__bars {
+  position: relative;
   display: flex;
   align-items: flex-end;
   gap: 10px;
   padding-top: 16px;
   overflow-x: auto;
+}
+
+/* 横轴基线：压在柱子底部、日期上方，没有访问的日子也读得出这一天的位置 */
+.stats__bars::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 19px;
+  height: 1px;
+  background: var(--line-2);
+  pointer-events: none;
 }
 
 .stats__bar-item {

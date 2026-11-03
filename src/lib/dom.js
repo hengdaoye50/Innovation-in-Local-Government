@@ -163,7 +163,14 @@ export function formatDate(iso) {
   ).padStart(2, "0")}`;
 }
 
-/** 中文字数统计：不含空白 */
-export function zhLength(text) {
-  return (text || "").replace(/\s/g, "").length;
+/**
+ * 中文字数：与 Word 的「字数」口径一致——汉字按字计，连续的拉丁字母或数字按一个词计，
+ * 标点与空白不计。原来的实现把标点也算进去，同一篇稿子的读数会比学生和老师
+ * 在 Word 里看到的偏高一两成，正好压在 1500 上限附近时会误判为超长。
+ */
+export function zhWords(text) {
+  const s = String(text || "");
+  const cjk = (s.match(/[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/g) || []).length;
+  const latin = (s.match(/[A-Za-z0-9]+(?:[.'’-][A-Za-z0-9]+)*/g) || []).length;
+  return cjk + latin;
 }

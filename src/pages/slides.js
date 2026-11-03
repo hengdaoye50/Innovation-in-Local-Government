@@ -80,6 +80,7 @@ function cardHtml(slide, index, demo, total) {
         ).padStart(2, "0")}</i></span>
         <span class="slide-card__pages mono">${Number(slide.slides) || 0} 页</span>
         <div class="slide-card__cover-rule"></div>
+        <span class="slide-card__plate" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span>
       </div>
       <div class="slide-card__body">
         <div class="slide-card__meta">
