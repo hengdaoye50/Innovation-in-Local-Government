@@ -1,10 +1,7 @@
 /** 教师后台 —— 案例审核、展位管理、文章发布、邀请码 */
-
-// 角色在界面与导出表格里的中文名，邀请码与用户列表共用
-const ROLE_LABEL = { student: "学生", teacher: "教师", observer: "观察员", admin: "管理员" };
 import { esc, qs, qsa, toast, timeAgo, formatDate, zhWords, mountReveal } from "../lib/dom.js";
 import { admin as adminApi, cases as casesApi, api } from "../lib/api.js";
-import { getState } from "../lib/store.js";
+import { getState, ROLE_LABEL } from "../lib/store.js";
 
 const STATUS_LABEL = {
   pending: { text: "待质检", cls: "tag--warn" },

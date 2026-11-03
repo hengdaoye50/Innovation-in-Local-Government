@@ -53,6 +53,7 @@ export function mountNav(actions = {}) {
             `<a class="nav__link" href="#${item.target}" data-target="${item.target}">${item.label}</a>`
         ).join("")}
         <a class="nav__link nav__link--mobile" href="#/login">登录 / 注册</a>
+        <a class="nav__link nav__link--mobile" href="#/me">个人页</a>
         <a class="nav__link nav__link--mobile" href="#/admin">教师后台</a>
       </nav>
       <div class="nav__actions">
@@ -125,6 +126,14 @@ function renderUser(host, actions) {
   const slot = host.querySelector(".nav__user-slot");
   if (!slot) return;
   const { user } = getState();
+  // 手机菜单里的这两条是写死在模板里的，按登录状态与角色决定要不要露出来：
+  // 登录之后不该还看到「登录 / 注册」，学生也不该看到「教师后台」
+  const mobileLogin = host.querySelector('.nav__link--mobile[href="#/login"]');
+  const mobileAdmin = host.querySelector('.nav__link--mobile[href="#/admin"]');
+  if (mobileLogin) mobileLogin.hidden = !!user;
+  if (mobileAdmin) {
+    mobileAdmin.hidden = !user || (user.role !== "admin" && user.role !== "teacher");
+  }
   if (!user) {
     slot.innerHTML = `<a class="nav__link" href="#/login">登录</a>`;
     return;
@@ -134,9 +143,9 @@ function renderUser(host, actions) {
   const writeCta = host.querySelector("[data-write-cta]");
   if (writeCta) writeCta.hidden = user.role === "observer";
   slot.innerHTML = `
-    <span class="nav-user" title="${esc(user.username)}">
+    <a class="nav-user" href="#/me" title="${esc(user.username)} · 个人页" aria-label="个人页">
       <span class="nav-user__badge" data-role="${esc(user.role)}">${esc(initial)}</span>
-    </span>
+    </a>
     ${
       user.role === "admin" || user.role === "teacher"
         ? `<a class="nav__link" href="#/admin">管理</a>`

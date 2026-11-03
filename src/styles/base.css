@@ -729,6 +729,11 @@
 .nav-user {
   display: inline-flex;
   align-items: center;
+  text-decoration: none;
+}
+
+.nav-user:hover .nav-user__badge {
+  border-color: var(--plum);
 }
 
 .nav-user__badge {

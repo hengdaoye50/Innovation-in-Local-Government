@@ -30,6 +30,28 @@
   letter-spacing: 0.08em;
 }
 
+/* 屏头右侧：步骤条 + 去个人页看作品与审核状态的入口 */
+.studio__head-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  flex: none;
+}
+
+.studio__mine-link {
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--ink-2);
+  transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+
+.studio__mine-link:hover {
+  color: var(--plum);
+  border-bottom-color: var(--plum);
+}
+
 .studio__grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 0.86fr);
@@ -1009,6 +1031,10 @@ label.btn {
   .studio__steps {
     display: none;
   }
+  /* 步骤条收掉后，右侧只剩这一个入口，靠左对齐别孤零零吊在右边 */
+  .studio__head-side {
+    align-items: flex-start;
+  }
   .studio__chat {
     height: 600px;
   }
@@ -1060,80 +1086,6 @@ label.btn {
   font-size: 12px;
 }
 
-/* —— 我的作品 —— */
-.studio__mine {
-  margin-top: 40px;
-  padding-top: 28px;
-  border-top: 1px solid var(--line);
-}
-
-.studio__mine-head {
-  display: flex;
-  align-items: baseline;
-  gap: 14px;
-  flex-wrap: wrap;
-  margin-bottom: 18px;
-}
-
-.studio__mine-head .h3 {
-  margin: 0;
-}
-
-.studio__mine-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.mine-row {
-  padding: 16px 0;
-  border-bottom: 1px solid var(--line);
-}
-
-.mine-row:last-child {
-  border-bottom: 0;
-}
-
-.mine-row__meta {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 7px;
-}
-
-.mine-row__title {
-  font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.5;
-  color: var(--ink);
-}
-
-.mine-row__title:hover {
-  color: var(--plum);
-}
-
-/* 退回理由：和 AI 评语同一套引文样式，一眼看出这是要改的地方 */
-.mine-row__review {
-  margin: 10px 0 0;
-  padding: 10px 12px;
-  border-left: 1px solid var(--warn);
-  background: rgba(176, 106, 30, 0.06);
-  font-size: 12.5px;
-  line-height: 1.75;
-  color: var(--ink-2);
-}
-
-.mine-row__review b {
-  display: block;
-  margin-bottom: 3px;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  color: var(--warn);
-}
-
 /* —— 修改模式提示条 —— */
 .draft__edit {
   display: flex;
@@ -1153,12 +1105,4 @@ label.btn {
 .draft__edit .btn {
   height: 26px;
   font-size: 12px;
-}
-
-/* 作品清单里的「修改」按钮，低调但可点 */
-.mine-row__edit {
-  height: 24px;
-  padding: 0 8px;
-  font-size: 11.5px;
-  color: var(--plum);
 }

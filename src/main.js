@@ -2,6 +2,7 @@ import "./styles/tokens.css";
 import "./styles/base.css";
 import "./styles/map.css";
 import "./styles/studio.css";
+import "./styles/me.css";
 import "./styles/boards.css";
 import "./styles/detail.css";
 import "./styles/reading.css";
@@ -34,6 +35,7 @@ import { mountCaseDetail } from "./pages/case.js";
 import { mountSlideDetail, mountPostDetail } from "./pages/detail.js";
 import { mountAuth } from "./pages/login.js";
 import { mountAdmin } from "./pages/admin.js";
+import { mePage, mountMe } from "./pages/me.js";
 
 const app = document.getElementById("app");
 const boot = document.getElementById("boot");
@@ -120,6 +122,11 @@ async function renderAdmin() {
   mountAdmin(app.querySelector("#detail-root"));
 }
 
+async function renderMe() {
+  app.innerHTML = `<main class="detail-page">${mePage()}</main>`;
+  await mountMe(app.querySelector(".me"));
+}
+
 function renderNotFound() {
   app.innerHTML = `
     <main class="detail-page">
@@ -144,6 +151,7 @@ route("/field/new", renderSurveyForm);
 route("/field/:id", renderSurvey);
 route("/login", renderLogin);
 route("/admin", renderAdmin);
+route("/me", renderMe);
 setNotFound(renderNotFound);
 
 /** 各路由的浏览器标题；详情页拿到数据后会自己覆盖成具体标题 */
@@ -151,6 +159,7 @@ const PAGE_TITLES = {
   "/": "案例地图",
   "/login": "登录",
   "/admin": "教师后台",
+  "/me": "个人页",
   "/field/new": "记录一次调研",
 };
 

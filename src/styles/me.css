@@ -1,0 +1,160 @@
+/* ============================================================
+   个人页 —— 账号信息 + 我的作品
+   从工作台搬出来的一屏：作品清单本来就长，压在工作台下面
+   会把协作区拖得很长。
+   ============================================================ */
+
+.me {
+  padding: clamp(40px, 6vw, 80px) 0 clamp(64px, 8vw, 120px);
+}
+
+.me__head {
+  margin-bottom: clamp(32px, 4vw, 48px);
+}
+
+.me__title {
+  margin: 10px 0 14px;
+  font-family: var(--font-display);
+  font-size: clamp(30px, 3.4vw, 42px);
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.me__grid {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: clamp(32px, 5vw, 64px);
+  align-items: start;
+}
+
+/* —— 账号 —— */
+.me__account {
+  padding: 24px 22px;
+}
+
+.me__account .h3 {
+  margin: 0 0 18px;
+}
+
+.me__facts {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+}
+
+.me__fact {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.me__fact:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.me__fact dt {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+}
+
+.me__fact dd {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink);
+  text-align: right;
+  word-break: break-all;
+}
+
+/* —— 我的作品 —— */
+.me__works-head {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line-gold);
+}
+
+.me__works-head .h3 {
+  margin: 0;
+}
+
+.me__list {
+  display: flex;
+  flex-direction: column;
+}
+
+.mine-row {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.mine-row:last-child {
+  border-bottom: 0;
+}
+
+.mine-row__meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 7px;
+}
+
+.mine-row__title {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.mine-row__title:hover {
+  color: var(--plum);
+}
+
+/* 退回理由：和 AI 评语同一套引文样式，一眼看出这是要改的地方 */
+.mine-row__review {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-left: 1px solid var(--warn);
+  background: rgba(176, 106, 30, 0.06);
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: var(--ink-2);
+}
+
+.mine-row__review b {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--warn);
+}
+
+/* 作品清单里的「修改」入口，低调但可点 */
+.mine-row__edit {
+  height: 24px;
+  padding: 0 8px;
+  font-size: 11.5px;
+  color: var(--plum);
+}
+
+@media (max-width: 900px) {
+  .me__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .me__account {
+    order: 2;
+  }
+}

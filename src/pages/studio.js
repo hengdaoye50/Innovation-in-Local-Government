@@ -61,11 +61,14 @@ export function studioSection() {
               润色到你满意后再行提交。
             </p>
           </div>
-          <ol class="studio__steps">
-            <li><span class="mono">01</span> 贴上来源</li>
-            <li><span class="mono">02</span> 追问细节</li>
-            <li><span class="mono">03</span> 定稿提交</li>
-          </ol>
+          <div class="studio__head-side">
+            <ol class="studio__steps">
+              <li><span class="mono">01</span> 贴上来源</li>
+              <li><span class="mono">02</span> 追问细节</li>
+              <li><span class="mono">03</span> 定稿提交</li>
+            </ol>
+            <a class="studio__mine-link" href="#/me">我的作品与审核状态 →</a>
+          </div>
         </div>
 
         <div class="studio__grid">
@@ -241,16 +244,6 @@ export function studioSection() {
             </div>
           </aside>
         </div>
-
-        <section class="studio__mine" aria-labelledby="mine-title">
-          <header class="studio__mine-head">
-            <h3 class="h3" id="mine-title">我的作品</h3>
-            <span class="meta">含审核中与已退回，退回理由就在这里看</span>
-          </header>
-          <div class="studio__mine-list" data-mine-list>
-            <div class="skeleton" style="height:56px"></div>
-          </div>
-        </section>
       </div>
     </section>
   `;
@@ -897,28 +890,10 @@ export function mountStudio(root) {
     });
   }
 
-  /* —————————— 我的作品 —————————— */
-
-  const STATUS_LABEL = {
-    pending: { text: "审核中", cls: "tag--warn" },
-    published: { text: "已发布", cls: "tag--ok" },
-    rejected: { text: "已退回", cls: "tag--err" },
-    hidden: { text: "已下架", cls: "tag--quiet" },
-  };
-
-  function timeAgo(iso) {
-    const diff = Date.now() - new Date(iso).getTime();
-    const day = 86400000;
-    if (!Number.isFinite(diff)) return "";
-    if (diff < 3600000) return `${Math.max(1, Math.round(diff / 60000))} 分钟前`;
-    if (diff < day) return `${Math.round(diff / 3600000)} 小时前`;
-    if (diff < day * 30) return `${Math.round(diff / day)} 天前`;
-    return new Date(iso).toISOString().slice(0, 10);
-  }
+  /* —————————— 编辑自己的作品 —————————— */
 
   /** 编辑模式：正在改哪一条自己的作品（null 表示新建） */
   let editingId = null;
-  let mineItems = [];
 
   function exitEdit() {
     editingId = null;
@@ -980,55 +955,25 @@ export function mountStudio(root) {
     section.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  async function loadMine() {
-    const host = qs("[data-mine-list]", section);
-    if (!host) return;
-    let items = [];
-    try {
-      const res = await casesApi.mine();
-      items = Array.isArray(res?.items) ? res.items : [];
-    } catch {
-      items = [];
-    }
-    mineItems = items;
-    if (!items.length) {
-      host.innerHTML = `<div class="empty">还没有提交过作品。写完一篇，提交后会出现在这里。</div>`;
-      return;
-    }
-    host.innerHTML = items
-      .map((c, index) => {
-        const st = STATUS_LABEL[c.status] || STATUS_LABEL.pending;
-        const editable = c.status === "pending" || c.status === "rejected";
-        return `
-        <article class="mine-row">
-          <div class="mine-row__meta">
-            <span class="tag ${st.cls}">${st.text}</span>
-            <span class="meta mono">${zhWords(c.body || c.summary || "")} 字</span>
-            <span class="meta">${timeAgo(c.createdAt)}</span>
-            ${
-              editable
-                ? `<button class="btn btn--quiet btn--sm mine-row__edit" type="button" data-edit="${index}">修改</button>`
-                : ""
-            }
-          </div>
-          <a class="mine-row__title" href="#/case/${esc(c.id)}">${esc(c.title)}</a>
-          ${
-            c.status === "rejected" && c.aiReview
-              ? `<p class="mine-row__review"><b>退回理由</b>${esc(c.aiReview)}</p>`
-              : ""
-          }
-        </article>`;
-      })
-      .join("");
 
-    host.querySelectorAll("[data-edit]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const item = mineItems[Number(btn.dataset.edit)];
-        if (item) enterEdit(item);
+
+  /* —————————— 从个人页进来修改 —————————— */
+
+  // 个人页的「修改」链接形如 #/?edit=<id>：把那条作品灌进编辑器并滚到工作台
+  const editId = new URLSearchParams(window.location.hash.split("?")[1] || "").get("edit");
+  if (editId) {
+    casesApi
+      .detail(editId)
+      .then((res) => {
+        const item = res?.item || res?.data || res;
+        if (!item?.id) return;
+        enterEdit(item);
+        section.scrollIntoView({ block: "start", behavior: "instant" });
+      })
+      .catch(() => {
+        /* 取不到就让用户从头写，不打断 */
       });
-    });
   }
-  loadMine();
 
   /* —————————— 文件导入 —————————— */
 
@@ -1266,8 +1211,6 @@ export function mountStudio(root) {
         statusText.dataset.state = "err";
         toast("质检未通过，按提示修改后可重新提交", { type: "error" });
       }
-      // 无论过没过，作品清单都要刷新：退回的理由就显示在那里
-      loadMine();
     } catch (err) {
       statusText.textContent = err.message || "提交失败";
       statusText.dataset.state = "err";

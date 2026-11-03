@@ -40,6 +40,14 @@ export async function ensureUser(loader) {
 }
 
 /** 领域标签的展示顺序与配色分组 */
+/** 角色中文名：后台与个人页共用一套叫法 */
+export const ROLE_LABEL = {
+  student: "学生",
+  teacher: "教师",
+  observer: "观察员",
+  admin: "管理员",
+};
+
 export const DOMAIN_ORDER = [
   "数字治理",
   "营商环境",
