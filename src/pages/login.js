@@ -170,7 +170,8 @@ async function mountAsideMap(root) {
       import("../lib/demo.js"),
     ]);
 
-    const map = createMap(host, {});
+    // 侧栏是窄幅门面：不带控件，附图按紧凑模式贴在角落
+    const map = createMap(host, { compact: true });
     await map.init();
 
     let items = [];

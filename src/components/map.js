@@ -52,7 +52,7 @@ function svgEl(tag, attrs = {}, children = []) {
   return node;
 }
 
-export function createMap(container, { onHover, onFocus, onView } = {}) {
+export function createMap(container, { onHover, onFocus, onView, compact = false } = {}) {
   let svg = null;
   let gRoot = null;
   let gNodes = null;
@@ -1111,7 +1111,7 @@ export function createMap(container, { onHover, onFocus, onView } = {}) {
     // 单独一层承载 3D 倾斜，svg 自己只负责加载动画与缩放，
     // 两者的 transform 才不会互相覆盖
     const stage = document.createElement("div");
-    stage.className = "map-stage";
+    stage.className = compact ? "map-stage is-compact" : "map-stage";
 
     svg = svgEl("svg", {
       viewBox: `0 0 ${VIEW_W} ${VIEW_H}`,
