@@ -32,9 +32,9 @@ function goToSection(id) {
 }
 
 export const SITE = {
-  name: "公共政策分析课程协作平台",
-  // 窄屏用的短名，全称在手机上会被截成「公共政策分析课程…」
-  short: "公共政策分析",
+  name: "地方政府创新课程协作平台",
+  // 窄屏用的短名，全称在手机上会被截成「地方政府创新课程…」
+  short: "地方政府创新",
   latin: "Local Governance Innovation",
   course: "MPA · 公共政策分析 / 地方政府创新",
 };

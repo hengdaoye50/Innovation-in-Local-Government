@@ -5,6 +5,7 @@ import { renderMarkdown } from "../lib/markdown.js";
 import { createCommentBlock } from "../components/comments.js";
 import { DEMO_CASES } from "../lib/demo.js";
 import { getState } from "../lib/store.js";
+import { SITE } from "../components/chrome.js";
 
 export async function mountCaseDetail(root, id) {
   root.innerHTML = `<div class="shell detail__loading"><div class="skeleton" style="height:40px;width:60%"></div></div>`;
@@ -139,6 +140,6 @@ export async function mountCaseDetail(root, id) {
     })
   );
 
-  document.title = `${item.title} · 公共政策分析课程协作平台`;
+  document.title = `${item.title} · ${SITE.name}`;
   mountReveal(root);
 }
