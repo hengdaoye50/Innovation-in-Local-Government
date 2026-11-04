@@ -149,6 +149,24 @@
   color: var(--plum);
 }
 
+/* —— 我的调研 / 我的展位 —— */
+.me__records {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(28px, 4vw, 56px);
+  margin-top: clamp(32px, 4vw, 52px);
+}
+
+/* 只有一栏时（学生没有展位）不要留半张空位 */
+.me__records > :only-child {
+  grid-column: 1 / -1;
+}
+
+.me__record .empty {
+  padding: 18px 0;
+  font-size: 13px;
+}
+
 /* —— 账户设置 —— */
 .me__settings {
   margin-top: clamp(32px, 5vw, 56px);
@@ -267,6 +285,10 @@
 
 @media (max-width: 900px) {
   .me__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .me__records {
     grid-template-columns: minmax(0, 1fr);
   }
 

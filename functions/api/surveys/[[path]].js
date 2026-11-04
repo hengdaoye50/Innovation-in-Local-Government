@@ -19,7 +19,7 @@ import {
   rateLimit,
 } from "../../lib/http.js";
 import { getSession, isStaff, isReadOnly, checkBindings } from "../../lib/auth.js";
-import { listSurveys, getSurvey, insertSurvey, hideSurvey } from "../../lib/db.js";
+import { listSurveys, listMySurveys, getSurvey, insertSurvey, hideSurvey } from "../../lib/db.js";
 
 const MAX_BODY = 20_000;
 
@@ -36,6 +36,17 @@ export async function onRequest(context) {
 
     if (!id && method === "GET") {
       const url = new URL(request.url);
+      // ?mine=1：个人页要看自己交过的全部记录，不分状态
+      if (url.searchParams.get("mine")) {
+        const session = await getSession(env, request);
+        if (!session) return fail("请先登录", 401);
+        const items = await listMySurveys(
+          env,
+          session.id,
+          url.searchParams.get("limit") || 30
+        );
+        return ok({ items });
+      }
       const items = await listSurveys(env, { limit: url.searchParams.get("limit") || 60 });
       return ok({ items });
     }

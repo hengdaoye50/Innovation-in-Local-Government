@@ -1,6 +1,11 @@
-/** 个人页：账号信息 + 我的作品（含审核状态与退回理由）+ 账户设置 */
+/** 个人页：账号信息 + 我的作品 / 调研 / 展位 + 账户设置 */
 import { esc, zhWords, timeAgo, mountReveal, toast } from "../lib/dom.js";
-import { cases as casesApi, auth as authApi } from "../lib/api.js";
+import {
+  cases as casesApi,
+  surveys as surveysApi,
+  slides as slidesApi,
+  auth as authApi,
+} from "../lib/api.js";
 import { getState, setState, ROLE_LABEL } from "../lib/store.js";
 import { AVATAR_MARKS, AVATAR_TINTS, avatarSvg, parseAvatar } from "../lib/avatar.js";
 
@@ -52,6 +57,33 @@ export function mePage() {
               <div class="skeleton" style="height:56px"></div>
             </div>
           </section>
+        </div>
+
+        <div class="me__records">
+          <section class="me__record reveal">
+            <header class="me__works-head">
+              <h2 class="h3">我的调研</h2>
+              <span class="meta" data-survey-count></span>
+            </header>
+            <div class="me__list" data-my-surveys>
+              <div class="skeleton" style="height:48px"></div>
+            </div>
+          </section>
+
+          ${
+            // 展位只有教师能上传，学生这一栏永远是空的，不如不显示
+            ["teacher", "admin"].includes(getState().user?.role)
+              ? `<section class="me__record reveal">
+            <header class="me__works-head">
+              <h2 class="h3">我的展位</h2>
+              <span class="meta" data-slide-count></span>
+            </header>
+            <div class="me__list" data-my-slides>
+              <div class="skeleton" style="height:48px"></div>
+            </div>
+          </section>`
+              : ""
+          }
         </div>
 
         <section class="card me__settings reveal" aria-labelledby="settings-title">
@@ -118,7 +150,7 @@ export function mePage() {
 
 export async function mountMe(root) {
   mountReveal(root);
-  await Promise.all([mountWorks(root), mountSettings(root)]);
+  await Promise.all([mountWorks(root), mountRecords(root), mountSettings(root)]);
 }
 
 /* —————————— 我的作品 —————————— */
@@ -170,6 +202,78 @@ async function mountWorks(root) {
         </article>`;
     })
     .join("");
+}
+
+/* —————————— 我的调研 / 我的展位 —————————— */
+
+async function mountRecords(root) {
+  const surveyHost = root.querySelector("[data-my-surveys]");
+  const slideHost = root.querySelector("[data-my-slides]");
+
+  if (surveyHost) {
+    let items = [];
+    try {
+      const res = await surveysApi.mine();
+      items = Array.isArray(res?.items) ? res.items : [];
+    } catch {
+      items = [];
+    }
+    const count = root.querySelector("[data-survey-count]");
+    if (count) count.textContent = items.length ? `共 ${items.length} 条` : "";
+
+    surveyHost.innerHTML = items.length
+      ? items
+          .map((s) => {
+            const place = [s.province, s.city, s.district]
+              .filter((p, i, arr) => p && arr.indexOf(p) === i)
+              .map(esc)
+              .join(" · ");
+            return `
+        <article class="mine-row">
+          <div class="mine-row__meta">
+            <span class="meta">${place}</span>
+            ${s.visitedAt ? `<span class="meta mono">${esc(s.visitedAt)}</span>` : ""}
+            ${s.status !== "published" ? `<span class="tag tag--quiet">已下架</span>` : ""}
+          </div>
+          <a class="mine-row__title" href="#/field/${esc(s.id)}">${esc(s.title)}</a>
+        </article>`;
+          })
+          .join("")
+      : `<div class="empty">还没有调研记录。走出去看过之后，记在这里。</div>`;
+  }
+
+  if (slideHost) {
+    let items = [];
+    try {
+      const res = await slidesApi.mine();
+      items = Array.isArray(res?.items) ? res.items : [];
+    } catch {
+      items = [];
+    }
+    const count = root.querySelector("[data-slide-count]");
+    if (count) count.textContent = items.length ? `共 ${items.length} 个` : "";
+
+    slideHost.innerHTML = items.length
+      ? items
+          .map(
+            (s) => `
+        <article class="mine-row">
+          <div class="mine-row__meta">
+            ${s.course ? `<span class="tag tag--quiet">${esc(s.course)}</span>` : ""}
+            ${s.term ? `<span class="meta">${esc(s.term)}</span>` : ""}
+            <span class="meta mono">${Number(s.slides) || 0} 页</span>
+            ${
+              s.visibility === "private"
+                ? `<span class="tag tag--warn">仅自己可见</span>`
+                : ""
+            }
+          </div>
+          <a class="mine-row__title" href="#/slide/${esc(s.id)}">${esc(s.title)}</a>
+        </article>`
+          )
+          .join("")
+      : `<div class="empty">还没有上传过展位。</div>`;
+  }
 }
 
 /* —————————— 账户设置 —————————— */

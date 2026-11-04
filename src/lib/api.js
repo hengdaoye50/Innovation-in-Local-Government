@@ -107,10 +107,14 @@ export const slides = {
     return api.get(`/api/slides${q ? `?${q}` : ""}`);
   },
   detail: (id) => api.get(`/api/slides/${encodeURIComponent(id)}`),
+  // 自己上传的展位，含「仅自己可见」
+  mine: (limit = 30) => api.get(`/api/slides?mine=1&limit=${limit}`),
 };
 
 export const surveys = {
   list: (limit = 60) => api.get(`/api/surveys?limit=${limit}`),
+  // 自己在个人页里回看：含被下架的，不分状态
+  mine: (limit = 30) => api.get(`/api/surveys?mine=1&limit=${limit}`),
   detail: (id) => api.get(`/api/surveys/${encodeURIComponent(id)}`),
   create: (payload) => api.post("/api/surveys", payload),
   remove: (id) => api.del(`/api/surveys/${encodeURIComponent(id)}`),

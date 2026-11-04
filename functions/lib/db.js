@@ -78,6 +78,17 @@ export async function listSurveys(env, { limit = 60 } = {}) {
   return (results || []).map(rowToSurvey);
 }
 
+/** 自己的调研足迹：不分状态，被下架的也要能看见，方便回看 */
+export async function listMySurveys(env, authorId, limit = 30) {
+  const { results } = await env.DB.prepare(
+    `SELECT * FROM surveys WHERE author_id = ?
+     ORDER BY COALESCE(visited_at, created_at) DESC LIMIT ?`
+  )
+    .bind(authorId, Math.min(100, Math.max(1, Number(limit) || 30)))
+    .all();
+  return (results || []).map(rowToSurvey);
+}
+
 export async function getSurvey(env, id) {
   const row = await env.DB.prepare("SELECT * FROM surveys WHERE id = ?").bind(id).first();
   return rowToSurvey(row);
@@ -341,6 +352,16 @@ export async function listSlides(
     `SELECT * FROM slides WHERE ${where.join(" AND ")} ORDER BY created_at DESC LIMIT ?`
   )
     .bind(...binds)
+    .all();
+  return (results || []).map(rowToSlide);
+}
+
+/** 自己的展位：含「仅自己可见」的那些，作者本人当然要看得到 */
+export async function listMySlides(env, authorId, limit = 30) {
+  const { results } = await env.DB.prepare(
+    `SELECT * FROM slides WHERE author_id = ? ORDER BY created_at DESC LIMIT ?`
+  )
+    .bind(authorId, Math.min(100, Math.max(1, Number(limit) || 30)))
     .all();
   return (results || []).map(rowToSlide);
 }

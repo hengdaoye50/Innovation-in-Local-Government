@@ -5,7 +5,7 @@
  */
 import { ok, fail, methodNotAllowed, readJson, handleError, randomId } from "../../lib/http.js";
 import { getSession, isStaff, checkBindings } from "../../lib/auth.js";
-import { listSlides, getSlide, hasSlideVisibility } from "../../lib/db.js";
+import { listSlides, listMySlides, getSlide, hasSlideVisibility } from "../../lib/db.js";
 import { reviewSlide } from "../../lib/review.js";
 
 export async function onRequest(context) {
@@ -76,6 +76,14 @@ export async function onRequest(context) {
       const url = new URL(request.url);
       // 私有展位要按访问者过滤，所以列表这里也要取会话
       const session = await getSession(env, request);
+
+      // ?mine=1：个人页看自己上传的展位，含「仅自己可见」
+      if (url.searchParams.get("mine")) {
+        if (!session) return fail("请先登录", 401);
+        const items = await listMySlides(env, session.id, url.searchParams.get("limit") || 30);
+        return ok({ items });
+      }
+
       const items = await listSlides(env, {
         course: url.searchParams.get("course") || "",
         term: url.searchParams.get("term") || "",
