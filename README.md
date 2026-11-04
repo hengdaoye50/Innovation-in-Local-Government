@@ -107,3 +107,8 @@ npx wrangler pages project create innovation-localgov --production-branch=main
 
 南开紫金纸本体系：紫 `#7E0C6E` + 金 `#C4A265` + 纸 `#FDF8F0`。
 完整规范见 `DESIGN.md`，项目维护约定见 `CLAUDE.md`。
+
+站点图标（`favicon.ico` / `favicon-32.png` / `favicon-48.png` / `favicon-192.png` /
+`apple-touch-icon.png`）由学院院徽 `public/brand/zhou-emblem@2x.png` 缩放生成。院徽压在一枚
+`#FDF8F0` 纸色圆片上——院徽内部的线条是半透明的，不垫纸底在深色标签栏里会糊成一片。
+院徽换版后需按同一方式重新导出，`apple-touch-icon` 用不透明纸底（iOS 不做透明合成）。
