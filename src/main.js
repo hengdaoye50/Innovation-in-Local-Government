@@ -9,6 +9,8 @@ import "./styles/reading.css";
 import "./styles/field.css";
 import "./styles/layers.css";
 import "./styles/auth.css";
+// 触屏兜底必须最后加载：它覆盖的规则权重与自身相同，靠加载顺序取胜
+import "./styles/touch.css";
 
 import { mountNav, mountFooter, flushPendingSection, SITE } from "./components/chrome.js";
 import {

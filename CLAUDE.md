@@ -61,7 +61,7 @@ MPA课程AI辅学项目开发/
 ├── index.html                # 单页入口
 ├── src/
 │   ├── main.js               # 路由与页面挂载
-│   ├── styles/               # tokens / base / map / studio / boards / detail / auth
+│   ├── styles/               # tokens / base / map / studio / boards / detail / auth / touch
 │   ├── pages/                # atlas / studio / slides / blog / case / detail / login / admin
 │   ├── components/           # map（SVG 浮雕地图）、chrome（顶栏页脚）、comments
 │   └── lib/                  # api / router / store / dom / markdown / demo

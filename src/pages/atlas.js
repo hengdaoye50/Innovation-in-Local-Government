@@ -84,6 +84,18 @@ export async function mountAtlas(root) {
   const canvasHost = qs(".map-canvas", section);
   const drawer = qs(".atlas__drawer", section);
   const focusCard = qs("[data-focus-card]", section);
+  const focusCardHost = focusCard.parentElement;
+  const narrowQuery = window.matchMedia("(max-width: 900px)");
+
+  /**
+   * 窄屏下卡片是贴视口底部的抽屉。留在舞台里不行：舞台有 z-index 自己的层叠上下文，
+   * 会被后面的分区整个压住（实测卡片有尺寸、opacity 1，却完全不可见）。
+   * 所以窄屏时把它挂到 body 上，宽屏放回舞台原位（宽屏定位按舞台坐标算）。
+   */
+  function placeFocusCard(narrow) {
+    const target = narrow ? document.body : focusCardHost;
+    if (focusCard.parentElement !== target) target.append(focusCard);
+  }
   const hint = qs("[data-atlas-hint]", section);
   const defaultHint = hint?.innerHTML || "";
 
@@ -119,6 +131,8 @@ export async function mountAtlas(root) {
   function closeFocusCard() {
     focusCard.classList.remove("is-open");
     focusCard.hidden = true;
+    // 收起后放回舞台，别让它留在 body 上跟着路由跑
+    placeFocusCard(false);
     if (hint) hint.innerHTML = defaultHint;
   }
 
@@ -165,6 +179,21 @@ export async function mountAtlas(root) {
     `;
 
     focusCard.hidden = false;
+
+    // 窄屏上卡片是贴视口底部的抽屉（见 map.css 的 ≤900px 段），位置由样式表决定。
+    // 这里不能再写内联 left/top，否则会把抽屉钉回舞台里的旧位置。
+    if (narrowQuery.matches) {
+      placeFocusCard(true);
+      focusCard.style.left = "";
+      focusCard.style.top = "";
+      requestAnimationFrame(() => focusCard.classList.add("is-open"));
+      if (hint) {
+        hint.innerHTML = `<span>点卡片进入案例 · 再点同一颗光点或按 Esc 收起</span>`;
+      }
+      return;
+    }
+
+    placeFocusCard(false);
 
     // 先量出真实尺寸再定位，避免贴边溢出
     const cardW = focusCard.offsetWidth || 320;
@@ -332,6 +361,8 @@ export async function mountAtlas(root) {
   const destroyMap = map.destroy.bind(map);
   map.destroy = () => {
     dust?.destroy();
+    // 抽屉可能正挂在 body 上，离开首页时清掉，否则会留在文档里
+    if (focusCard.parentElement === document.body) focusCard.remove();
     destroyMap();
   };
 

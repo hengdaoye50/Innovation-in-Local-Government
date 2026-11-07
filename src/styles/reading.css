@@ -439,6 +439,7 @@
 /* —— 边注列表（右侧栏） —— */
 .reading__side {
   max-height: calc(100vh - 110px);
+  max-height: calc(100dvh - 110px);
   overflow-y: auto;
 }
 

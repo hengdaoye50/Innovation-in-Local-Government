@@ -3,7 +3,9 @@
    ============================================================ */
 
 .auth {
+  /* svh 取「地址栏展开时」的高度，移动浏览器收起地址栏时不会把内容顶出一截 */
   min-height: 100vh;
+  min-height: 100svh;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 0.92fr);
 }
@@ -193,6 +195,10 @@ body.page-auth .nav {
   .auth__panel {
     margin: 0 auto;
     max-width: 520px;
+    /* 横屏刘海机型两边的圆角会压住表单，让出安全区 */
+    padding-left: calc(clamp(24px, 7vw, 96px) + var(--safe-left));
+    padding-right: calc(clamp(24px, 7vw, 96px) + var(--safe-right));
+    padding-bottom: calc(clamp(40px, 6vw, 80px) + var(--safe-bottom));
   }
   .auth__aside {
     display: none;

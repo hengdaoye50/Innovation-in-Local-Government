@@ -1,0 +1,25 @@
+/* ============================================================
+   触屏兜底
+   ------------------------------------------------------------------
+   只在「窄屏 + 粗指针」下生效，桌面与平板指针设备一律不受影响。
+
+   单独成表而不是塞进 base.css：这里要覆盖的规则（.chat__input、
+   .studio__draft .input 等）散在 studio.css 里，且选择器权重与本表相同，
+   只有靠后加载才赢。所以它在 main.js 里必须最后一个 import。
+   ============================================================ */
+
+@media (max-width: 900px) and (pointer: coarse) {
+  /* iOS Safari 对字号小于 16px 的输入控件会在聚焦时自动放大整页，
+     而放大的副作用（页面被推走、要手动缩回）比那 1px 的排版差异糟得多。
+     以下三处组件各自压过字号，这里逐个点名覆盖。 */
+  .input,
+  .textarea,
+  .select,
+  .chat__input,
+  .studio__draft .input,
+  .studio__draft .select,
+  .studio__draft .draft__text,
+  .draft__row--3 .select {
+    font-size: 16px;
+  }
+}

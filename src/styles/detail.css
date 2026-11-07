@@ -5,6 +5,7 @@
 .detail-page {
   padding-top: 64px;
   min-height: 100vh;
+  min-height: 100svh;
 }
 
 .detail {
@@ -1051,6 +1052,22 @@
   .detail__body {
     font-size: 16px;
     line-height: 1.85;
+  }
+}
+
+/* 手机上台签条原本靠横滑：六个面板只露出四个，滑不出「后面还有」这件事。
+   改成换行铺两排，一眼看全，也不用先教会用户这行能滑 */
+@media (max-width: 720px) {
+  .admin__tabs {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+  .admin__tab {
+    flex: 1 1 30%;
+    min-width: 0;
+    padding: 12px 6px;
+    text-align: center;
+    font-size: 14px;
   }
 }
 

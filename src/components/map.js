@@ -27,6 +27,30 @@ const SIDE_STEP = 5;
 // 分析态下光点浮起的高度（用户单位）
 const LIFT = 20;
 
+/**
+ * 光点命中区半径。
+ * 光点本身按案例密度取 3.4–7.6，热区放大到 2.2 倍也只有 17px 直径：
+ * 鼠标够用，手指点不中。触屏设备按 44px 直径兜底（iOS / Material 的通用下限），
+ * 指针设备保持原样——否则相邻省份的光点会互相抢点击。
+ *
+ * 注意这里要换算：r 是 SVG 用户单位，地图被 viewBox 缩放过（手机上约 0.55 倍），
+ * 直接写 22 渲染出来只有 23px。所以按实际渲染比例反算，并封顶避免缩放放大后
+ * 热区糊成一片。
+ */
+const COARSE_POINTER = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
+
+function makeHitRadius(svg) {
+  if (!COARSE_POINTER) return (r) => r * 2.2;
+  return (r) => {
+    // 取 transform 之后的宽度：.map-svg 上还有一层 scale，用 clientWidth 会少算那部分
+    const rect = svg?.getBoundingClientRect();
+    const rendered = rect && rect.width > 0 ? rect.width : svg?.clientWidth || 0;
+    const pxPerUnit = rendered > 0 ? rendered / VIEW_W : 0.55;
+    const target = 22 / pxPerUnit;
+    return Math.min(Math.max(r * 2.2, target), 56);
+  };
+}
+
 const SIDE_COLORS = ["#0c070c", "#150b14", "#1f101d", "#2b1426"];
 // 调研层的侧壁：同深度换成冷色，浮雕厚度不变，只是底图换了调子
 const SIDE_COLORS_FIELD = ["#071013", "#0c1820", "#122630", "#193240"];
@@ -821,6 +845,8 @@ export function createMap(container, { onHover, onFocus, onView, compact = false
     gNodes.replaceChildren();
     nodeLevel = pickLevel();
     lastNodes = aggregate(cases, nodeLevel);
+    // 命中区按当前渲染比例换算，见 makeHitRadius
+    const hitRadius = makeHitRadius(svg);
 
     // 点位密集时整体减淡：近千个光晕叠在一起会糊成一条发光带，
     // 密度越高每个点越淡，靠「亮点数量」而不是「亮点亮度」表达聚集
@@ -884,7 +910,7 @@ export function createMap(container, { onHover, onFocus, onView, compact = false
         // 透明热区：光点浮起后原位置会变成空白，补一个热区让第二次点击仍能命中
         svgEl("circle", {
           class: "node__hit",
-          r: (node.r * 2.2).toFixed(1),
+          r: hitRadius(node.r).toFixed(1),
           fill: "transparent",
         }),
         svgEl("ellipse", {

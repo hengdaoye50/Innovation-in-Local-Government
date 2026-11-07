@@ -664,6 +664,7 @@
   position: sticky;
   top: 84px;
   max-height: calc(100vh - 108px);
+  max-height: calc(100dvh - 108px);
   overflow-y: auto;
   padding: 0;
 }
@@ -1011,6 +1012,7 @@ label.btn {
   .studio__chat,
   .studio__draft {
     height: min(780px, calc(100vh - 108px));
+    height: min(780px, calc(100dvh - 108px));
   }
 }
 

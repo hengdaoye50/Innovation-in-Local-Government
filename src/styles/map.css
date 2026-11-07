@@ -1060,30 +1060,61 @@
     height: 72px;
   }
 
-  /* 分析态：地图缩到上方便于看清光路，卡片改为贴底 */
+  /* 分析态：地图摊平，卡片脱离舞台贴到视口底部。
+     舞台在竖屏只有 clamp(320, 46vh, 430) 高，卡片留在舞台内时（原来锚在 stage 底部）
+     会盖掉大半个地图，光路与关联环全被压住，这个交互就只剩一张卡片可看。
+     改成 fixed 之后卡片落在下一屏上方，地图整幅可见。
+     因此这里也不再缩到 0.72——没有遮挡了，缩小只会让光路更难看清。 */
   .map-svg {
     /* 窄屏透视压缩更明显，倾斜角度收小 */
     transform: rotateX(9deg) scale(0.96);
   }
 
   .map-svg.is-atlas {
-    transform: rotateX(0deg) scale(0.72) translateY(-16%);
-    transform-origin: 50% 0;
+    transform: rotateX(0deg) scale(0.96);
+    transform-origin: 50% 50%;
     transition: transform 640ms var(--ease), opacity 640ms var(--ease);
   }
 
   .map-focus-card {
-    left: 12px !important;
+    position: fixed;
+    left: 12px;
     right: 12px;
-    top: auto !important;
-    bottom: 16px;
+    top: auto;
+    bottom: 12px;
     width: auto;
     max-width: none;
+    /* 内容长时可滚，但最多占掉半屏，地图要一直露在上面 */
+    max-height: 56svh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 18px 18px calc(16px + var(--safe-bottom)) 20px;
+    border-radius: var(--radius-lg);
     transform: translateY(14px);
+  }
+
+  /* 贴底抽屉要盖到下一屏上，但地图屏 .atlas 是 overflow: hidden 的，
+     超出舞台的那截会被裁掉、等于什么都看不见。只在抽屉打开时放开这一层。 */
+  .atlas:has(.map-focus-card.is-open) {
+    overflow: visible;
   }
 
   .map-focus-card.is-open {
     transform: none;
+  }
+
+  /* 关闭按钮在触屏上要能点中：22px 的叉太小，包到 44px 的方形热区 */
+  .map-focus-card__close {
+    width: 44px;
+    height: 44px;
+    margin: -14px -10px -14px 0;
+  }
+
+  /* 进案例的入口同样按手指尺寸兜底 */
+  .map-focus-card__go {
+    min-height: 44px;
+    align-items: center;
+    font-size: 14px;
   }
 
   /* 分析态下缩放按钮无意义，让位给卡片 */

@@ -79,6 +79,14 @@
   --shell: 1180px;
   --gutter: 24px;
 
+  /* —— 安全区 ——
+     index.html 开了 viewport-fit=cover，刘海机型横屏时内容会顶进圆角与摄像头区，
+     所以固定元素与整屏容器都要让出 env() 给的四边。非刘海机型这几个值恒为 0。 */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
   /* 圆角阶梯：极小标记 4 / 控件 8 / 卡片 12 / 浮层 16。
      每档只差一档用途，不再混用 0–4px 这种看不出差别的值 */
   --radius-xs: 4px;
