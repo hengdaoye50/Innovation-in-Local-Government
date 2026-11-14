@@ -6,7 +6,8 @@
 学生从公开新闻中发现地方政府创新实践，与大模型协同检索、撰写 1000–1500 字案例梗概，
 提交后按发生地标注在中国地图上；同时提供课堂 PPT 展示板（含 AI 评语与讨论）与拓展材料展板。
 
-- 线上域名：待定（独立 Cloudflare Pages 项目 `innovation-localgov`）
+- 线上域名：`https://innovation.jinhuazhang.top`（独立 Cloudflare Pages 项目 `innovation-localgov`，
+  默认域 `https://innovation-localgov.pages.dev` 同时可用）
 - 代码仓库：`hengdaoye50/Innovation-in-Local-Government`
 - 默认工作语言：中文；代码、命令、变量名用英文
 

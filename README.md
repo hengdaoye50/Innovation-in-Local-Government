@@ -91,7 +91,8 @@ npx wrangler pages project create innovation-localgov --production-branch=main
 `npm ci` → `npm run build` → 应用 D1 迁移 → 同步 Pages Secrets → `wrangler pages deploy dist`。
 
 首次部署后到 Cloudflare 控制台为 Pages 项目确认 D1（`DB`）与 KV（`SESSIONS`）绑定，
-然后即可绑定自定义域名。
+再绑定自定义域名。本站线上地址为 `https://innovation.jinhuazhang.top`，Pages 默认域
+`https://innovation-localgov.pages.dev` 同时可用。
 
 ## 数据维护
 
