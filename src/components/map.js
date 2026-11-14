@@ -105,7 +105,21 @@ export function createMap(container, { onHover, onFocus, onView, compact = false
   let atlasKey = "";
   let atlasNode = null;
 
-  const view = { x: 0, y: 0, k: 1 };
+  // 默认视角：首页放大到 1.2 倍（1.0 时省面偏小、四周留白过多）；
+  // 登录页侧栏是紧凑门面，保持 1.0 —— 那张图贴着面板边缘，放大会切掉版图两翼。
+  // 缩放锚点是 viewBox 中心，所以平移要按同一比例反向补，否则地图从左上角撑开
+  const DEFAULT_K = compact ? 1 : 1.2;
+  // 版图在框里是偏下的：底部压着 64px 纸感渐变和操作提示，放大后海南会埋进过渡带。
+  // 默认视角整体上提一截，让陆地落在标题之下、渐变之上的可视区。窄屏没有这段留白，
+  // 控件又紧贴舞台上沿，上提会撞上去，所以不动
+  const narrowStage = typeof matchMedia === "function" && matchMedia("(max-width: 900px)").matches;
+  const DEFAULT_LIFT = compact || narrowStage ? 0 : 56;
+  const DEFAULT_VIEW = {
+    x: (VIEW_W / 2) * (1 - DEFAULT_K),
+    y: (VIEW_H / 2) * (1 - DEFAULT_K) - DEFAULT_LIFT,
+    k: DEFAULT_K,
+  };
+  const view = { ...DEFAULT_VIEW };
   let viewRaf = 0;
   let zoomSettleTimer = 0;
 
@@ -157,9 +171,7 @@ export function createMap(container, { onHover, onFocus, onView, compact = false
   }
 
   function resetView() {
-    view.x = 0;
-    view.y = 0;
-    view.k = 1;
+    Object.assign(view, DEFAULT_VIEW);
     applyView();
   }
 

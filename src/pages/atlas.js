@@ -62,7 +62,7 @@ export function atlasSection() {
           <button class="ctrl" data-map="reset" title="复位视角" aria-label="复位视角">
             ${ICONS.reset}
           </button>
-          <span class="ctrl ctrl--readout mono" data-zoom-readout aria-live="off">×1.0</span>
+          <span class="ctrl ctrl--readout mono" data-zoom-readout aria-live="off">×1.2</span>
         </div>
 
         <div class="atlas__hint" data-atlas-hint>
