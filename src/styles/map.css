@@ -1022,6 +1022,9 @@
   }
   .atlas__stage {
     flex: none;
+    /* 兜底一行固定高度：老内核不认 clamp()，整条声明会失效，
+       舞台塌成 0 高、地图整块不可见（只剩背景与标题） */
+    height: 400px;
     height: clamp(320px, 46vh, 430px);
     min-height: 0;
     margin-top: 0;

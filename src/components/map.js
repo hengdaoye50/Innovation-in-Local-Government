@@ -1182,6 +1182,11 @@ export function createMap(container, { onHover, onFocus, onView, compact = false
     container._keyHandler = onKey;
 
     container.dataset.ready = "1";
+    // 舞台高度为 0 时整块地图是不可见的，屏幕上看不出出了什么事——外部布局没给高度，
+    // 或内核不认 clamp() 时都会落到这里。撑一下父级，让地图至少显示得出来
+    if (container.clientHeight < 40) {
+      container.parentElement?.style.setProperty("height", "360px");
+    }
     requestAnimationFrame(() => {
       svg?.classList.add("is-in");
       // 光点只在第一次进场时按纬度依次点亮；之后缩放重绘不再重放
