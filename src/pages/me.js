@@ -233,7 +233,9 @@ async function mountRecords(root) {
           <div class="mine-row__meta">
             <span class="meta">${place}</span>
             ${s.visitedAt ? `<span class="meta mono">${esc(s.visitedAt)}</span>` : ""}
+            ${s.imageCount ? `<span class="meta mono">${s.imageCount} 图</span>` : ""}
             ${s.status !== "published" ? `<span class="tag tag--quiet">已下架</span>` : ""}
+            <a class="btn btn--quiet btn--sm mine-row__edit" href="#/field/${esc(s.id)}/edit">编辑</a>
           </div>
           <a class="mine-row__title" href="#/field/${esc(s.id)}">${esc(s.title)}</a>
         </article>`;

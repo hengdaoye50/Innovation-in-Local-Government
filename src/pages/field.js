@@ -1,6 +1,7 @@
 /** 调研足迹 —— 第五屏：师生实地调研的见闻记录 */
 import { esc, mountReveal } from "../lib/dom.js";
 import { surveys as surveysApi } from "../lib/api.js";
+import { stripMarkdown } from "../lib/markdown.js";
 
 export function fieldSection() {
   return `
@@ -11,8 +12,8 @@ export function fieldSection() {
             <div class="screen-ordinal">05 / 田野</div>
             <h2 id="field-title">调研足迹</h2>
             <p class="lede">
-              课上真正走出去看过的地方。游记、见闻、随手记都行，不必写成案例——
-              留着给下一次去的人当线索。
+              课上真正走出去看过的地方。游记、见闻、随手记都行，可以配照片——
+              不必写成案例，留着给下一次去的人当线索。
             </p>
           </div>
           <div class="screen-head__aside">
@@ -49,8 +50,15 @@ export async function mountField(root) {
 
   listEl.innerHTML = items.map((s, i) => rowHtml(s, i, items.length)).join("");
   listEl.querySelectorAll("[data-survey]").forEach((node) => {
-    node.addEventListener("click", () => {
+    const go = () => {
       window.location.hash = `/field/${node.dataset.survey}`;
+    };
+    node.addEventListener("click", go);
+    node.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        go();
+      }
     });
   });
   mountReveal(section);
@@ -61,26 +69,41 @@ function rowHtml(survey, index, total) {
     .filter((p, i, arr) => p && arr.indexOf(p) === i)
     .join(" · ");
   const when = survey.visitedAt || (survey.createdAt || "").slice(0, 7);
-  const excerpt = (survey.body || "").replace(/\s+/g, " ").slice(0, 96);
+  // 摘要里不要小标题：把「## 取号机旁边多了一个人」原样拼进摘要，读起来像断裂的句子
+  const excerpt = stripMarkdown(
+    String(survey.body || "").replace(/^#{1,6}[ \t].*$/gm, ""),
+    110
+  );
+  const photos = survey.imageCount || 0;
 
   return `
-    <article class="field-row reveal" data-survey="${esc(survey.id)}" tabindex="0" role="link"
+    <article class="field-row${photos ? " field-row--with-photo" : ""} reveal"
+      data-survey="${esc(survey.id)}" tabindex="0" role="link"
       aria-label="${esc(survey.title)}">
       <div class="field-row__index mono">${String(index + 1).padStart(2, "0")}<i>/ ${String(
     total
   ).padStart(2, "0")}</i></div>
+
       <div class="field-row__main">
         <div class="field-row__meta">
           <span class="field-row__place">${esc(place)}</span>
           ${when ? `<span class="meta mono">${esc(when)}</span>` : ""}
           <span class="meta">${esc(survey.author)}</span>
+          ${photos ? `<span class="meta mono">${photos} 图</span>` : ""}
         </div>
         <h3 class="field-row__title">${esc(survey.title)}</h3>
-        <p class="field-row__excerpt">${esc(excerpt)}${survey.body.length > 96 ? "…" : ""}</p>
+        <p class="field-row__excerpt">${esc(excerpt)}</p>
       </div>
-      <span class="field-row__go" aria-hidden="true">
-        <svg viewBox="0 0 12 8"><path d="M1 4h10M8 1l3 3-3 3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </span>
+
+      ${
+        survey.cover
+          ? `<div class="field-row__thumb">
+               <img src="${esc(survey.cover)}" alt="" loading="lazy" decoding="async" />
+             </div>`
+          : `<span class="field-row__go" aria-hidden="true">
+               <svg viewBox="0 0 12 8"><path d="M1 4h10M8 1l3 3-3 3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+             </span>`
+      }
     </article>
   `;
 }

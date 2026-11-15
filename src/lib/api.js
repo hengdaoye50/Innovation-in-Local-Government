@@ -20,7 +20,7 @@ async function request(path, { method = "GET", body, signal, headers = {} } = {}
   };
 
   if (body !== undefined) {
-    if (body instanceof FormData) {
+    if (body instanceof FormData || body instanceof Blob) {
       init.body = body;
     } else {
       init.headers["Content-Type"] = "application/json";
@@ -117,7 +117,19 @@ export const surveys = {
   mine: (limit = 30) => api.get(`/api/surveys?mine=1&limit=${limit}`),
   detail: (id) => api.get(`/api/surveys/${encodeURIComponent(id)}`),
   create: (payload) => api.post("/api/surveys", payload),
+  update: (id, payload) => api.put(`/api/surveys/${encodeURIComponent(id)}`, payload),
   remove: (id) => api.del(`/api/surveys/${encodeURIComponent(id)}`),
+};
+
+export const surveyImages = {
+  // 直接发二进制，省掉 base64 的三成膨胀
+  upload: (blob, { width, height } = {}) =>
+    request(`/api/survey-images?w=${Math.round(width || 0)}&h=${Math.round(height || 0)}`, {
+      method: "POST",
+      body: blob,
+      headers: { "Content-Type": blob.type || "image/jpeg" },
+    }),
+  remove: (id) => api.del(`/api/survey-images/${encodeURIComponent(id)}`),
 };
 
 export const posts = {

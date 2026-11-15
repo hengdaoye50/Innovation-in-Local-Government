@@ -31,7 +31,8 @@ import { studioSection, mountStudio } from "./pages/studio.js";
 import { slidesSection, mountSlides } from "./pages/slides.js";
 import { blogSection, mountBlog } from "./pages/blog.js";
 import { fieldSection, mountField } from "./pages/field.js";
-import { mountSurveyDetail, mountSurveyForm } from "./pages/survey.js";
+import { mountSurveyDetail } from "./pages/survey.js";
+import { mountSurveyEditor } from "./pages/survey-editor.js";
 import { mountReading } from "./pages/reading.js";
 import { mountCaseDetail } from "./pages/case.js";
 import { mountSlideDetail, mountPostDetail } from "./pages/detail.js";
@@ -110,7 +111,12 @@ async function renderSurvey({ id }) {
 
 async function renderSurveyForm() {
   app.innerHTML = `<main id="detail-root" class="detail-page"></main>`;
-  await mountSurveyForm(app.querySelector("#detail-root"));
+  await mountSurveyEditor(app.querySelector("#detail-root"));
+}
+
+async function renderSurveyEdit({ id }) {
+  app.innerHTML = `<main id="detail-root" class="detail-page"></main>`;
+  await mountSurveyEditor(app.querySelector("#detail-root"), id);
 }
 
 async function renderLogin() {
@@ -150,6 +156,7 @@ route("/slide/:id", renderSlide);
 route("/post/:id", renderPost);
 route("/reading/:id", renderReading);
 route("/field/new", renderSurveyForm);
+route("/field/:id/edit", renderSurveyEdit);
 route("/field/:id", renderSurvey);
 route("/login", renderLogin);
 route("/admin", renderAdmin);

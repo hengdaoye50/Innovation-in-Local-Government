@@ -63,9 +63,10 @@ MPA课程AI辅学项目开发/
 ├── src/
 │   ├── main.js               # 路由与页面挂载
 │   ├── styles/               # tokens / base / map / studio / boards / detail / auth / touch
-│   ├── pages/                # atlas / studio / slides / blog / case / detail / login / admin
+│   ├── pages/                # atlas / studio / slides / blog / field / survey（阅读）/
+│   │                         # survey-editor（编写与编辑）/ case / detail / reading / me / login / admin
 │   ├── components/           # map（SVG 浮雕地图）、chrome（顶栏页脚）、comments
-│   └── lib/                  # api / router / store / dom / markdown / demo
+│   └── lib/                  # api / router / store / dom / markdown / image（前端压图）/ demo
 ├── public/
 │   ├── data/china.json       # 中国省级 GeoJSON（已修正环绕向，见 scripts/fix-geojson.mjs）
 │   ├── data/cities.json      # 省 / 地级市 / 区县 三级坐标索引（定位精度到区县）
@@ -79,7 +80,8 @@ MPA课程AI辅学项目开发/
 │   ├── sample-case.md        # Markdown 版
 │   └── sample-case.docx      # Word 版（同内容的转换产物）
 ├── functions/
-│   ├── api/                  # Pages Functions（auth / cases / chat / slides / posts / comments / admin）
+│   ├── api/                  # Pages Functions（auth / cases / chat / slides / posts / surveys /
+│   │                         # survey-images / readings / comments / views / admin）
 │   └── lib/                  # 服务端共享模块（http / auth / db / llm / search / review）
 ├── migrations/               # D1 schema 与种子数据
 └── .github/workflows/deploy.yml
@@ -103,6 +105,9 @@ MPA课程AI辅学项目开发/
 | 协作工作台 | `/#/studio` | AI 对话检索 + 梗概撰写 + 提交 |
 | 展示板 | `/#/slides` | 课堂 PPT 展位，每个展位含 AI 评语与讨论 |
 | 拓展材料 | `/#/blog` | 课程推荐的文章、论文与方法笔记 |
+| 调研足迹 | `/#/field` | 首页第五屏：师生实地调研的见闻列表，有图就显示缩略图 |
+| 足迹详情 | `/#/field/:id` | 图文阅读：衬线正文、图版与图注、点图放大、页边目录 |
+| 足迹编写 | `/#/field/new`、`/#/field/:id/edit` | Markdown 分栏编辑、实时预览、照片上传、本机草稿 |
 | 教师后台 | `/#/admin` | 邀请码、作品审核、下架、展位管理 |
 
 ## 内容规则
@@ -117,6 +122,17 @@ MPA课程AI辅学项目开发/
 - 来源链接上限 15 条，提交时校验。
 - 提交后进入 `pending`；AI 质检通过自动转 `published`，不通过退回 `rejected` 并给出理由。
 - 教师可随时将 `published` 改为 `hidden`（下架），案例保留但不出现在地图。
+
+### 调研足迹
+
+- 与案例分开一套规则：**不跑模型质检**。游记没有「创新点」可判，硬判只会把人逼成汇报腔。
+- 必填：标题、发生地（省 + 市/县，区县可选）、正文（≥ 80 字符）。调研月份可选。
+- 正文用 Markdown，正文里独占一段的照片自动立成图版，`![图注](…)` 的图注会显示在图下。
+- 一篇最多 9 张照片；图片的存储与清理规则见下文「调研足迹的配图」。
+- 作者本人与教师 / 管理员可以**改**已发布的记录，改完状态不变——不该因为改稿而退回未发布，
+  也不该让被下架的记录借编辑复活。`updated_at` 只在真正编辑过之后才有值。
+- 编辑入口：阅读页的「编辑这条」、个人页「我的调研」每行的「编辑」。
+- 编写页有本机草稿（`localStorage`，键 `field:draft:<id|new>`），换设备不带走，成功发布即清空。
 
 ### 提交与署名
 
@@ -147,7 +163,22 @@ slides     id, title, course, term, author_id, cover_url, file_url, description,
            status, created_at
 comments   id, target_type, target_id, author_id, author_role, body, created_at
 posts      id, title, author, source_url, tags, body, cover_url, published_at
+surveys    id, title, province, city, district, lng, lat, body, author_id, author_name,
+           visited_at, status, created_at, updated_at
+survey_images  id, survey_id, owner_id, mime, width, height, bytes(BLOB), created_at
 ```
+
+### 调研足迹的配图
+
+图片直接存 D1，不另接 R2：课程量级（几百张）、无需额外绑定与费用。代价与约定：
+
+- 上传前在浏览器里压缩到长边 1600 的 WebP（`src/lib/image.js`），服务端再卡 1.5MB 硬上限。
+  D1 单行上限 2MB，原图不压缩会直接写不进去。
+- 只收 JPG / PNG / WebP，按文件头判类型，**不收 SVG**（能带脚本）。取图走
+  `/api/survey-images/:id`，内容不可变，长缓存。
+- 正文里用 `![图注](/api/survey-images/<id>)` 引用；保存时 `syncSurveyImages`
+  把被引用的图挂到这条记录，已从正文删掉的图连带删除；传了却没保存的图，
+  一天后由 `pruneOrphanImages` 清掉。
 
 ## 认证
 

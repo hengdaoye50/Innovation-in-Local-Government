@@ -49,6 +49,22 @@ export function rowToCase(row) {
 
 /* ————————— 调研足迹 ————————— */
 
+/** 正文里的插图地址；图片存在 D1，按 id 走 /api/survey-images 取 */
+const IMAGE_URL_RE = /!\[[^\]]*\]\((\/api\/survey-images\/([A-Za-z0-9_]+))/g;
+
+export function referencedImageIds(body) {
+  const ids = [];
+  for (const m of String(body || "").matchAll(IMAGE_URL_RE)) {
+    if (!ids.includes(m[2])) ids.push(m[2]);
+  }
+  return ids;
+}
+
+function firstImageUrl(body) {
+  for (const m of String(body || "").matchAll(IMAGE_URL_RE)) return m[1];
+  return "";
+}
+
 function rowToSurvey(row) {
   if (!row) return null;
   return {
@@ -65,6 +81,9 @@ function rowToSurvey(row) {
     visitedAt: row.visited_at || "",
     status: row.status,
     createdAt: row.created_at,
+    updatedAt: row.updated_at || "",
+    cover: firstImageUrl(row.body),
+    imageCount: referencedImageIds(row.body).length,
   };
 }
 
@@ -122,6 +141,141 @@ export async function hideSurvey(env, id) {
     .bind(id)
     .run();
   return result.meta?.changes > 0;
+}
+
+/** 编辑不改变状态：作者改稿不该把自己改回未发布，也不该被下架的内容自行复活 */
+export async function updateSurvey(env, id, data) {
+  const fields = [
+    data.title,
+    data.province,
+    data.city || null,
+    data.district || null,
+    data.lng ?? null,
+    data.lat ?? null,
+    data.body,
+    data.visitedAt || null,
+    id,
+  ];
+  try {
+    // 00011 迁移之前没有 updated_at，缺列时降级成不写该列，正文照样能保存
+    const result = await env.DB.prepare(
+      `UPDATE surveys SET title = ?, province = ?, city = ?, district = ?, lng = ?, lat = ?,
+         body = ?, visited_at = ?, updated_at = ? WHERE id = ?`
+    )
+      .bind(fields[0], fields[1], fields[2], fields[3], fields[4], fields[5], fields[6], fields[7], data.now, id)
+      .run();
+    return result.meta?.changes > 0;
+  } catch (err) {
+    if (!/no such column/i.test(String(err?.message || ""))) throw err;
+    const result = await env.DB.prepare(
+      `UPDATE surveys SET title = ?, province = ?, city = ?, district = ?, lng = ?, lat = ?,
+         body = ?, visited_at = ? WHERE id = ?`
+    )
+      .bind(...fields)
+      .run();
+    return result.meta?.changes > 0;
+  }
+}
+
+/* ————————— 调研配图 ————————— */
+
+const NO_IMAGE_TABLE = /no such table/i;
+
+export async function insertSurveyImage(env, data) {
+  await env.DB.prepare(
+    `INSERT INTO survey_images (id, survey_id, owner_id, mime, width, height, bytes, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  )
+    .bind(
+      data.id,
+      data.surveyId || null,
+      data.ownerId,
+      data.mime,
+      data.width ?? null,
+      data.height ?? null,
+      data.bytes,
+      data.now
+    )
+    .run();
+}
+
+export async function getSurveyImage(env, id) {
+  try {
+    const row = await env.DB.prepare(
+      "SELECT mime, bytes FROM survey_images WHERE id = ?"
+    )
+      .bind(id)
+      .first();
+    return row || null;
+  } catch (err) {
+    if (NO_IMAGE_TABLE.test(String(err?.message || ""))) return null;
+    throw err;
+  }
+}
+
+export async function deleteSurveyImage(env, id, ownerId) {
+  const result = await env.DB.prepare("DELETE FROM survey_images WHERE id = ? AND owner_id = ?")
+    .bind(id, ownerId)
+    .run();
+  return result.meta?.changes > 0;
+}
+
+/**
+ * 保存正文后对齐配图：正文里引用的图挂到这条记录上，之前挂在这条记录、
+ * 但已被作者从正文里删掉的图，一并从库里清掉，不留孤儿。
+ * 归属不按上传者过滤——教师改学生稿时插的图也得挂上，否则第二天会被当成孤儿清掉。
+ */
+export async function syncSurveyImages(env, surveyId, body) {
+  const ids = referencedImageIds(body);
+  try {
+    if (ids.length) {
+      const marks = ids.map(() => "?").join(",");
+      await env.DB.prepare(
+        `UPDATE survey_images SET survey_id = ? WHERE id IN (${marks})`
+      )
+        .bind(surveyId, ...ids)
+        .run();
+    }
+    const stale =
+      ids.length
+        ? await env.DB.prepare(
+            `SELECT id FROM survey_images WHERE survey_id = ? AND id NOT IN (${ids
+              .map(() => "?")
+              .join(",")})`
+          )
+            .bind(surveyId, ...ids)
+            .all()
+        : await env.DB.prepare("SELECT id FROM survey_images WHERE survey_id = ?")
+            .bind(surveyId)
+            .all();
+    const staleIds = (stale.results || []).map((r) => r.id);
+    if (staleIds.length) {
+      await env.DB.prepare(
+        `DELETE FROM survey_images WHERE id IN (${staleIds.map(() => "?").join(",")})`
+      )
+        .bind(...staleIds)
+        .run();
+    }
+    return ids.length;
+  } catch (err) {
+    // 图床表还没建（迁移未跑）：正文照常保存，只是图不归这条记录管
+    if (NO_IMAGE_TABLE.test(String(err?.message || ""))) return 0;
+    throw err;
+  }
+}
+
+/** 传了图又没保存的那批会一直漂在库里；过一天之后顺手清掉 */
+export async function pruneOrphanImages(env, ownerId) {
+  try {
+    const cutoff = new Date(Date.now() - 24 * 3600_000).toISOString();
+    await env.DB.prepare(
+      "DELETE FROM survey_images WHERE owner_id = ? AND survey_id IS NULL AND created_at < ?"
+    )
+      .bind(ownerId, cutoff)
+      .run();
+  } catch (err) {
+    if (!NO_IMAGE_TABLE.test(String(err?.message || ""))) throw err;
+  }
 }
 
 export function rowToSlide(row) {
