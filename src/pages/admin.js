@@ -781,7 +781,8 @@ async function renderInvites(panel, me) {
               </button>
               ${
                 isAdmin
-                  ? `<button class="btn btn--gold btn--sm" data-new-invite="teacher">生成教师邀请码</button>`
+                  ? `<button class="btn btn--gold btn--sm" data-new-invite="teacher">生成教师邀请码</button>
+                     <button class="btn btn--gold btn--sm" data-new-invite="admin">生成管理员邀请码</button>`
                   : ""
               }
             </div>
@@ -798,7 +799,8 @@ async function renderInvites(panel, me) {
           <h2 class="h3" style="margin-bottom:12px">说明</h2>
           <p class="field__hint" style="line-height:1.8">
             邀请码 6 位、一次性。角色由邀请码决定——教师邀请码注册出来的账号
-            直接拥有后台权限；<b>观察员</b>邀请码注册出来的账号只能浏览案例、展位与材料，
+            直接拥有后台权限；<b>管理员</b>邀请码开出的账号权限最高，可以管理账号、签发教师码；
+            <b>观察员</b>邀请码注册出来的账号只能浏览案例、展位与材料，
             不能提交作品、参与讨论，也不能用工作台。<br /><br />
             备注只给你自己看，用来记这个码给了谁。生成前会弹一次确认，
             里面写清角色、数量与备注，点错了可以取消。<b>删除</b>会让未使用的码立刻消失，
@@ -935,7 +937,11 @@ async function renderInvites(panel, me) {
         html: `
           <dl class="dialog__facts">
             <div><dt>角色</dt><dd>${esc(label)}${
-              role === "teacher" ? " · 注册即拥有后台权限" : ""
+              role === "teacher"
+                ? " · 注册即拥有后台权限"
+                : role === "admin"
+                  ? " · 注册即拥有全部后台权限"
+                  : ""
             }</dd></div>
             <div><dt>数量</dt><dd>${count} 个</dd></div>
             <div><dt>备注</dt><dd>${note ? esc(note) : "（未填）"}</dd></div>
@@ -944,6 +950,7 @@ async function renderInvites(panel, me) {
             }</dd></div>
           </dl>
           ${role === "teacher" ? `<p style="margin-top:12px">教师邀请码会直接开出后台账号，请确认要发给谁。</p>` : ""}
+          ${role === "admin" ? `<p style="margin-top:12px">管理员邀请码开出的账号能改别人的角色、签发教师码，权限最高。只发给你完全信任的人。</p>` : ""}
         `,
         confirmText: `确认生成 ${count} 个`,
         cancelText: "取消",

@@ -3,7 +3,7 @@
  *   GET  列出邀请码（顺带清掉历史作废记录）
  *   POST 生成新邀请码 { role, note?, count? }
  *
- * 只有 admin 能签发教师邀请码；teacher 只能签发学生与观察员邀请码。
+ * 只有 admin 能签发教师与管理员邀请码；teacher 只能签发学生与观察员邀请码。
  */
 import { ok, fail, methodNotAllowed, readJson, handleError } from "../../../lib/http.js";
 import { getSession, isStaff, randomInviteCode, checkBindings } from "../../../lib/auth.js";
@@ -53,13 +53,13 @@ export async function onRequest(context) {
     if (request.method === "POST") {
       const body = await readJson(request, 2_000);
       const wanted = String(body.role || "student");
-      if (!["student", "teacher", "observer"].includes(wanted)) {
-        return fail("角色只能是 student、teacher 或 observer");
+      if (!["student", "teacher", "admin", "observer"].includes(wanted)) {
+        return fail("角色只能是 student、teacher、admin 或 observer");
       }
 
-      // 提权边界：只有管理员能发教师邀请码；观察员码教师也能发（只读，不涉及提权）
-      if (wanted === "teacher" && session.role !== "admin") {
-        return fail("只有管理员可以签发教师邀请码", 403);
+      // 提权边界：教师与管理员邀请码只有管理员能发；观察员码教师也能发（只读，不涉及提权）
+      if ((wanted === "teacher" || wanted === "admin") && session.role !== "admin") {
+        return fail("只有管理员可以签发教师或管理员邀请码", 403);
       }
 
       const note = String(body.note || "").trim().slice(0, 60);
