@@ -136,6 +136,67 @@ export function toast(message, { type = "info", duration = 2600 } = {}) {
   }, duration);
 }
 
+let openDialog = null;
+
+/**
+ * 确认对话框：正文用 HTML 片段说明「将要发生什么」，所以重要操作能把
+ * 类型、数量、不可逆的后果摆在同一屏里，而不是一句「确定吗」。
+ * 返回 Promise<boolean>：确认 true；取消、Esc、点遮罩都是 false。
+ */
+export function confirmDialog({
+  title = "确认操作",
+  html = "",
+  confirmText = "确认",
+  cancelText = "取消",
+  danger = false,
+} = {}) {
+  // 同一时刻只留一个对话框，避免连点按钮叠出两层
+  openDialog?.(false);
+
+  return new Promise((resolve) => {
+    const previous = document.activeElement;
+    const root = el("div", { class: "dialog", role: "dialog", "aria-modal": "true" });
+    root.innerHTML = `
+      <div class="dialog__veil" data-close></div>
+      <div class="dialog__panel" role="document">
+        <h2 class="dialog__title">${esc(title)}</h2>
+        <div class="dialog__body">${html}</div>
+        <div class="dialog__actions">
+          <button class="btn btn--quiet btn--sm" type="button" data-close>${esc(cancelText)}</button>
+          <button class="btn btn--primary btn--sm${danger ? " btn--danger" : ""}" type="button" data-ok>
+            ${esc(confirmText)}
+          </button>
+        </div>
+      </div>
+    `;
+
+    const onKeydown = (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        close(false);
+      }
+    };
+
+    function close(result) {
+      openDialog = null;
+      document.removeEventListener("keydown", onKeydown);
+      root.remove();
+      if (previous instanceof HTMLElement && document.contains(previous)) previous.focus();
+      resolve(result);
+    }
+
+    openDialog = close;
+    root.querySelectorAll("[data-close]").forEach((node) => {
+      node.addEventListener("click", () => close(false));
+    });
+    root.querySelector("[data-ok]").addEventListener("click", () => close(true));
+    document.addEventListener("keydown", onKeydown);
+
+    document.body.append(root);
+    root.querySelector("[data-ok]").focus();
+  });
+}
+
 export function debounce(fn, wait = 240) {
   let timer = 0;
   return (...args) => {

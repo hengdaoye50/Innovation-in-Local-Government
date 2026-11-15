@@ -1,8 +1,12 @@
 /**
  * GET /api/admin/users —— 账号列表（仅 admin）
+ *
+ * 打开列表时顺手清掉「停用的空账号」：停用 + 名下零内容的，留着只是占位置。
+ * 名下有作品的停用账号不会动，只把数字报回去（purged.skipped）。
  */
 import { ok, fail, methodNotAllowed, handleError } from "../../../lib/http.js";
 import { getSession, checkBindings } from "../../../lib/auth.js";
+import { purgeEmptyDisabledUsers } from "../../../lib/purge.js";
 
 export async function onRequest(context) {
   const { request, env } = context;
@@ -15,6 +19,13 @@ export async function onRequest(context) {
     if (session?.role !== "admin") return fail("只有管理员可以管理账号", 403);
 
     if (request.method !== "GET") return methodNotAllowed(["GET"]);
+
+    let purged = { users: 0, skipped: 0 };
+    try {
+      purged = await purgeEmptyDisabledUsers(env, { keepId: session.id });
+    } catch {
+      purged = { users: 0, skipped: 0 };
+    }
 
     const { results } = await env.DB.prepare(
       `SELECT id, username, display_name, role, status, created_at, last_login_at
@@ -51,6 +62,7 @@ export async function onRequest(context) {
         students: Number(counts?.students) || 0,
         observers: Number(counts?.observers) || 0,
       },
+      purged,
     });
   } catch (err) {
     return handleError(err);

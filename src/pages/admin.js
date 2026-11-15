@@ -1,5 +1,5 @@
 /** 教师后台 —— 案例审核、展位管理、文章发布、邀请码 */
-import { esc, qs, qsa, toast, timeAgo, formatDate, zhWords, mountReveal } from "../lib/dom.js";
+import { esc, qs, qsa, toast, timeAgo, formatDate, zhWords, mountReveal, confirmDialog } from "../lib/dom.js";
 import { admin as adminApi, cases as casesApi, api } from "../lib/api.js";
 import { getState, ROLE_LABEL } from "../lib/store.js";
 
@@ -740,6 +740,11 @@ async function renderInvites(panel, me) {
       <div class="card">
         <header class="admin__panel-head">
           <h2 class="h3">邀请码</h2>
+          ${
+            isAdmin
+              ? `<button class="btn btn--quiet btn--sm" data-purge type="button">清理停用账号</button>`
+              : ""
+          }
         </header>
 
         <div class="invite-maker">
@@ -763,6 +768,10 @@ async function renderInvites(panel, me) {
                 data-invite-count
               />
             </label>
+            <label class="invite-export">
+              <input type="checkbox" data-invite-export checked />
+              <span>生成后导出这一批表格</span>
+            </label>
             <div class="invite-maker__actions">
               <button class="btn btn--primary btn--sm" data-new-invite="student">
                 生成学生邀请码
@@ -775,9 +784,6 @@ async function renderInvites(panel, me) {
                   ? `<button class="btn btn--gold btn--sm" data-new-invite="teacher">生成教师邀请码</button>`
                   : ""
               }
-              <button class="btn btn--ghost btn--sm" data-export-invites type="button">
-                导出表格
-              </button>
             </div>
           </div>
         </div>
@@ -794,10 +800,13 @@ async function renderInvites(panel, me) {
             邀请码 6 位、一次性。角色由邀请码决定——教师邀请码注册出来的账号
             直接拥有后台权限；<b>观察员</b>邀请码注册出来的账号只能浏览案例、展位与材料，
             不能提交作品、参与讨论，也不能用工作台。<br /><br />
-            备注只给你自己看，用来记这个码给了谁。<b>作废</b>会让未使用的码立刻失效，
-            已使用的码保留作账号来历，不能作废。<br /><br />
-            给一个班发码时把<b>数量</b>改成人头数（一次最多 200），生成后点<b>导出表格</b>，
-            导出的是当前这张列表，CSV 用 Excel 直接打开，备注列可以填班级或学号段。
+            备注只给你自己看，用来记这个码给了谁。生成前会弹一次确认，
+            里面写清角色、数量与备注，点错了可以取消。<b>删除</b>会让未使用的码立刻消失，
+            已使用的码保留作账号来历，不能删。<br /><br />
+            给一个班发码时把<b>数量</b>改成人头数（一次最多 200），
+            勾上<b>生成后导出这一批表格</b>，生成完直接下载这一次的码表，CSV 用 Excel 直接打开。<br /><br />
+            列表里只留还能用的码和已用的码；<b>停用的空账号</b>（名下没有案例、展位、留言）
+            会在打开这一页或「用户管理」时自动清掉，有作品的停用账号会保留。
             ${isAdmin ? "" : "<br /><br />你是教师角色，可以签发学生与观察员邀请码。"}
           </p>
         </section>
@@ -808,11 +817,9 @@ async function renderInvites(panel, me) {
   const listEl = qs("[data-invite-list]", panel);
   const noteInput = qs("[data-invite-note]", panel);
   const countInput = qs("[data-invite-count]", panel);
-  /** 当前列表快照，导出表格时直接用它，不再请求一次 */
-  let currentInvites = [];
+  const exportInput = qs("[data-invite-export]", panel);
 
   function statusOf(i) {
-    if (i.revoked) return { text: "已作废", cls: "tag--quiet" };
     if (i.used) return { text: `已使用${i.usedBy ? " · " + i.usedBy : ""}`, cls: "tag--ok" };
     return { text: "未使用", cls: "" };
   }
@@ -822,11 +829,13 @@ async function renderInvites(panel, me) {
     try {
       const res = await adminApi.invites();
       items = Array.isArray(res?.items) ? res.items : [];
+      if (res?.purged?.invites) {
+        toast(`已清理 ${res.purged.invites} 个历史作废邀请码`);
+      }
     } catch (err) {
       listEl.innerHTML = `<div class="empty">${esc(err.message || "读取失败")}</div>`;
       return;
     }
-    currentInvites = items;
 
     if (!items.length) {
       listEl.innerHTML = `<div class="empty">还没有生成邀请码。学生需要凭邀请码才能注册。</div>`;
@@ -836,7 +845,7 @@ async function renderInvites(panel, me) {
     listEl.innerHTML = items
       .map((i) => {
         const st = statusOf(i);
-        const locked = i.used || i.revoked;
+        const locked = i.used;
         return `
       <div class="invite-row${locked ? " is-locked" : ""}" data-code="${esc(i.code)}">
         <div class="invite-row__main">
@@ -854,7 +863,7 @@ async function renderInvites(panel, me) {
           ${
             locked
               ? ""
-              : `<button class="btn btn--quiet btn--sm" data-revoke>作废</button>`
+              : `<button class="btn btn--quiet btn--sm" data-revoke>删除</button>`
           }
         </div>
       </div>`;
@@ -886,39 +895,80 @@ async function renderInvites(panel, me) {
       });
     });
 
-    // 作废
+    // 删除：直接把这个码从库里去掉，列表里不留「已作废」的残行
     qsa("[data-revoke]", listEl).forEach((btn) => {
       btn.addEventListener("click", async () => {
         const row = btn.closest("[data-code]");
         const code = row.dataset.code;
-        if (!window.confirm(`作废邀请码 ${code}？作废后学生无法再用它注册。`)) return;
+        const confirmed = await confirmDialog({
+          title: `删除邀请码 ${code}？`,
+          html: `<p>删除后学生无法再用它注册，这个码也不会再出现在这张列表里。
+                 已经用掉的码不会出现在这里——它已经是某个账号的来历，不能删。</p>`,
+          confirmText: "删除",
+          danger: true,
+        });
+        if (!confirmed) return;
         btn.disabled = true;
         try {
-          await adminApi.revokeInvite(code);
-          toast("已作废");
+          await adminApi.deleteInvite(code);
+          toast(`邀请码 ${code} 已删除`);
           load();
         } catch (err) {
-          toast(err.message || "作废失败", { type: "error" });
+          toast(err.message || "删除失败", { type: "error" });
           btn.disabled = false;
         }
       });
     });
   }
 
+  // 生成：先弹确认窗，把角色 / 数量 / 备注 / 是否导出摆清楚，避免手滑点成另一种码
   qsa("[data-new-invite]", panel).forEach((btn) => {
     btn.addEventListener("click", async () => {
       const role = btn.dataset.newInvite;
+      const label = ROLE_LABEL[role] || "学生";
       const note = noteInput.value.trim();
       const count = Math.min(200, Math.max(1, Number(countInput?.value) || 1));
+      const withExport = Boolean(exportInput?.checked);
+
+      const confirmed = await confirmDialog({
+        title: `生成 ${count} 个${label}邀请码？`,
+        html: `
+          <dl class="dialog__facts">
+            <div><dt>角色</dt><dd>${esc(label)}${
+              role === "teacher" ? " · 注册即拥有后台权限" : ""
+            }</dd></div>
+            <div><dt>数量</dt><dd>${count} 个</dd></div>
+            <div><dt>备注</dt><dd>${note ? esc(note) : "（未填）"}</dd></div>
+            <div><dt>导出</dt><dd>${
+              withExport ? `生成后导出这 ${count} 个码的表格` : "不导出表格"
+            }</dd></div>
+          </dl>
+          ${role === "teacher" ? `<p style="margin-top:12px">教师邀请码会直接开出后台账号，请确认要发给谁。</p>` : ""}
+        `,
+        confirmText: `确认生成 ${count} 个`,
+        cancelText: "取消",
+      });
+      if (!confirmed) return;
+
       btn.disabled = true;
       try {
         const res = await adminApi.createInvite(role, note, count);
-        const label = ROLE_LABEL[role] || "学生";
-        toast(
-          count > 1
-            ? `已生成 ${res?.count || count} 个${label}邀请码，记得导出表格`
-            : `${label}邀请码 ${res?.code || ""} 已生成`
-        );
+        const items = Array.isArray(res?.items) && res.items.length
+          ? res.items
+          : res?.code
+            ? [{ code: res.code, role, note, createdAt: res.createdAt }]
+            : [];
+
+        if (withExport && items.length) {
+          exportInviteCsv(items);
+          toast(`已生成 ${items.length} 个${label}邀请码，表格已下载`);
+        } else {
+          toast(
+            count > 1
+              ? `已生成 ${res?.count || count} 个${label}邀请码`
+              : `${label}邀请码 ${res?.code || ""} 已生成`
+          );
+        }
         noteInput.value = "";
         load();
       } catch (err) {
@@ -929,43 +979,64 @@ async function renderInvites(panel, me) {
     });
   });
 
-  // 导出：CSV 带 BOM，Excel 双击打开不乱码；字段全部加引号，备注里有逗号也不会串列
-  qs("[data-export-invites]", panel)?.addEventListener("click", () => {
-    if (!currentInvites.length) {
-      toast("还没有邀请码可以导出", { type: "error" });
-      return;
+  // 清理：作废码早已即删，这里主要收拾停用的空账号 + 早期软删除留下的残行
+  qs("[data-purge]", panel)?.addEventListener("click", async () => {
+    const confirmed = await confirmDialog({
+      title: "清理停用账号？",
+      html: `<p>会删除<b>已停用、且名下没有任何内容</b>的账号（没有案例、展位、留言、调研、批注），
+             顺手清掉历史作废的邀请码。</p>
+             <p style="margin-top:10px">名下有作品的停用账号会保留。删掉的账号无法恢复，
+             想留着以后启用的账号请先别停用。</p>`,
+      confirmText: "清理",
+      danger: true,
+    });
+    if (!confirmed) return;
+    try {
+      const res = await adminApi.purge();
+      const parts = [];
+      if (res?.users) parts.push(`${res.users} 个停用账号`);
+      if (res?.invites) parts.push(`${res.invites} 个作废邀请码`);
+      toast(parts.length ? `已清理 ${parts.join("、")}` : "没有需要清理的记录");
+      if (res?.skipped) {
+        toast(`另有 ${res.skipped} 个停用账号名下有作品，已保留`);
+      }
+      load();
+    } catch (err) {
+      toast(err.message || "清理失败", { type: "error" });
     }
-    const rows = [["邀请码", "角色", "备注", "状态", "使用者", "生成时间"]];
-    for (const i of currentInvites) {
-      const status = i.revoked ? "已作废" : i.used ? "已使用" : "未使用";
-      rows.push([
-        i.code,
-        ROLE_LABEL[i.role] || "学生",
-        i.note || "",
-        status,
-        i.usedBy || "",
-        (i.createdAt || "").slice(0, 10),
-      ]);
-    }
-    const csv =
-      "\uFEFF" +
-      rows
-        .map((r) => r.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(","))
-        .join("\r\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    const stamp = new Date().toISOString().slice(0, 10);
-    link.href = url;
-    link.download = `邀请码-${stamp}-${currentInvites.length}个.csv`;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    toast(`已导出 ${currentInvites.length} 个邀请码`);
   });
 
   load();
+}
+
+/** 这一批邀请码的表格：CSV 带 BOM，Excel 双击打开不乱码；字段全部加引号，备注里有逗号也不会串列 */
+function exportInviteCsv(items) {
+  const rows = [["序号", "邀请码", "角色", "备注", "生成时间"]];
+  items.forEach((item, index) => {
+    rows.push([
+      index + 1,
+      item.code,
+      ROLE_LABEL[item.role] || "学生",
+      item.note || "",
+      String(item.createdAt || "").replace("T", " ").slice(0, 16),
+    ]);
+  });
+  const csv =
+    "\uFEFF" +
+    rows
+      .map((row) => row.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(","))
+      .join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const stamp = new Date().toISOString().slice(0, 10);
+  const role = ROLE_LABEL[items[0]?.role] || "邀请码";
+  link.href = url;
+  link.download = `邀请码-${stamp}-${role}${items.length}个.csv`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 /* ————————— 用户管理（仅 admin） ————————— */
@@ -979,6 +1050,7 @@ async function renderUsers(panel) {
         <h2 class="h3">账号</h2>
         <span class="meta" data-user-counts></span>
       </header>
+      <p class="field__hint" data-user-hint hidden style="padding:0 22px"></p>
       <div class="admin__list" data-user-list>
         <div class="skeleton" style="height:80px"></div>
       </div>
@@ -988,6 +1060,7 @@ async function renderUsers(panel) {
   async function load() {
     const listEl = qs("[data-user-list]", panel);
     const countEl = qs("[data-user-counts]", panel);
+    const hintEl = qs("[data-user-hint]", panel);
     let data;
     try {
       data = await api.get("/api/admin/users");
@@ -998,9 +1071,19 @@ async function renderUsers(panel) {
 
     const items = data?.items || [];
     const counts = data?.counts || {};
+    const purged = data?.purged || {};
     countEl.textContent = `管理员 ${counts.admins || 0} · 教师 ${counts.teachers || 0} · 学生 ${
       counts.students || 0
     } · 观察员 ${counts.observers || 0}`;
+
+    if (purged.users) toast(`已自动清理 ${purged.users} 个停用的空账号`);
+
+    if (purged.skipped) {
+      hintEl.hidden = false;
+      hintEl.textContent = `另有 ${purged.skipped} 个停用账号名下有作品（案例、展位或留言），为了不连带删掉内容，它们没有自动清理。`;
+    } else {
+      hintEl.hidden = true;
+    }
 
     if (!items.length) {
       listEl.innerHTML = `<div class="empty">还没有账号。</div>`;
@@ -1010,7 +1093,7 @@ async function renderUsers(panel) {
     listEl.innerHTML = items
       .map(
         (u) => `
-      <article class="admin__row" data-user="${u.id}">
+      <article class="admin__row" data-user="${u.id}" data-username="${esc(u.username)}">
         <div class="admin__row-main">
           <div class="admin__row-meta">
             <span class="user-badge" data-role="${esc(u.role)}">${ROLE_TEXT[u.role] || u.role}</span>
@@ -1063,8 +1146,25 @@ async function renderUsers(panel) {
 
     qsa("[data-toggle-status]", listEl).forEach((btn) => {
       btn.addEventListener("click", async () => {
-        const id = btn.closest("[data-user]").dataset.user;
+        const row = btn.closest("[data-user]");
+        const id = row.dataset.user;
+        const username = row.dataset.username || "该账号";
         const status = btn.dataset.status;
+
+        if (status === "disabled") {
+          // 停用会让账号立刻失效；名下没内容的账号还会在下次打开本页时被自动清掉，
+          // 这两个后果都写进确认窗，别让人以为停用只是「临时藏一下」
+          const confirmed = await confirmDialog({
+            title: `停用账号 ${username}？`,
+            html: `<p>停用后该账号立刻无法登录。</p>
+                   <p style="margin-top:10px">如果它名下<b>没有任何内容</b>（没有案例、展位、留言、调研、批注），
+                   下次打开这一页时会被自动清理，删掉就找不回来了。</p>`,
+            confirmText: "停用",
+            danger: true,
+          });
+          if (!confirmed) return;
+        }
+
         btn.disabled = true;
         try {
           await api.patch(`/api/admin/users/${id}`, { status });

@@ -156,6 +156,17 @@ posts      id, title, author, source_url, tags, body, cover_url, published_at
 - 用户名：字母数字，长度 ≥ 6。密码：8–18 位，含大写、小写、数字。
 - 角色：`admin` / `teacher` / `student`。
 
+### 邀请码与账号清理
+
+- 邀请码只有活着的：未使用的可以删除（**硬删除**，库里不留行），已使用的保留作账号来历，
+  删不了。早期版本的 `revoked_at` 软删除已经被废弃，`GET /api/admin/invites` 会顺手清掉残行。
+- 批量生成前必须过一道确认窗（角色、数量、备注、是否导出），导出的是**这一批**的码表，
+  不是整张列表——导出逻辑在 `src/pages/admin.js` 的 `exportInviteCsv`，只吃生成接口的返回值。
+- 停用的账号在打开「用户管理」时自动清理，条件是**名下零内容**（没有案例、展位、留言、调研、
+  批注，也没签发过邀请码）。有内容的停用账号永不自动删除，只在界面报数，
+  清理规则集中在 `functions/lib/purge.js`。停用这个动作本身会连带出「可能被自动清理」的后果，
+  所以停用按钮带确认窗，别把确认去掉。
+
 ## 部署
 
 - GitHub Actions 在 `main` push 时触发：`npm ci` → `npm run build` → `wrangler pages deploy dist`。

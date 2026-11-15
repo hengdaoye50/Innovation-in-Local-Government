@@ -1,12 +1,13 @@
 /**
  * /api/admin/invites
- *   GET  列出邀请码
- *   POST 生成新邀请码 { role: 'student' | 'teacher', note? }
+ *   GET  列出邀请码（顺带清掉历史作废记录）
+ *   POST 生成新邀请码 { role, note?, count? }
  *
- * 只有 admin 能签发教师邀请码；teacher 只能签发学生邀请码。
+ * 只有 admin 能签发教师邀请码；teacher 只能签发学生与观察员邀请码。
  */
 import { ok, fail, methodNotAllowed, readJson, handleError } from "../../../lib/http.js";
 import { getSession, isStaff, randomInviteCode, checkBindings } from "../../../lib/auth.js";
+import { purgeRevokedInvites } from "../../../lib/purge.js";
 
 export async function onRequest(context) {
   const { request, env } = context;
@@ -19,8 +20,16 @@ export async function onRequest(context) {
     if (!isStaff(session)) return fail("无权访问", 403);
 
     if (request.method === "GET") {
+      // 打开后台就把早期软删除的「已作废」残行清掉；清理失败不能拖累列表
+      let purged = 0;
+      try {
+        purged = await purgeRevokedInvites(env);
+      } catch {
+        purged = 0;
+      }
+
       const { results } = await env.DB.prepare(
-        `SELECT i.code, i.role, i.note, i.created_at, i.used_at, i.revoked_at,
+        `SELECT i.code, i.role, i.note, i.created_at, i.used_at,
                 u.username AS used_by_name
          FROM invites i
          LEFT JOIN users u ON u.id = i.used_by
@@ -36,9 +45,8 @@ export async function onRequest(context) {
           used: Boolean(r.used_at),
           usedBy: r.used_by_name || "",
           usedAt: r.used_at || "",
-          revoked: Boolean(r.revoked_at),
-          revokedAt: r.revoked_at || "",
         })),
+        purged: { invites: purged },
       });
     }
 
@@ -57,6 +65,7 @@ export async function onRequest(context) {
       const note = String(body.note || "").trim().slice(0, 60);
       // 批量上限 200：一个班一次发完够用，也挡住误操作把表刷爆
       const count = Math.min(200, Math.max(1, Number(body.count) || 1));
+      const now = new Date().toISOString();
 
       if (count === 1) {
         for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -65,9 +74,9 @@ export async function onRequest(context) {
             await env.DB.prepare(
               "INSERT INTO invites (code, role, note, created_by, created_at) VALUES (?, ?, ?, ?, ?)"
             )
-              .bind(code, wanted, note || null, session.id, new Date().toISOString())
+              .bind(code, wanted, note || null, session.id, now)
               .run();
-            return ok({ code, role: wanted, note, count: 1 });
+            return ok({ code, role: wanted, note, count: 1, createdAt: now });
           } catch (err) {
             if (attempt === 4) throw err;
           }
@@ -77,7 +86,6 @@ export async function onRequest(context) {
 
       // 批量：先在内存里生成互不重复的码，再用 batch 一次写入（D1 batch 是事务性的）。
       // 万一撞上已有记录整批回滚，重试时换一批码。
-      const now = new Date().toISOString();
       for (let attempt = 0; attempt < 3; attempt += 1) {
         const codes = new Set();
         while (codes.size < count) codes.add(randomInviteCode());
@@ -91,8 +99,9 @@ export async function onRequest(context) {
             )
           );
           return ok({
-            items: list.map((code) => ({ code, role: wanted, note })),
+            items: list.map((code) => ({ code, role: wanted, note, createdAt: now })),
             count: list.length,
+            createdAt: now,
           });
         } catch (err) {
           if (attempt === 2) throw err;
