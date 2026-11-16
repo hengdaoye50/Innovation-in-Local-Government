@@ -139,6 +139,10 @@ MPA课程AI辅学项目开发/
 - 提交需登录；作品与作者账号绑定。
 - 支持直接粘贴 Markdown 或上传 `.md` / `.docx`，上传文件在前端解析为文本后提交，
   原始文件不入库。
+- **Word 里的图片不进正文**：mammoth 默认把图片转成 base64 data URI，带两张截图的文档就能把正文
+  撑到几百 KB，而案例提交接口只收 120KB JSON，学生最后看到的是「请求体过大」。导入时一律丢弃图片，
+  并把丢弃数量与 mammoth 的格式告警一起显示给学生（`src/pages/studio.js` 的 `readFileAsText`）。
+- 已知限制：Word 表格经 mammoth 的 markdown 输出会被拍平成一串段落，不还原成表格。
 
 ### 留言与评语
 

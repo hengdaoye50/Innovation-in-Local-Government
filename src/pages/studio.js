@@ -23,18 +23,55 @@ const WORD_MIN = 1000;
 const WORD_MAX = 1500;
 const LINK_LIMIT = 15;
 
-/** 把上传的文件读成纯文本：docx 走 mammoth，其余按文本读 */
+/**
+ * 把上传的文件读成纯文本：docx 走 mammoth，其余按文本读。
+ *
+ * Word 里的图片一律丢掉。mammoth 默认把图片转成 base64 data URI 塞进正文，
+ * 一篇带两张截图的文档就能把正文撑到几百 KB——提交接口只收 120KB，学生最后
+ * 看到的是「请求体过大」，正文里还混着一长串乱码。案例是文字梗概，要配图走调研足迹。
+ *
+ * @returns {Promise<{text: string, notes: string[]}>} notes 是给人看的丢失提示
+ */
 async function readFileAsText(file) {
   const name = file.name.toLowerCase();
   if (name.endsWith(".docx")) {
     // 按需加载，只有真的导入 Word 时才把这部分代码取下来
     const mammoth = (await import("mammoth")).default;
     const buffer = await file.arrayBuffer();
-    const result = await mammoth.convertToMarkdown({ arrayBuffer: buffer });
-    return (result.value || "").replace(/\r\n/g, "\n").trim();
+    let dropped = 0;
+    const result = await mammoth.convertToMarkdown(
+      { arrayBuffer: buffer },
+      {
+        // 每张图都会进这个回调：返回空的 src，正文里就不会出现 base64。
+        // 计数必须放在这里——返回空 src 后正文里连 ![]() 都不会留下，事后数不出来。
+        convertImage: mammoth.images.imgElement(() => {
+          dropped += 1;
+          return Promise.resolve({ src: "" });
+        }),
+      }
+    );
+
+    const text = (result.value || "")
+      .replace(/\r\n/g, "\n")
+      // 兜底：万一还有残留的空图或 data URI，一并清掉（不在这里计数，免得重复）
+      .replace(/!\[[^\]]*\]\((?:data:[^)]*|)\)/g, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+
+    const notes = [];
+    if (dropped) {
+      notes.push(`${dropped} 张图片没有导入（案例只收文字，配图请用调研足迹）`);
+    }
+    const otherWarnings = (result.messages || []).filter(
+      (m) => m.type === "warning" && !/image/i.test(m.message || "")
+    ).length;
+    if (otherWarnings) {
+      notes.push(`另有 ${otherWarnings} 处格式被简化（批注、脚注、文本框等 Word 专有格式）`);
+    }
+    return { text, notes };
   }
   if (name.endsWith(".md") || name.endsWith(".markdown") || name.endsWith(".txt")) {
-    return (await file.text()).replace(/\r\n/g, "\n").trim();
+    return { text: (await file.text()).replace(/\r\n/g, "\n").trim(), notes: [] };
   }
   throw new Error("只支持 .md / .markdown / .txt / .docx");
 }
@@ -353,13 +390,14 @@ export function mountStudio(root) {
       } else {
         // 文档内容直接接到输入框，学生看得见、改得动
         try {
-          const text = await readFileAsText(file);
+          const { text, notes } = await readFileAsText(file);
           if (!text) {
             toast("文件里没有可读取的文字", { type: "error" });
             continue;
           }
           input.value = (input.value ? `${input.value}\n\n` : "") + text;
           updateLinkCounter();
+          if (notes.length) toast(notes.join("；"), { type: "info" });
         } catch (err) {
           toast(err.message || "文件读取失败", { type: "error" });
         }
@@ -995,7 +1033,7 @@ export function mountStudio(root) {
     statusText.dataset.state = "";
 
     try {
-      const text = await readFileAsText(file);
+      const { text, notes } = await readFileAsText(file);
       if (!text) throw new Error("文件里没有可读取的文字");
 
       // 正文已有内容时追问，避免默默覆盖
@@ -1019,9 +1057,11 @@ export function mountStudio(root) {
       }
 
       updateWords();
-      statusText.textContent = `已导入 ${zhWords(text)} 字，请检查段落与来源`;
+      statusText.textContent = `已导入 ${zhWords(text)} 字，请检查段落与来源${
+        notes.length ? ` · ${notes.join("；")}` : ""
+      }`;
       statusText.dataset.state = zhWords(text) >= WORD_MIN ? "ok" : "";
-      toast("文件已导入");
+      toast(notes.length ? `文件已导入，${notes[0]}` : "文件已导入");
     } catch (err) {
       statusText.textContent = err.message || "读取失败";
       statusText.dataset.state = "err";
