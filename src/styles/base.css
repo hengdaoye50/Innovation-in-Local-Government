@@ -606,7 +606,7 @@
   color: var(--plum);
 }
 
-@media (max-width: 860px) {
+@media (max-width: 1080px) {
   .nav.is-dark .nav__links.is-open {
     background: rgba(30, 18, 28, 0.97);
     border-bottom-color: rgba(196, 162, 101, 0.16);
@@ -685,6 +685,8 @@
   display: flex;
   align-items: center;
   gap: 2px;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .nav__link {
@@ -695,6 +697,10 @@
   letter-spacing: 0.01em;
   color: var(--ink-2);
   border-radius: 2px;
+  /* 顶栏六个入口，宽度不够时宁可收窄字号与内边距，
+     也不能让「协作工作台」这类五字标签在词中间折成两行 */
+  white-space: nowrap;
+  flex: 0 0 auto;
   transition: color var(--dur) var(--ease);
 }
 
@@ -796,7 +802,22 @@
   color: var(--ink);
 }
 
-@media (max-width: 860px) {
+/* 六个入口在 1180 往下就开始挤：先收内边距与字号，再往下才折进菜单 */
+@media (max-width: 1180px) {
+  .nav__inner {
+    gap: 14px;
+  }
+  .nav__link {
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+  .nav__link::after {
+    left: 10px;
+    right: 10px;
+  }
+}
+
+@media (max-width: 1080px) {
   .nav__links {
     display: none;
     position: absolute;

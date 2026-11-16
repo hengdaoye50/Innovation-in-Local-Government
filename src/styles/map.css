@@ -22,17 +22,20 @@
   isolation: isolate;
 }
 
-/* 纸底渐隐，衔接到下一屏 */
-.atlas::after {
+/* 底部不再铺纸白渐隐。
+   那条渐隐在首屏就横在视口最下沿，看上去像一条多余的白边，还压住了下面的滚动提示；
+   改成：制图台自己收一条金色细线，下一屏顶部铺一层极淡暗影，读作页与页之间的接缝。 */
+.atlas {
+  box-shadow: inset 0 -1px 0 rgba(196, 162, 101, 0.26);
+}
+
+.atlas + .screen::before {
   content: "";
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 64px;
-  background: linear-gradient(to bottom, rgba(30, 18, 28, 0), var(--paper) 96%);
+  inset: 0 0 auto;
+  height: 32px;
+  background: linear-gradient(to bottom, rgba(30, 18, 28, 0.12), rgba(30, 18, 28, 0));
   pointer-events: none;
-  z-index: 3;
 }
 
 /* 极淡的经纬网 */
@@ -916,7 +919,7 @@
   gap: 10px;
   font-size: 12px;
   letter-spacing: 0.1em;
-  color: rgba(253, 248, 240, 0.42);
+  color: rgba(253, 248, 240, 0.58);
   white-space: nowrap;
 }
 
@@ -1042,8 +1045,7 @@
   .atlas__hint {
     display: none;
   }
-  /* 竖屏时控件挪到左上，附图收到右下角：
-     底部渐隐占 64px，附图要整个坐在它上面，不然会被渐隐吃掉一半 */
+  /* 竖屏时控件挪到左上，附图收到右下角：留出底部控件与细线的位置 */
   .map-inset-svg {
     right: 10px;
     bottom: 76px;
@@ -1058,9 +1060,6 @@
     transform: none;
     width: auto;
     max-height: 46%;
-  }
-  .atlas::after {
-    height: 72px;
   }
 
   /* 分析态：地图摊平，卡片脱离舞台贴到视口底部。

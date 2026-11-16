@@ -32,7 +32,22 @@ export function flushPendingSection() {
 export function goToSection(id) {
   if (scrollToSection(id)) return;
   pendingSection = id;
-  navigate("/");
+  if (currentPath() !== "/") {
+    navigate("/");
+    return;
+  }
+  // 已经在首页却找不到区块：多半是首屏还在挂载（各屏都是异步渲染的），
+  // 这时 navigate("/") 不会触发 hashchange，点了等于没点。隔一小会重试几次，
+  // 期间若路由挂载的 flush 已经把它接走（pendingSection 被清），就直接收手。
+  const retry = (left) => {
+    setTimeout(() => {
+      if (pendingSection !== id) return;
+      if (scrollToSection(id)) pendingSection = "";
+      else if (left > 1) retry(left - 1);
+      else pendingSection = "";
+    }, 350);
+  };
+  retry(3);
 }
 
 export const SITE = {

@@ -77,17 +77,70 @@ export function start() {
   resolve();
 }
 
-/** 平滑滚动到页内区块（主导航用） */
+const NAV_HEIGHT = 64;
+
+/** 用户自己动了滚轮/手指就不要再纠正——那是他在夺回控制权 */
+function watchUserScroll(cancel) {
+  const stop = () => {
+    cancel();
+    remove();
+  };
+  const remove = () => {
+    window.removeEventListener("wheel", stop);
+    window.removeEventListener("touchstart", stop);
+    window.removeEventListener("keydown", onKey);
+  };
+  const onKey = (event) => {
+    if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) {
+      stop();
+    }
+  };
+  window.addEventListener("wheel", stop, { passive: true });
+  window.addEventListener("touchstart", stop, { passive: true });
+  window.addEventListener("keydown", onKey);
+  return remove;
+}
+
+/**
+ * 平滑滚动到页内区块（主导航用）。
+ *
+ * 只在出发时量一次是量不准的：图片、字体、延迟渲染的列表都会在滚动途中改变页面高度，
+ * 落点于是漂到别处——表现就是「点了导航，页面跳到一个不三不四的位置」。
+ * 所以这里滚完再量一次，偏差超过 8px 就纠一次，最多两轮。
+ */
 export function scrollToSection(id) {
   const target = document.getElementById(id);
   if (!target) return false;
-  const navHeight = 64;
-  const top = target.getBoundingClientRect().top + window.scrollY - navHeight;
-  window.scrollTo({
-    top,
-    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-      ? "auto"
-      : "smooth",
-  });
+
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const toTarget = () => {
+    const top = target.getBoundingClientRect().top + window.scrollY - NAV_HEIGHT;
+    window.scrollTo({ top, behavior: reduceMotion ? "auto" : "smooth" });
+  };
+
+  toTarget();
+
+  let attempts = 0;
+  let cancelled = false;
+  let unwatch = () => {};
+  const stop = () => {
+    cancelled = true;
+    clearTimeout(timer);
+    unwatch();
+  };
+  const settle = () => {
+    if (cancelled) return;
+    attempts += 1;
+    // 区块顶部相对视口的偏差：小于 8px 就当对齐了，肉眼看不出来
+    const drift = Math.round(target.getBoundingClientRect().top - NAV_HEIGHT);
+    if (Math.abs(drift) > 8 && attempts <= 2) {
+      toTarget();
+      timer = setTimeout(settle, reduceMotion ? 120 : 480);
+      return;
+    }
+    unwatch();
+  };
+  let timer = setTimeout(settle, reduceMotion ? 80 : 560);
+  unwatch = watchUserScroll(stop);
   return true;
 }
