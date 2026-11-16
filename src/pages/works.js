@@ -57,8 +57,8 @@ export async function mountWorks(root) {
         <div class="screen-ordinal">材料提交</div>
         <h1 class="works__title">我的材料</h1>
         <p class="works__lede">
-          案例分析报告、课堂展示课件、读书报告、文献评析，都在这里交。
-          站点只负责收与摆，不改你的文件；教师批阅后会在这里看到结论与评语。
+          案例分析报告、课堂展示课件、读书报告与文献评析的统一提交入口。文件按原样保存，
+          教师在此批阅并给出结论。
         </p>
       </div>
       <div class="works__head-actions">
@@ -83,8 +83,8 @@ export async function mountWorks(root) {
             ${items.map(rowHtml).join("")}
           </div>`
         : `<div class="works__empty">
-            <div class="eyebrow">还没有交过材料</div>
-            <p>第一次交之前，先把文件准备好：课件请另存一份 PDF，教师批阅时能直接在内嵌预览里翻页。</p>
+            <div class="eyebrow">尚无提交记录</div>
+            <p>一次提交可包含 PDF 或 Word 文件，最多 3 个。课件建议另存为 PDF 后一并提交。</p>
             <a class="btn btn--primary btn--sm" href="#/works/new">提交材料</a>
           </div>`
     }
@@ -158,8 +158,8 @@ export async function mountWorkDetail(root, id) {
   if (!work) {
     root.innerHTML = `<main class="detail-page"><div class="shell shell-narrow empty">
       <div class="screen-ordinal">打不开</div>
-      <h1 class="h2" style="margin:12px 0 16px">这份材料不在了</h1>
-      <p class="lede">它可能被作者撤回，或还没有被教师放上展示板。</p>
+      <h1 class="h2" style="margin:12px 0 16px">材料不存在</h1>
+      <p class="lede">可能已被作者撤回，或尚未被放上展示板。</p>
       <a class="btn btn--ghost btn--sm" href="#/works">回到材料提交</a>
     </div></main>`;
     return;

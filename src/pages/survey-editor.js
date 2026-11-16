@@ -631,7 +631,7 @@ function editorHtml(survey) {
           class="field-editor__title"
           data-title
           maxlength="80"
-          placeholder="给这次调研起个标题"
+          placeholder="调研标题"
           value="${esc(survey?.title || "")}"
           aria-label="标题"
         />
@@ -688,12 +688,12 @@ function editorHtml(survey) {
             class="field-editor__input"
             data-body
             spellcheck="false"
-            placeholder="到那儿之后先看到什么，谁带你走的，问了谁、他怎么说，哪件事和你预想的不一样。
+            placeholder="记录走访时间、地点、对象与主要见闻。
 
-空一行分段。写完一段可以按「＋ 照片」插一张图，图的说明写在方括号里，会变成图注。"
+空一行分段。「＋ 照片」插入图片，方括号内写图注。"
           >${esc(survey?.body || "")}</textarea>
           <div class="field-editor__drop-note" aria-hidden="true">
-            <span>把照片拖进来，或直接 Ctrl+V 粘贴截图</span>
+            <span>照片可拖入此页，或粘贴截图</span>
           </div>
         </div>
         <div class="field-editor__pane field-editor__pane--preview">

@@ -92,17 +92,16 @@ export function studioSection() {
         <div class="screen-head reveal">
           <div class="screen-head__text">
             <div class="screen-ordinal">02 / 协作</div>
-            <h2 id="studio-title">与模型协作，梳理地方创新案例</h2>
+            <h2 id="studio-title">案例撰写</h2>
             <p class="lede">
-              从身边新闻中挖掘灵感，与模型一起检索、追问、核对；最终一起打磨一份案例梗概；
-              润色到你满意后再行提交。
+              从公开新闻出发，检索、核对、成稿并提交。AI 承担检索与结构梳理，正文由作者独立完成。
             </p>
           </div>
           <div class="studio__head-side">
             <ol class="studio__steps">
-              <li><span class="mono">01</span> 贴上来源</li>
-              <li><span class="mono">02</span> 追问细节</li>
-              <li><span class="mono">03</span> 定稿提交</li>
+              <li><span class="mono">01</span> 来源材料</li>
+              <li><span class="mono">02</span> 检索核对</li>
+              <li><span class="mono">03</span> 成稿提交</li>
             </ol>
             <a class="studio__mine-link" href="#/me">我的作品与审核状态 →</a>
           </div>
@@ -185,7 +184,7 @@ export function studioSection() {
               </div>
             </header>
 
-            <p class="draft__lede">没有成稿先在左边对话里攒材料；已有成稿，从这里导入。</p>
+            <p class="draft__lede">尚无成稿时，先在左侧对话中整理材料；已有成稿可直接导入。</p>
 
             <div class="draft__body">
               <section class="draft__section draft__section--first">
@@ -481,14 +480,14 @@ export function mountStudio(root) {
 
     const card = el("div", { class: "chat-start" });
     card.innerHTML = `
-      <div class="chat-start__title">从哪条路开始</div>
+      <div class="chat-start__title">起始方式</div>
       <ol class="chat-start__list">
         <li>
           <button class="chat-start__item" type="button" data-start="material">
             <span class="chat-start__no">01</span>
             <span class="chat-start__body">
-              <span class="chat-start__label">手上有报道、文件或课上讲的例子</span>
-              <span class="chat-start__hint">贴进下面的输入框。我先核对时间、主体和具体动作，再看它新在哪里。</span>
+              <span class="chat-start__label">已有报道、文件或课堂例子</span>
+              <span class="chat-start__hint">粘贴到下方输入框。核对时间、主体与具体动作，再判断创新点。</span>
             </span>
           </button>
         </li>
@@ -496,8 +495,8 @@ export function mountStudio(root) {
           <button class="chat-start__item" type="button" data-start="direction">
             <span class="chat-start__no">02</span>
             <span class="chat-start__body">
-              <span class="chat-start__label">只知道一个方向</span>
-              <span class="chat-start__hint">说出领域、地方或关键词。我去检索近期报道和政策文本，回来与你逐条对。</span>
+              <span class="chat-start__label">仅有方向或关键词</span>
+              <span class="chat-start__hint">给出领域、地方或关键词。检索近期报道与政策文本后逐条核对。</span>
             </span>
           </button>
         </li>
@@ -505,13 +504,13 @@ export function mountStudio(root) {
           <button class="chat-start__item" type="button" data-start="draft">
             <span class="chat-start__no">03</span>
             <span class="chat-start__body">
-              <span class="chat-start__label">已经写了一稿</span>
-              <span class="chat-start__hint">导入右侧编辑区。我按段落看结构、证据和落点，不整段重写。</span>
+              <span class="chat-start__label">已有初稿</span>
+              <span class="chat-start__hint">导入右侧稿件区。按段落检查结构、证据与结论，不做整段重写。</span>
             </span>
           </button>
         </li>
       </ol>
-      <p class="chat-start__note">缺的部分我去检索，查不到就直接说缺口在哪，不替你补。</p>
+      <p class="chat-start__note">缺失的材料会明确标注出处缺口，不做推测性补写。</p>
     `;
     card.querySelectorAll("[data-start]").forEach((btn) => {
       btn.addEventListener("click", () => {

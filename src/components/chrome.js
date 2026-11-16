@@ -216,8 +216,8 @@ export function mountFooter() {
             alt="南开大学周恩来政府管理学院" />
           <div class="footer__brand">${esc(SITE.name)}</div>
           <p class="footer__note">
-            由 ${esc(SITE.course)} 课程共建。案例由学生从公开新闻出发、
-            经与模型协同检索后独立撰写，版权归作者本人所有，引用请注明来源。
+            由 ${esc(SITE.course)} 课程共建。案例由学生依据公开新闻独立撰写，版权归作者本人，
+            引用请注明来源。
           </p>
         </div>
         <div class="footer__links">

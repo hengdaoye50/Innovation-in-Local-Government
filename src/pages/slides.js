@@ -12,15 +12,14 @@ export function slidesSection() {
             <div class="screen-ordinal">03 / 课堂</div>
             <h2 id="slides-title">课堂展示</h2>
             <p class="lede">
-              教师把这一次的材料摆到这块展示板上。点开能看原件、翻课件，也可以在下面接着讨论——
-              同意、反驳，或者补上它漏掉的那一环。
+              教师选出的课程作品，含课件、报告与案例分析。课件可直接翻页，作品下方设有讨论。
             </p>
           </div>
           <div class="screen-head__aside">
             <button class="btn btn--ghost btn--sm" data-podium type="button" aria-pressed="false">
               投影模式
             </button>
-            <a class="btn btn--ghost" href="#/works/new">提交我的材料</a>
+            <a class="btn btn--ghost" href="#/works/new">提交材料</a>
           </div>
         </div>
 

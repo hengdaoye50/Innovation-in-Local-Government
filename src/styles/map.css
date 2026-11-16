@@ -91,6 +91,15 @@
   color: var(--gold);
 }
 
+/* 标题下的说明行：一句名词性描述，说清这张图里有什么，不做宣传 */
+.atlas__lede {
+  margin: 12px 0 0;
+  font-size: 13.5px;
+  letter-spacing: 0.06em;
+  line-height: 1.7;
+  color: rgba(253, 248, 240, 0.52);
+}
+
 .atlas__stats {
   display: flex;
   gap: 30px;

@@ -20,8 +20,8 @@ export async function mountCaseDetail(root, id) {
     root.innerHTML = `
       <div class="shell shell-narrow detail__empty">
         <div class="screen-ordinal">未找到</div>
-        <h1 class="h2" style="margin:12px 0 16px">这个案例还在地图之外</h1>
-        <p class="lede">它可能已被作者撤回，或尚未通过质检。</p>
+        <h1 class="h2" style="margin:12px 0 16px">案例不存在</h1>
+        <p class="lede">可能已被作者撤回，或尚未通过质检。</p>
         <a class="btn btn--ghost" href="#/">回到地图</a>
       </div>
     `;

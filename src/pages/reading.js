@@ -36,7 +36,7 @@ export async function mountReading(root, id) {
   } catch {
     root.innerHTML = `<div class="shell shell-narrow empty">
       <div class="screen-ordinal">未找到</div>
-      <h1 class="h2" style="margin:12px 0 16px">这篇文献还没有入库</h1>
+      <h1 class="h2" style="margin:12px 0 16px">文献不存在</h1>
       <a class="btn btn--ghost btn--sm" href="#blog" data-target="blog">回到文献共读</a>
     </div>`;
     return;

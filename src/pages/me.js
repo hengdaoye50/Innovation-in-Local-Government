@@ -26,7 +26,7 @@ export function mePage() {
         <header class="me__head reveal">
           <p class="eyebrow">个人页</p>
           <h1 class="me__title" data-me-name>${esc(name)}</h1>
-          <p class="lede">账号信息，以及你提交过的作品；审核状态与退回理由都在下面这一列。</p>
+          <p class="lede">账号信息与提交记录。审核状态、退回理由列在下方。</p>
         </header>
 
         <div class="me__grid">

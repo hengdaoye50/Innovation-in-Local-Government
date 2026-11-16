@@ -421,8 +421,8 @@ async function renderSlides(panel) {
             <span class="field__label">演示文件（可选）</span>
             <input class="input admin__file" name="file" type="file" accept="application/pdf,.pdf" />
             <span class="field__hint">
-              只收 <b>PDF</b>。PPT 请先在 PowerPoint 里「另存为 PDF」再上传——
-              浏览器没法内嵌预览 pptx，转成 PDF 才能直接在展位里翻页。单份不超过 20MB。
+            只收 <b>PDF</b>。PPT 需先在 PowerPoint 里另存为 PDF 再上传：浏览器无法内嵌预览 pptx，
+            转为 PDF 才能翻页。单份不超过 20MB。
             </span>
           </label>
           <label class="field">
@@ -1221,7 +1221,7 @@ async function renderWorksQueue(panel) {
         <h3 class="h3">材料批阅</h3>
         <p class="field__hint">
           学生交上来的材料在这里审。三档结论（优秀 / 通过 / 退回）+ 一句评语；
-          勾「放上展示板」才会出现在课堂展示板上，评语要不要一起公开由下面那个开关决定。
+          勾「放上展示板」后作品出现在课堂展示板上；评语是否一同公开由下方开关决定。
         </p>
       </header>
 

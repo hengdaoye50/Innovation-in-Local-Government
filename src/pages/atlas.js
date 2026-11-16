@@ -14,9 +14,8 @@ export function atlasSection() {
       <div class="shell atlas__head">
         <div class="atlas__title-block">
           <div class="atlas__eyebrow">Local Governance Innovation Atlas</div>
-          <h1 class="atlas__title" id="atlas-title">
-            地方创变，<em>落在地图上</em>
-          </h1>
+          <h1 class="atlas__title" id="atlas-title">地方创新全览</h1>
+          <p class="atlas__lede">案例、调研足迹与课程作品的地理索引</p>
         </div>
         <div class="atlas__stats" aria-label="案例统计">
           <div class="stat">

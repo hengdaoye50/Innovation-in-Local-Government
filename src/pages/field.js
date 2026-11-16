@@ -12,8 +12,7 @@ export function fieldSection() {
             <div class="screen-ordinal">05 / 田野</div>
             <h2 id="field-title">调研足迹</h2>
             <p class="lede">
-              课上真正走出去看过的地方。游记、见闻、随手记都行，可以配照片——
-              不必写成案例，留着给下一次去的人当线索。
+              实地调研的记录，含地点、时间、见闻与照片。不参与案例质检，作为后续走访的线索保留。
             </p>
           </div>
           <div class="screen-head__aside">
@@ -43,7 +42,7 @@ export async function mountField(root) {
   }
 
   if (!items.length) {
-    listEl.innerHTML = `<div class="empty">还没有调研记录。第一次走出去之后，把见闻记在这里。</div>`;
+    listEl.innerHTML = `<div class="empty">尚无调研记录；走访后可在此补录。</div>`;
     mountReveal(section);
     return;
   }

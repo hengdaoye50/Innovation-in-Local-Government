@@ -274,15 +274,15 @@ function editorHtml(work) {
           <a class="detail__back" href="${editing ? `#/works/${esc(work.id)}` : "#/works"}">
             ${editing ? "回到这份材料" : "回到我的材料"}
           </a>
-          <span class="meta">${editing ? "改完重交会重新进入待批阅" : "交上之后教师会看到批阅队列里"}</span>
+          <span class="meta">${editing ? "保存后重新进入待批阅" : "提交后进入教师批阅队列"}</span>
         </div>
 
         <header class="work-form__head">
           <div class="screen-ordinal">${editing ? "改稿" : "提交材料"}</div>
           <h1 class="work-form__title">${editing ? esc(work.title) : "交一份材料"}</h1>
           <p class="work-files__hint">
-            站点不改你的文件：PDF 能直接内嵌预览，Word 只提供下载。
-            课件建议在 PowerPoint 里另存一份 PDF 一起交。
+            材料按原样保存，不做格式转换。PDF 可内嵌预览，Word 提供下载；
+            课件建议另存为 PDF 后一并提交。
           </p>
         </header>
 
@@ -356,8 +356,7 @@ function editorHtml(work) {
           </label>
           <p class="field__hint">
             只收 <b>Word（.docx / .doc）</b>与 <b>PDF（.pdf）</b>，单个不超过 ${MAX_FILE_MB}MB，最多 ${MAX_FILES} 个。
-            课件请先在 PowerPoint 里另存为 PDF——站点不转格式，PDF 才能直接翻页看。
-            也可以直接把文件拖到这个页面里。
+            文件也可直接拖入此页。
           </p>
         </section>
 
@@ -368,7 +367,7 @@ function editorHtml(work) {
           </div>
           <div class="work-link-list" data-link-list></div>
           <button class="btn btn--quiet btn--sm" type="button" data-add-link>＋ 添加链接</button>
-          <p class="field__hint">飞书、腾讯文档、网盘都行。链接只登记不抓取，教师点开自己看。</p>
+          <p class="field__hint">支持飞书、腾讯文档、网盘等在线文档。链接只登记，不抓取内容。</p>
         </section>
 
         <footer class="work-form__foot">

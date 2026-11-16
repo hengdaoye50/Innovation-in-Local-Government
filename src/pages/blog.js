@@ -10,7 +10,7 @@ export function blogSection() {
             <div class="screen-ordinal">04 / 文献共读</div>
             <h2 id="blog-title">文献共读</h2>
             <p class="lede">
-              课堂上一起读的方法论文献。可以在正文上划线、写边注，文末有整篇的脉络图和讨论区。
+              课程共读的方法论文献。正文支持划线、边注，文末附全文脉络图与讨论区。
             </p>
           </div>
         </div>
