@@ -3,6 +3,7 @@ import { esc, toast, zhWords, debounce, confirmDialog } from "../lib/dom.js";
 import { surveys as surveysApi, surveyImages } from "../lib/api.js";
 import { renderProse } from "../lib/markdown.js";
 import { compressImage } from "../lib/image.js";
+import { goToSection } from "../components/chrome.js";
 
 const MAX_IMAGES = 9;
 const MIN_CHARS = 80; // 与服务端一致：按原始字符数判，不看 zhWords
@@ -28,7 +29,7 @@ export async function mountSurveyEditor(root, id = "") {
       root.innerHTML = `<div class="shell shell-narrow empty">
         <div class="screen-ordinal">打不开</div>
         <h1 class="h2" style="margin:12px 0 16px">这条记录不在了</h1>
-        <a class="btn btn--ghost btn--sm" href="#field">回到调研足迹</a>
+        <a class="btn btn--ghost btn--sm" href="#field" data-target="field">回到调研足迹</a>
       </div>`;
       return;
     }
@@ -578,7 +579,8 @@ export async function mountSurveyEditor(root, id = "") {
       });
       if (!yes) return;
     }
-    window.location.hash = survey ? `/field/${survey.id}` : "/field";
+    if (survey) window.location.hash = `/field/${survey.id}`;
+    else goToSection("field");
   });
 
   refreshCounters();
@@ -597,7 +599,9 @@ function editorHtml(survey) {
   return `
     <form class="shell field-editor" data-editor data-view="write" novalidate data-form>
       <div class="field-editor__top">
-        <a class="detail__back" href="${editing ? `#/field/${esc(survey.id)}` : "#field"}">
+        <a class="detail__back" href="${editing ? `#/field/${esc(survey.id)}` : "#field"}"${
+          editing ? "" : ' data-target="field"'
+        }>
           ${editing ? "回到这条记录" : "回到调研足迹"}
         </a>
         <span class="field-editor__state mono" data-save-state>

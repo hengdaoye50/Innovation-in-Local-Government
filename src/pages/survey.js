@@ -3,7 +3,7 @@ import { esc, toast, zhWords, confirmDialog } from "../lib/dom.js";
 import { surveys as surveysApi } from "../lib/api.js";
 import { renderProse, stripMarkdown } from "../lib/markdown.js";
 import { getState } from "../lib/store.js";
-import { SITE } from "../components/chrome.js";
+import { goToSection, SITE } from "../components/chrome.js";
 
 const placeOf = (s) =>
   [s.province, s.city, s.district].filter((p, i, arr) => p && arr.indexOf(p) === i).join(" · ");
@@ -28,7 +28,7 @@ export async function mountSurveyDetail(root, id) {
     root.innerHTML = `<div class="shell shell-narrow empty">
       <div class="screen-ordinal">未找到</div>
       <h1 class="h2" style="margin:12px 0 16px">这条调研记录不在了</h1>
-      <a class="btn btn--ghost btn--sm" href="#field">回到调研足迹</a>
+      <a class="btn btn--ghost btn--sm" href="#field" data-target="field">回到调研足迹</a>
     </div>`;
     return;
   }
@@ -52,7 +52,7 @@ export async function mountSurveyDetail(root, id) {
       <div class="field-read__progress" aria-hidden="true"><i data-progress-bar></i></div>
 
       <div class="shell field-read__shell">
-        <a class="detail__back" href="#field">回到调研足迹</a>
+        <a class="detail__back" href="#field" data-target="field">回到调研足迹</a>
 
         <header class="field-read__head">
           <div class="field-read__kicker">
@@ -132,7 +132,8 @@ export async function mountSurveyDetail(root, id) {
     try {
       await surveysApi.remove(survey.id);
       toast("已删除");
-      window.location.hash = "/field";
+      // /field 不是路由，回列表要走区块跳转，否则会落到 404
+      goToSection("field");
     } catch (err) {
       toast(err.message || "删除失败", { type: "error" });
     }

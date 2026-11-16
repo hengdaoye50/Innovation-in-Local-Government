@@ -21,6 +21,7 @@ import {
   currentPath,
   onRouteChange,
   onRouteMounted,
+  scrollToSection,
 } from "./lib/router.js";
 import { getState, setState } from "./lib/store.js";
 import { auth as authApi, api } from "./lib/api.js";
@@ -161,6 +162,22 @@ route("/field/:id", renderSurvey);
 route("/login", renderLogin);
 route("/admin", renderAdmin);
 route("/me", renderMe);
+
+/**
+ * 首页五个区块的兜底路由。
+ * 老链接与手打的地址常写成 #studio / #/studio，这些不是页面而是首页里的区块，
+ * 不接住就会掉进 404（「开始撰写」曾经就是这么断的）。
+ * 真正的页面路由都注册在上面，优先命中，不会被这里截走。
+ */
+for (const id of ["atlas", "studio", "slides", "blog", "field"]) {
+  const landOnSection = async () => {
+    await renderHome();
+    scrollToSection(id);
+  };
+  route(id, landOnSection);
+  route(`/${id}`, landOnSection);
+}
+
 setNotFound(renderNotFound);
 
 /** 各路由的浏览器标题；详情页拿到数据后会自己覆盖成具体标题 */

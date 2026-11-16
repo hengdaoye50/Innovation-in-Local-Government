@@ -266,7 +266,7 @@ export function mountStudio(root) {
             这里是对模型协作、撰写与提交作品的写作台，观察员账号没有写作权限。
             案例地图、课堂展示板与拓展材料仍然可以正常查看。
           </p>
-          <a class="btn btn--ghost btn--sm" href="#atlas" style="margin-top:18px">去看案例地图</a>
+          <a class="btn btn--ghost btn--sm" href="#atlas" data-target="atlas" style="margin-top:18px">去看案例地图</a>
         </div>`;
     }
     return;

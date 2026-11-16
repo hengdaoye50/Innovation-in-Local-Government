@@ -14,6 +14,8 @@ const NAV_ITEMS = [
 
 /** 待滚动的目标区块：从详情页、后台点导航时先回首页，渲染完再滚过去 */
 let pendingSection = "";
+/** document 级代理只挂一次（顶栏整页只挂一次，路由来回不重复） */
+let chromeClickBound = false;
 
 export function flushPendingSection() {
   const id = pendingSection;
@@ -22,10 +24,11 @@ export function flushPendingSection() {
 }
 
 /**
- * 顶栏和页脚指向的都是首页里的区块。不在首页时这些区块根本不存在，
- * 直接让锚点生效会落到 404，所以统一走这里：能滚就滚，不能滚就先回首页。
+ * 顶栏、页脚与正文里的「回到某区块」都指向首页里的区块。
+ * 不在首页时这些区块根本不存在，直接让锚点生效会落到 404，
+ * 所以所有这类链接必须带 data-target 走这里（document 上统一代理，见 mountNav）。
  */
-function goToSection(id) {
+export function goToSection(id) {
   if (scrollToSection(id)) return;
   pendingSection = id;
   navigate("/");
@@ -59,7 +62,6 @@ export function mountNav(actions = {}) {
       </nav>
       <div class="nav__actions">
         <span class="nav__user-slot"></span>
-        <a class="btn btn--primary btn--sm" href="#studio" data-write-cta>开始撰写</a>
         <button class="nav__toggle" aria-label="展开菜单" aria-expanded="false">
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3">
             <path d="M2 5h14M2 9h14M2 13h14" stroke-linecap="round"/>
@@ -98,6 +100,18 @@ export function mountNav(actions = {}) {
     toggle.setAttribute("aria-expanded", "false");
     goToSection(link.dataset.target);
   });
+
+  // 页脚与正文里的「回到某区块」不在顶栏里头，统一在 document 上接一次，
+  // 免得每个页面各自挂监听、漏一个就掉进 404
+  if (!chromeClickBound) {
+    chromeClickBound = true;
+    document.addEventListener("click", (event) => {
+      const link = event.target.closest("a[data-target]");
+      if (!link || host.contains(link)) return;
+      event.preventDefault();
+      goToSection(link.dataset.target);
+    });
+  }
 
   function updateActive() {
     let current = "";
@@ -146,9 +160,6 @@ function renderUser(host, actions) {
   const initial = [...(user.displayName || user.username || "?")][0] || "?";
   // 选过预设头像就画标记，没选过仍是首字母章
   const mark = avatarSvg(user.avatar, 16);
-  // 观察员只读：顶栏不该出现「开始撰写」这个入口，点了也只会被拦
-  const writeCta = host.querySelector("[data-write-cta]");
-  if (writeCta) writeCta.hidden = user.role === "observer";
   slot.innerHTML = `
     <a class="nav-user" href="#/me" title="${esc(user.username)} · 个人页" aria-label="个人页">
       <span class="nav-user__badge" data-role="${esc(user.role)}">${mark || esc(initial)}</span>
@@ -199,12 +210,6 @@ export function mountFooter() {
     </div>
   `;
   host.querySelector("[data-footer-year]").textContent = String(new Date().getFullYear());
-  host.addEventListener("click", (event) => {
-    const link = event.target.closest("[data-target]");
-    if (!link) return;
-    event.preventDefault();
-    goToSection(link.dataset.target);
-  });
   document.body.append(host);
   return host;
 }

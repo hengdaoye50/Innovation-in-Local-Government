@@ -37,7 +37,7 @@ export async function mountReading(root, id) {
     root.innerHTML = `<div class="shell shell-narrow empty">
       <div class="screen-ordinal">未找到</div>
       <h1 class="h2" style="margin:12px 0 16px">这篇文献还没有入库</h1>
-      <a class="btn btn--ghost btn--sm" href="#blog">回到文献共读</a>
+      <a class="btn btn--ghost btn--sm" href="#blog" data-target="blog">回到文献共读</a>
     </div>`;
     return;
   }
@@ -53,7 +53,7 @@ export async function mountReading(root, id) {
   root.innerHTML = `
     <article class="detail detail--reading">
       <div class="shell shell-narrow">
-        <a class="detail__back" href="#blog">回到文献共读</a>
+        <a class="detail__back" href="#blog" data-target="blog">回到文献共读</a>
         <header class="detail__head">
           <div class="detail__place">
             <span class="detail__place-dot"></span>

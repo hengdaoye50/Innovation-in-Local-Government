@@ -22,7 +22,7 @@ export async function mountSlideDetail(root, id) {
   root.innerHTML = `
     <article class="detail">
       <div class="shell shell-narrow">
-        <a class="detail__back" href="#slides">回到展示板</a>
+        <a class="detail__back" href="#slides" data-target="slides">回到展示板</a>
         <header class="detail__head">
           <div class="detail__place">
             <span class="detail__place-dot"></span>
@@ -86,7 +86,7 @@ export async function mountPostDetail(root, id) {
   root.innerHTML = `
     <article class="detail detail--reading">
       <div class="shell shell-narrow">
-        <a class="detail__back" href="#blog">回到拓展材料</a>
+        <a class="detail__back" href="#blog" data-target="blog">回到拓展材料</a>
         <header class="detail__head">
           <div class="detail__meta">${tags}</div>
           <h1 class="detail__title">${esc(post.title)}</h1>
