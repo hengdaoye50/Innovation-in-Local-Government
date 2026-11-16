@@ -131,13 +131,15 @@ export function mountNav(actions = {}) {
   }
 
   function updateActive() {
+    const probe = 140;
     let current = "";
     for (const item of NAV_ITEMS) {
       if (!item.target) continue;
       const section = document.getElementById(item.target);
       if (!section) continue;
-      const rect = section.getBoundingClientRect();
-      if (rect.top <= 140 && rect.bottom > 140) current = item.target;
+      // 取「已经越过检测线」的最后一屏，而不是「正卡在检测线上」的那一屏。
+      // 后者在区块之间会有一段谁都对不上，高亮于是闪断、看着像跳错了。
+      if (section.getBoundingClientRect().top - probe <= 0) current = item.target;
     }
     const path = currentPath();
     host.querySelectorAll(".nav__link").forEach((node) => {
