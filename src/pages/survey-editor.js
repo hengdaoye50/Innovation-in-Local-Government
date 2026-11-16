@@ -260,8 +260,53 @@ export async function mountSurveyEditor(root, id = "") {
     onInput();
   };
 
-  page.querySelectorAll("[data-tool]").forEach((btn) => {
-    btn.addEventListener("click", () => {
+  /**
+   * 整理分段：把「只有单换行的一整片文字」拆成按空行分段的段落。
+   * 纯文本账本式记录（时间 / 地点 / 对象 一行一条）转进来时最需要这一步。
+   * 规则是死的：不碰代码块；同一类结构（连续列表项、连续引用行）之间不插空行，
+   * 有序列表与无序列表算两类，免得「2. 组织架构」把下面的项目符号吞进去。
+   */
+  const tidyParagraphs = () => {
+    const source = bodyInput.value.replace(/\r\n/g, "\n");
+    if (!source.trim()) return;
+
+    const familyOf = (line) => {
+      const text = line.trim();
+      if (/^[-*+]\s/.test(text)) return "bullet";
+      if (/^\d+[.)]\s/.test(text)) return "ordered";
+      if (/^>/.test(text)) return "quote";
+      if (/^#{1,6}\s/.test(text)) return "heading";
+      if (/^\|/.test(text)) return "table";
+      return "";
+    };
+
+    const lines = source.split("\n");
+    const out = [];
+    let inFence = false;
+
+    lines.forEach((line, i) => {
+      if (/^\s*```/.test(line)) inFence = !inFence;
+      const prev = out.length ? out[out.length - 1] : null;
+      const family = familyOf(line);
+      const sameFamily = family !== "" && prev !== null && family === familyOf(prev);
+      const needBlank =
+        i > 0 && !inFence && prev !== null && prev.trim() !== "" && line.trim() !== "" && !sameFamily;
+      if (needBlank) out.push("");
+      out.push(line);
+    });
+
+    const next = out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+    if (next === bodyInput.value.trim()) {
+      toast("看着已经分好了，不用再整");
+      return;
+    }
+    bodyInput.value = next;
+    bodyInput.focus();
+    onInput();
+    toast("已按空行分段，列表和引用没动");
+  };
+
+  page.querySelectorAll("[data-tool]").forEach((btn) => {    btn.addEventListener("click", () => {
       switch (btn.dataset.tool) {
         case "h2":
           prefixLines("## ");
@@ -289,6 +334,9 @@ export async function mountSurveyEditor(root, id = "") {
           break;
         case "hr":
           insertBlock("---");
+          break;
+        case "tidy":
+          tidyParagraphs();
           break;
         case "image":
           filePicker.click();
@@ -600,6 +648,8 @@ function editorHtml(survey) {
           <button class="tool" type="button" data-tool="ol" title="有序列表">1.</button>
           <button class="tool" type="button" data-tool="link" title="链接">链</button>
           <button class="tool" type="button" data-tool="hr" title="分隔线">—</button>
+          <button class="tool" type="button" data-tool="tidy"
+            title="整理分段：把只有单换行的一整片文字按段落拆开">整理</button>
         </div>
         <div class="field-editor__toolgroup">
           <button class="tool tool--accent" type="button" data-tool="image" title="插入照片（也可以直接粘贴或拖进来）">
