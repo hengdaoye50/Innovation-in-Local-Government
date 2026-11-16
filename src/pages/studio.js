@@ -24,11 +24,13 @@ const WORD_MAX = 1500;
 const LINK_LIMIT = 15;
 
 /**
- * 把上传的文件读成纯文本：docx 走 mammoth，其余按文本读。
+ * 把上传的文件读成文本：docx 走 mammoth + 小转换器，其余按文本读。
  *
- * Word 里的图片一律丢掉。mammoth 默认把图片转成 base64 data URI 塞进正文，
- * 一篇带两张截图的文档就能把正文撑到几百 KB——提交接口只收 120KB，学生最后
- * 看到的是「请求体过大」，正文里还混着一长串乱码。案例是文字梗概，要配图走调研足迹。
+ * 走 HTML 而不是 mammoth 自带的 markdown 输出，是因为后者不认表格：单元格会被拍平成
+ * 竖排段落（「事项 / 改革前 / 改革后 / 居住证 / 7 个工作日…」），内容不丢但读不成表。
+ *
+ * 图片一律丢弃：mammoth 默认把图片转成 base64 data URI，一篇带两张截图的文档就能把正文
+ * 撑到几百 KB——提交接口只收 120KB，学生最后看到的是「请求体过大」。案例只收文字，配图走调研足迹。
  *
  * @returns {Promise<{text: string, notes: string[]}>} notes 是给人看的丢失提示
  */
@@ -37,34 +39,22 @@ async function readFileAsText(file) {
   if (name.endsWith(".docx")) {
     // 按需加载，只有真的导入 Word 时才把这部分代码取下来
     const mammoth = (await import("mammoth")).default;
-    const buffer = await file.arrayBuffer();
-    let dropped = 0;
-    const result = await mammoth.convertToMarkdown(
-      { arrayBuffer: buffer },
-      {
-        // 每张图都会进这个回调：返回空的 src，正文里就不会出现 base64。
-        // 计数必须放在这里——返回空 src 后正文里连 ![]() 都不会留下，事后数不出来。
-        convertImage: mammoth.images.imgElement(() => {
-          dropped += 1;
-          return Promise.resolve({ src: "" });
-        }),
-      }
+    const { docxToMarkdown } = await import("../lib/docx.js");
+    const { markdown, droppedImages, otherWarnings } = await docxToMarkdown(
+      mammoth,
+      await file.arrayBuffer()
     );
 
-    const text = (result.value || "")
-      .replace(/\r\n/g, "\n")
-      // 兜底：万一还有残留的空图或 data URI，一并清掉（不在这里计数，免得重复）
+    // 兜底：万一还有残留的空图或 data URI，一并清掉
+    const text = markdown
       .replace(/!\[[^\]]*\]\((?:data:[^)]*|)\)/g, "")
       .replace(/\n{3,}/g, "\n\n")
       .trim();
 
     const notes = [];
-    if (dropped) {
-      notes.push(`${dropped} 张图片没有导入（案例只收文字，配图请用调研足迹）`);
+    if (droppedImages) {
+      notes.push(`${droppedImages} 张图片没有导入（案例只收文字，配图请用调研足迹）`);
     }
-    const otherWarnings = (result.messages || []).filter(
-      (m) => m.type === "warning" && !/image/i.test(m.message || "")
-    ).length;
     if (otherWarnings) {
       notes.push(`另有 ${otherWarnings} 处格式被简化（批注、脚注、文本框等 Word 专有格式）`);
     }

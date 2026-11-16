@@ -1,4 +1,4 @@
-# 地方政府创新案例库（Innovation in Local Government）
+﻿# 地方政府创新案例库（Innovation in Local Government）
 
 ## 项目定位
 
@@ -67,7 +67,7 @@ MPA课程AI辅学项目开发/
 │   │                         # survey-editor（编写与编辑）/ works / work-editor（材料提交）/
 │   │                         # case / detail / reading / me / login / admin
 │   ├── components/           # map（SVG 浮雕地图）、chrome（顶栏页脚）、comments
-│   └── lib/                  # api / router / store / dom / markdown / image（前端压图）/ demo
+│   └── lib/                  # api / router / store / dom / markdown / image（压图）/ docx（Word 转换）/ demo
 ├── public/
 │   ├── data/china.json       # 中国省级 GeoJSON（已修正环绕向，见 scripts/fix-geojson.mjs）
 │   ├── data/cities.json      # 省 / 地级市 / 区县 三级坐标索引（定位精度到区县）
@@ -146,7 +146,9 @@ MPA课程AI辅学项目开发/
 - **Word 里的图片不进正文**：mammoth 默认把图片转成 base64 data URI，带两张截图的文档就能把正文
   撑到几百 KB，而案例提交接口只收 120KB JSON，学生最后看到的是「请求体过大」。导入时一律丢弃图片，
   并把丢弃数量与 mammoth 的格式告警一起显示给学生（`src/pages/studio.js` 的 `readFileAsText`）。
-- 已知限制：Word 表格经 mammoth 的 markdown 输出会被拍平成一串段落，不还原成表格。
+- **Word 里的表格要还原成 Markdown 表**：mammoth 自带的 markdown 输出不认表格，会把单元格拍平成
+  竖排段落，所以改走它的 HTML 输出，再用 `src/lib/docx.js` 里的小转换器落到 Markdown
+  （只处理 mammoth 真会吐的那套标签，不追求通用 HTML→Markdown）。单元格内的 `|` 会转义成 `\|`。
 
 ### 留言与评语
 
