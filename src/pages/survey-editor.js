@@ -44,21 +44,36 @@ export async function mountSurveyEditor(root, id = "") {
   const districtSel = page.querySelector("[data-district]");
   const geo = { provinces: [], cities: [], districts: [] };
 
+  const optionsHtml = (names, placeholder) =>
+    `<option value="">${placeholder}</option>` +
+    names.map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join("");
+
+  /**
+   * 旧的记录里可能存着坐标索引里已经改名的地名（区县合并、撤县设区都发生过）。
+   * 这种值不能被悄悄丢掉——原样摆进选项并选好，让人看得见、能改、不丢精度。
+   */
+  const withKept = (names, keep) => (keep && !names.includes(keep) ? [keep, ...names] : names);
+
   const fillCities = (province, keep) => {
-    const list = geo.cities.filter((c) => c.province === province);
-    citySel.innerHTML =
-      `<option value="">${list.length ? "请选择" : "暂无数据"}</option>` +
-      list.map((c) => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join("");
+    const names = withKept(
+      geo.cities.filter((c) => c.province === province).map((c) => c.name),
+      keep
+    );
+    citySel.innerHTML = optionsHtml(names, names.length ? "请选择" : "暂无数据");
     citySel.value = keep || "";
-    citySel.disabled = !list.length;
+    citySel.disabled = !names.length;
   };
 
   const fillDistricts = (province, city, keep) => {
-    const list = geo.districts.filter((d) => d.province === province && d.city === city);
-    districtSel.innerHTML =
-      `<option value="">${list.length ? "可选" : "暂无区县数据"}</option>` +
-      list.map((d) => `<option value="${esc(d.name)}">${esc(d.name)}</option>`).join("");
+    const names = withKept(
+      geo.districts.filter((d) => d.province === province && d.city === city).map((d) => d.name),
+      keep
+    );
+    districtSel.innerHTML = optionsHtml(names, names.length ? "可选" : "暂无区县数据");
     districtSel.value = keep || "";
+    // 模板里是 disabled（地区数据还没到位时不该能点），拿到名单后必须重新打开，
+    // 否则选完市这一格永远是灰的
+    districtSel.disabled = !names.length;
   };
 
   try {
