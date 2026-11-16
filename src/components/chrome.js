@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { label: "案例地图", target: "atlas" },
   { label: "协作工作台", target: "studio" },
   { label: "课堂展示", target: "slides" },
+  { label: "材料提交", route: "/works" },
   { label: "文献共读", target: "blog" },
   { label: "调研足迹", target: "field" },
 ];
@@ -52,9 +53,10 @@ export function mountNav(actions = {}) {
         <span class="nav__brand-short">${esc(SITE.short)}</span>
       </a>
       <nav class="nav__links" aria-label="主导航">
-        ${NAV_ITEMS.map(
-          (item) =>
-            `<a class="nav__link" href="#${item.target}" data-target="${item.target}">${item.label}</a>`
+        ${NAV_ITEMS.map((item) =>
+          item.route
+            ? `<a class="nav__link" href="#${item.route}" data-route="${item.route}">${item.label}</a>`
+            : `<a class="nav__link" href="#${item.target}" data-target="${item.target}">${item.label}</a>`
         ).join("")}
         <a class="nav__link nav__link--mobile" href="#/login">登录 / 注册</a>
         <a class="nav__link nav__link--mobile" href="#/me">个人页</a>
@@ -116,12 +118,20 @@ export function mountNav(actions = {}) {
   function updateActive() {
     let current = "";
     for (const item of NAV_ITEMS) {
+      if (!item.target) continue;
       const section = document.getElementById(item.target);
       if (!section) continue;
       const rect = section.getBoundingClientRect();
       if (rect.top <= 140 && rect.bottom > 140) current = item.target;
     }
+    const path = currentPath();
     host.querySelectorAll(".nav__link").forEach((node) => {
+      // 独立路由（材料提交）按路径判，首页区块按滚动位置判
+      if (node.dataset.route) {
+        node.classList.toggle("is-active", path.startsWith(node.dataset.route));
+        return;
+      }
+      if (!node.dataset.target) return;
       node.classList.toggle("is-active", node.dataset.target === current);
     });
   }

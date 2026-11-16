@@ -132,6 +132,39 @@ export const surveyImages = {
   remove: (id) => api.del(`/api/survey-images/${encodeURIComponent(id)}`),
 };
 
+/* —— 材料提交 —— */
+
+const workQuery = (params = {}) =>
+  new URLSearchParams(
+    Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== "")
+  ).toString();
+
+export const works = {
+  // 自己的全部（含被退回的）
+  mine: (limit = 50) => api.get(`/api/works?mine=1&limit=${limit}`),
+  // 教师批阅队列
+  queue: (params = {}) => api.get(`/api/works?queue=1&${workQuery(params)}`),
+  // 已放上展示板的：所有人可见
+  featured: (limit = 24) => api.get(`/api/works?featured=1&limit=${limit}`),
+  detail: (id) => api.get(`/api/works/${encodeURIComponent(id)}`),
+  create: (payload) => api.post("/api/works", payload),
+  update: (id, payload) => api.put(`/api/works/${encodeURIComponent(id)}`, payload),
+  review: (id, payload) => api.patch(`/api/works/${encodeURIComponent(id)}`, payload),
+  remove: (id) => api.del(`/api/works/${encodeURIComponent(id)}`),
+};
+
+export const workFiles = {
+  // 文件名走查询串，正文就是文件本身，不做 base64
+  upload: (file) =>
+    request(`/api/works/files?name=${encodeURIComponent(file.name)}`, {
+      method: "POST",
+      body: file,
+      headers: { "Content-Type": file.type || "application/octet-stream" },
+    }),
+  // 下载/预览地址：直接给浏览器用，不走 fetch
+  url: (id) => `/api/works/files/${encodeURIComponent(id)}`,
+};
+
 export const posts = {
   list: (params = {}) => {
     const q = new URLSearchParams(

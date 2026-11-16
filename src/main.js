@@ -7,6 +7,7 @@ import "./styles/boards.css";
 import "./styles/detail.css";
 import "./styles/reading.css";
 import "./styles/field.css";
+import "./styles/works.css";
 import "./styles/layers.css";
 import "./styles/auth.css";
 // 触屏兜底必须最后加载：它覆盖的规则权重与自身相同，靠加载顺序取胜
@@ -34,6 +35,8 @@ import { blogSection, mountBlog } from "./pages/blog.js";
 import { fieldSection, mountField } from "./pages/field.js";
 import { mountSurveyDetail } from "./pages/survey.js";
 import { mountSurveyEditor } from "./pages/survey-editor.js";
+import { mountWorks, mountWorkDetail } from "./pages/works.js";
+import { mountWorkEditor } from "./pages/work-editor.js";
 import { mountReading } from "./pages/reading.js";
 import { mountCaseDetail } from "./pages/case.js";
 import { mountSlideDetail, mountPostDetail } from "./pages/detail.js";
@@ -120,6 +123,28 @@ async function renderSurveyEdit({ id }) {
   await mountSurveyEditor(app.querySelector("#detail-root"), id);
 }
 
+/* —————————————— 材料提交 —————————————— */
+
+async function renderWorks() {
+  app.innerHTML = `<main id="detail-root"></main>`;
+  await mountWorks(app.querySelector("#detail-root"));
+}
+
+async function renderWorkDetail({ id }) {
+  app.innerHTML = `<main id="detail-root"></main>`;
+  await mountWorkDetail(app.querySelector("#detail-root"), id);
+}
+
+async function renderWorkNew() {
+  app.innerHTML = `<main id="detail-root"></main>`;
+  await mountWorkEditor(app.querySelector("#detail-root"));
+}
+
+async function renderWorkEdit({ id }) {
+  app.innerHTML = `<main id="detail-root"></main>`;
+  await mountWorkEditor(app.querySelector("#detail-root"), id);
+}
+
 async function renderLogin() {
   document.body.classList.add("page-auth");
   app.innerHTML = `<main id="detail-root"></main>`;
@@ -159,6 +184,10 @@ route("/reading/:id", renderReading);
 route("/field/new", renderSurveyForm);
 route("/field/:id/edit", renderSurveyEdit);
 route("/field/:id", renderSurvey);
+route("/works", renderWorks);
+route("/works/new", renderWorkNew);
+route("/works/:id/edit", renderWorkEdit);
+route("/works/:id", renderWorkDetail);
 route("/login", renderLogin);
 route("/admin", renderAdmin);
 route("/me", renderMe);
@@ -187,6 +216,8 @@ const PAGE_TITLES = {
   "/admin": "教师后台",
   "/me": "个人页",
   "/field/new": "记录一次调研",
+  "/works": "材料提交",
+  "/works/new": "提交材料",
 };
 
 onRouteChange((path) => {

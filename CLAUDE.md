@@ -64,7 +64,8 @@ MPA课程AI辅学项目开发/
 │   ├── main.js               # 路由与页面挂载
 │   ├── styles/               # tokens / base / map / studio / boards / detail / auth / touch
 │   ├── pages/                # atlas / studio / slides / blog / field / survey（阅读）/
-│   │                         # survey-editor（编写与编辑）/ case / detail / reading / me / login / admin
+│   │                         # survey-editor（编写与编辑）/ works / work-editor（材料提交）/
+│   │                         # case / detail / reading / me / login / admin
 │   ├── components/           # map（SVG 浮雕地图）、chrome（顶栏页脚）、comments
 │   └── lib/                  # api / router / store / dom / markdown / image（前端压图）/ demo
 ├── public/
@@ -81,8 +82,8 @@ MPA课程AI辅学项目开发/
 │   └── sample-case.docx      # Word 版（同内容的转换产物）
 ├── functions/
 │   ├── api/                  # Pages Functions（auth / cases / chat / slides / posts / surveys /
-│   │                         # survey-images / readings / comments / views / admin）
-│   └── lib/                  # 服务端共享模块（http / auth / db / llm / search / review）
+│   │                         # survey-images / works / readings / comments / views / admin）
+│   └── lib/                  # 服务端共享模块（http / auth / db / works / blobstore / llm / search / review）
 ├── migrations/               # D1 schema 与种子数据
 └── .github/workflows/deploy.yml
 ```
@@ -103,12 +104,15 @@ MPA课程AI辅学项目开发/
 | 地图首页 | `/` | 3D 中国地图 + 案例节点，点击进入案例详情 |
 | 案例详情 | `/#/case/:id` | 梗概正文、来源链接、留言 |
 | 协作工作台 | `/#/studio` | AI 对话检索 + 梗概撰写 + 提交 |
-| 展示板 | `/#/slides` | 课堂 PPT 展位，每个展位含 AI 评语与讨论 |
 | 拓展材料 | `/#/blog` | 课程推荐的文章、论文与方法笔记 |
 | 调研足迹 | `/#/field` | 首页第五屏：师生实地调研的见闻列表，有图就显示缩略图 |
 | 足迹详情 | `/#/field/:id` | 图文阅读：衬线正文、图版与图注、点图放大、页边目录 |
 | 足迹编写 | `/#/field/new`、`/#/field/:id/edit` | Markdown 分栏编辑、实时预览、照片上传、本机草稿 |
-| 教师后台 | `/#/admin` | 邀请码、作品审核、下架、展位管理 |
+| 课堂展示 | `/#/slides` | 展示板：教师放上来的材料 + 历史展位，含投影模式 |
+| 材料提交 | `/#/works` | 学生交案例分析报告、课件、读书报告、文献评析；站点不预处理 |
+| 材料详情 | `/#/works/:id` | 附件下载 / PDF 内嵌预览、教师批阅结论与评语 |
+| 提交与改稿 | `/#/works/new`、`/#/works/:id/edit` | 类型、课程学期、组别、说明、附件、外链 |
+| 教师后台 | `/#/admin` | 邀请码、案例审核、材料批阅、展位管理 |
 
 ## 内容规则
 
@@ -170,6 +174,11 @@ posts      id, title, author, source_url, tags, body, cover_url, published_at
 surveys    id, title, province, city, district, lng, lat, body, author_id, author_name,
            visited_at, status, created_at, updated_at
 survey_images  id, survey_id, owner_id, mime, width, height, bytes(BLOB), created_at
+works      id, kind, title, course, term, group_name, members, summary, links_json,
+           author_id, author_name, status, verdict, comment, comment_public,
+           reviewer_id, reviewer_name, reviewed_at, featured, featured_at,
+           created_at, updated_at
+work_files id, work_id, owner_id, file_name, mime, size, storage(r2|kv), created_at
 ```
 
 ### 调研足迹的配图
@@ -183,6 +192,17 @@ survey_images  id, survey_id, owner_id, mime, width, height, bytes(BLOB), create
 - 正文里用 `![图注](/api/survey-images/<id>)` 引用；保存时 `syncSurveyImages`
   把被引用的图挂到这条记录，已从正文删掉的图连带删除；传了却没保存的图，
   一天后由 `pruneOrphanImages` 清掉。
+
+### 材料提交的附件
+
+附件走 R2（绑定名 `FILES`，bucket `innovation-works`），元信息在 D1 的 `work_files`。
+
+- **只收 Word（.docx / .doc）与 PDF（.pdf）**，单个 ≤20MB，一份材料最多 3 个附件。
+  不收 PPT / ZIP / 图片：站点不做格式转换，课件要自己另存为 PDF，PDF 也是唯一能内嵌翻页的格式。
+- 类型判定是扩展名 **AND** 文件头双检（`functions/lib/blobstore.js` 的 `verifyFileBytes`）：
+  PDF 认 `%PDF-`，docx 认 zip 魔数，doc 认 OLE 魔数。改个后缀就想把别的格式混进来会直接被拒。
+- `FILES` 绑定缺失时 `blobstore.js` 自动退回 KV（总量 1GB，只够过渡），
+  `work_files.storage` 记着每个附件当初落在哪，换存储后老附件照旧能取。
 
 ## 认证
 

@@ -98,6 +98,39 @@ PATCH  /api/admin/cases/:id    { status }
 统一响应：成功 `{ ok: true, data }`；失败 `{ ok: false, error, detail? }`，HTTP 状态码对语义。
 所有写接口校验会话、角色和请求体大小；`/api/chat` 按 IP 做速率限制。
 
+## 3.1 材料提交板块（/works）
+
+把「课堂展示」从教师单向下传，扩成一个学生交材料、教师批阅、教师把材料放上展示板的通道。
+与协作工作台的边界：工作台负责「和模型一起把内容写出来」，这里**只收成品**——
+站点不转格式、不生成缩略图、不跑模型、不打分，PDF 用浏览器原生内嵌预览，其余格式只下载。
+
+| 环节 | 说明 |
+| --- | --- |
+| 提交 | 类型（案例分析报告 / 课堂展示课件 / 读书报告 / 文献评析 / 其他）+ 标题 + 课程学期 + 组别 + 说明 + 外链 + 1–3 个附件；附件只收 Word（.docx / .doc）与 PDF，单个 ≤20MB |
+| 状态 | `submitted` 待批阅 → `returned` 退回重交 / `reviewed` 已批阅 → `featured` 已放上展示板；`archived` 归档 |
+| 批阅 | 三档结论（优秀 / 通过 / 退回）+ 评语，评语默认只有本人与教师可见，上不上展示板、评语要不要一起公开，由教师在批阅时分别决定 |
+| 可见 | 学生看自己的全部 + 本课程已展出的；教师看全部并按课程 / 学期 / 类型 / 状态筛；观察员只看展出 |
+| 展示 | 「课堂展示板」承接展示：已放上展示板的 works 与历史 slides 并列渲染，投影模式保留 |
+
+数据模型（迁移 0012）：`works` 存提交单与批阅结论，`work_files` 存附件元信息；
+文件本身走 R2（绑定 `FILES`，bucket `innovation-works`），`functions/lib/blobstore.js` 把 R2 与 KV 封在一层里——
+绑定缺失时退回 KV，补上后新上传自动改存 R2，代码不动。
+
+API：
+
+```text
+GET    /api/works?mine=1 | ?queue=1&course=&term=&kind=&status= | ?featured=1 | ?limit=
+POST   /api/works            { kind, title, course, term, groupName, members, summary, links, files[] }
+GET    /api/works/:id
+PUT    /api/works/:id        作者改稿（reviewed 之后必须先被退回）
+PATCH  /api/works/:id        教师批阅 { verdict, comment, commentPublic, featured }
+DELETE /api/works/:id        作者撤回（仅未批阅）/ 教师归档
+POST   /api/works/files      上传附件（原始二进制，单份 ≤20MB）
+GET    /api/works/files/:id  取附件（按作品可见性鉴权，不许裸链）
+```
+
+分期：P1 表 + 上传 + 学生提交与我的材料 + 教师批阅 → P2 展示板与讨论 → P3 按课程学期统计与导出。
+
 ## 4. 实施阶段
 
 | 阶段 | 内容 | 产出 |

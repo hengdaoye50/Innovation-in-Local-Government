@@ -1,7 +1,8 @@
 /** 教师后台 —— 案例审核、展位管理、文章发布、邀请码 */
 import { esc, qs, qsa, toast, timeAgo, formatDate, zhWords, mountReveal, confirmDialog } from "../lib/dom.js";
-import { admin as adminApi, cases as casesApi, api } from "../lib/api.js";
+import { admin as adminApi, cases as casesApi, api, works as worksApi, workFiles } from "../lib/api.js";
 import { getState, ROLE_LABEL } from "../lib/store.js";
+import { COURSES, TERMS, WORK_KINDS } from "../lib/courses.js";
 
 const STATUS_LABEL = {
   pending: { text: "待质检", cls: "tag--warn" },
@@ -9,9 +10,6 @@ const STATUS_LABEL = {
   rejected: { text: "已退回", cls: "tag--quiet" },
   hidden: { text: "已下架", cls: "tag--quiet" },
 };
-
-const COURSES = ["地方政府创新", "公共政策分析"];
-const TERMS = ["2026 秋", "2026 春", "2025 秋", "2025 春", "2024 秋", "2024 春"];
 
 export function mountAdmin(root) {
   const { user, authChecked } = getState();
@@ -47,6 +45,7 @@ export function mountAdmin(root) {
       <div class="admin__tabs" role="tablist">
         <button class="admin__tab is-on" data-tab="stats" role="tab">数据</button>
         <button class="admin__tab" data-tab="cases" role="tab">案例审核</button>
+        <button class="admin__tab" data-tab="works" role="tab">材料批阅</button>
         <button class="admin__tab" data-tab="slides" role="tab">展位管理</button>
         <button class="admin__tab" data-tab="posts" role="tab">拓展材料</button>
         <button class="admin__tab" data-tab="invites" role="tab">邀请码</button>
@@ -55,6 +54,7 @@ export function mountAdmin(root) {
 
       <section class="admin__panel" data-panel="stats"></section>
       <section class="admin__panel" data-panel="cases" hidden></section>
+      <section class="admin__panel" data-panel="works" hidden></section>
       <section class="admin__panel" data-panel="slides" hidden></section>
       <section class="admin__panel" data-panel="posts" hidden></section>
       <section class="admin__panel" data-panel="invites" hidden></section>
@@ -65,6 +65,7 @@ export function mountAdmin(root) {
   const panels = {
     stats: qs('[data-panel="stats"]', root),
     cases: qs('[data-panel="cases"]', root),
+    works: qs('[data-panel="works"]', root),
     slides: qs('[data-panel="slides"]', root),
     posts: qs('[data-panel="posts"]', root),
     invites: qs('[data-panel="invites"]', root),
@@ -74,6 +75,7 @@ export function mountAdmin(root) {
   const loaders = {
     stats: () => renderStats(panels.stats),
     cases: () => renderCases(panels.cases),
+    works: () => renderWorksQueue(panels.works),
     slides: () => renderSlides(panels.slides),
     posts: () => renderPosts(panels.posts),
     invites: () => renderInvites(panels.invites, user),
@@ -1184,6 +1186,304 @@ async function renderUsers(panel) {
       });
     });
   }
+
+  load();
+}
+
+/* ————————— 材料批阅 ————————— */
+
+const WORK_STATUS = {
+  submitted: { text: "待批阅", cls: "tag--warn" },
+  returned: { text: "已退回", cls: "tag--err" },
+  reviewed: { text: "已批阅", cls: "tag--ok" },
+  archived: { text: "已归档", cls: "tag--quiet" },
+};
+
+const WORK_VERDICT = {
+  excellent: { text: "优秀", cls: "tag--ok" },
+  pass: { text: "通过", cls: "tag--ok" },
+  return: { text: "退回", cls: "tag--err" },
+};
+
+function fileSizeText(bytes) {
+  const n = Number(bytes) || 0;
+  if (n >= 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)} MB`;
+  if (n >= 1024) return `${Math.round(n / 1024)} KB`;
+  return `${n} B`;
+}
+
+async function renderWorksQueue(panel) {
+  const filters = { course: "", term: "", kind: "", status: "submitted" };
+
+  panel.innerHTML = `
+    <div class="card works-queue">
+      <header class="admin__section-head">
+        <h3 class="h3">材料批阅</h3>
+        <p class="field__hint">
+          学生交上来的材料在这里审。三档结论（优秀 / 通过 / 退回）+ 一句评语；
+          勾「放上展示板」才会出现在课堂展示板上，评语要不要一起公开由下面那个开关决定。
+        </p>
+      </header>
+
+      <div class="works-queue__filters">
+        <select class="select" data-f-course>
+          <option value="">全部课程</option>
+          ${COURSES.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("")}
+        </select>
+        <select class="select" data-f-term>
+          <option value="">全部学期</option>
+          ${TERMS.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("")}
+        </select>
+        <select class="select" data-f-kind>
+          <option value="">全部类型</option>
+          ${WORK_KINDS.map((k) => `<option value="${k.value}">${k.label}</option>`).join("")}
+        </select>
+        <select class="select" data-f-status>
+          <option value="">全部状态</option>
+          <option value="submitted" selected>待批阅</option>
+          <option value="returned">已退回</option>
+          <option value="reviewed">已批阅</option>
+          <option value="archived">已归档</option>
+        </select>
+      </div>
+
+      <div class="works-queue__list" data-queue-list>
+        <div class="skeleton" style="height:120px"></div>
+      </div>
+    </div>
+  `;
+
+  const listHost = qs("[data-queue-list]", panel);
+
+  const load = async () => {
+    listHost.innerHTML = `<div class="skeleton" style="height:120px"></div>`;
+    let items = [];
+    try {
+      const res = await worksApi.queue({
+        course: filters.course,
+        term: filters.term,
+        kind: filters.kind,
+        status: filters.status,
+        limit: 100,
+      });
+      items = Array.isArray(res?.items) ? res.items : [];
+      if (res?.storage === "kv") {
+        listHost.dataset.storage = "kv";
+      }
+    } catch (err) {
+      listHost.innerHTML = `<div class="empty">${esc(err.message || "读取失败")}</div>`;
+      return;
+    }
+
+    if (!items.length) {
+      listHost.innerHTML = `<div class="empty">这个筛选下没有材料。</div>`;
+      return;
+    }
+
+    listHost.innerHTML = `
+      ${listHost.dataset.storage === "kv" ? `<div class="works-queue__banner">附件目前暂存在 KV（总量约 1GB，还要和登录会话共用）。R2 开通并配上 FILES 绑定后会自动改存 R2，代码不用动。</div>` : ""}
+      <div class="works-queue__count meta">${items.length} 份</div>
+      ${items
+        .map((w) => {
+          const status = WORK_STATUS[w.status] || WORK_STATUS.submitted;
+          const verdict = WORK_VERDICT[w.verdict];
+          return `
+          <article class="works-queue__row" data-work-row="${esc(w.id)}">
+            <div class="works-queue__row-main">
+              <div class="works-queue__row-meta">
+                <span class="tag tag--quiet">${esc(w.kindLabel || "材料")}</span>
+                ${w.course ? `<span class="meta">${esc(w.course)}</span>` : ""}
+                ${w.term ? `<span class="meta mono">${esc(w.term)}</span>` : ""}
+                <span class="tag ${status.cls}">${status.text}</span>
+                ${verdict ? `<span class="tag ${verdict.cls}">${esc(verdict.text)}</span>` : ""}
+                ${w.featured ? `<span class="tag tag--warn">已展出</span>` : ""}
+              </div>
+              <button class="works-queue__row-title" type="button" data-open="${esc(w.id)}">
+                ${esc(w.title)}
+              </button>
+              <div class="meta">
+                ${esc(w.author)}${w.groupName ? ` · ${esc(w.groupName)}` : ""} ·
+                ${(w.files || []).length} 个附件 ·
+                ${esc((w.createdAt || "").slice(0, 10))}
+              </div>
+            </div>
+            <div class="works-queue__row-side">
+              <a class="btn btn--quiet btn--sm" href="#/works/${esc(w.id)}">打开</a>
+            </div>
+          </article>`;
+        })
+        .join("")}
+    `;
+
+    listHost.querySelectorAll("[data-open]").forEach((btn) => {
+      btn.addEventListener("click", () => openReview(btn.dataset.open));
+    });
+  };
+
+  const openReview = async (id) => {
+    listHost.innerHTML = `<div class="skeleton" style="height:200px"></div>`;
+    let work = null;
+    try {
+      work = await worksApi.detail(id);
+    } catch (err) {
+      listHost.innerHTML = `<div class="empty">${esc(err.message || "读不出来")}</div>`;
+      return;
+    }
+
+    const files = work.files || [];
+    const pdf = files.find((f) => /^application\/pdf$/i.test(f.mime));
+    const verdict = work.verdict || "pass";
+
+    listHost.innerHTML = `
+      <button class="btn btn--quiet btn--sm" type="button" data-back>← 回到队列</button>
+
+      <article class="work-review">
+        <header class="work-review__head">
+          <div class="meta">
+            <span class="tag tag--quiet">${esc(work.kindLabel || "材料")}</span>
+            ${work.course ? `<span class="meta">${esc(work.course)}</span>` : ""}
+            ${work.term ? `<span class="meta mono">${esc(work.term)}</span>` : ""}
+          </div>
+          <h4 class="work-review__title">${esc(work.title)}</h4>
+          <div class="meta">
+            ${esc(work.author)}${work.groupName ? ` · ${esc(work.groupName)}` : ""}
+            ${work.members ? ` · ${esc(work.members)}` : ""}
+            · ${esc((work.createdAt || "").slice(0, 10))} 交
+          </div>
+        </header>
+
+        ${work.summary ? `<div class="work-review__summary">${esc(work.summary)}</div>` : ""}
+
+        <div class="work-review__files">
+          ${files
+            .map(
+              (f) => `<a href="${workFiles.url(f.id)}" target="_blank" rel="noopener noreferrer">
+                ${esc(f.name)} <span class="mono">${fileSizeText(f.size)}</span>
+              </a>`
+            )
+            .join("")}
+          ${(work.links || [])
+            .map(
+              (l) =>
+                `<a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(
+                  l.title || l.url
+                )}</a>`
+            )
+            .join("")}
+          ${!files.length && !(work.links || []).length ? `<span class="meta">没有附件</span>` : ""}
+        </div>
+
+        ${
+          pdf
+            ? `<iframe class="work-review__preview" src="${workFiles.url(pdf.id)}"
+                 title="${esc(pdf.name)}" loading="lazy"></iframe>`
+            : `<p class="field__hint">这份材料没有 PDF，点上面的文件名下载后查看。</p>`
+        }
+
+        <form class="work-review__form" data-review-form>
+          <div class="work-review__verdicts">
+            ${["excellent", "pass", "return"]
+              .map(
+                (v) => `
+              <label class="work-review__verdict">
+                <input type="radio" name="verdict" value="${v}" ${v === verdict ? "checked" : ""} />
+                <span>${WORK_VERDICT[v].text}</span>
+              </label>`
+              )
+              .join("")}
+          </div>
+
+          <label class="field">
+            <span class="field__label">评语</span>
+            <textarea class="textarea" name="comment" rows="4"
+              placeholder="说说好在哪、哪里还可以往前走一步。退回时写清要改什么。">${esc(
+                work.comment || ""
+              )}</textarea>
+          </label>
+
+          <div class="work-review__toggles">
+            <label class="admin__choice-item">
+              <input type="checkbox" name="featured" ${work.featured ? "checked" : ""} />
+              <span>放上课堂展示板</span>
+            </label>
+            <label class="admin__choice-item">
+              <input type="checkbox" name="commentPublic" ${work.commentPublic ? "checked" : ""} />
+              <span>评语随作品一起公开</span>
+            </label>
+          </div>
+
+          <div class="work-review__actions">
+            <span class="field__hint" data-review-status></span>
+            <button class="btn btn--primary btn--sm" type="submit">保存批阅</button>
+          </div>
+        </form>
+      </article>
+    `;
+
+    listHost.querySelector("[data-back]").addEventListener("click", load);
+
+    const form = qs("[data-review-form]", listHost);
+    const statusText = qs("[data-review-status]", listHost);
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const fd = new FormData(form);
+      const payload = {
+        verdict: String(fd.get("verdict") || ""),
+        comment: String(fd.get("comment") || "").trim(),
+        featured: fd.get("featured") === "on",
+        commentPublic: fd.get("commentPublic") === "on",
+      };
+      if (!payload.comment) {
+        statusText.textContent = "批阅要留一句评语";
+        statusText.dataset.state = "err";
+        return;
+      }
+      const btn = form.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      statusText.textContent = "保存中…";
+      statusText.dataset.state = "";
+      try {
+        await worksApi.review(id, payload);
+        toast(
+          payload.verdict === "return"
+            ? "已退回，学生那边会看到评语"
+            : payload.featured
+              ? "已批阅并展出"
+              : "已批阅"
+        );
+        load();
+      } catch (err) {
+        statusText.textContent = err.message || "保存失败";
+        statusText.dataset.state = "err";
+        btn.disabled = false;
+      }
+    });
+  };
+
+  panel.querySelectorAll("[data-f-course]").forEach((node) =>
+    node.addEventListener("change", () => {
+      filters.course = node.value;
+      load();
+    })
+  );
+  panel.querySelectorAll("[data-f-term]").forEach((node) =>
+    node.addEventListener("change", () => {
+      filters.term = node.value;
+      load();
+    })
+  );
+  panel.querySelectorAll("[data-f-kind]").forEach((node) =>
+    node.addEventListener("change", () => {
+      filters.kind = node.value;
+      load();
+    })
+  );
+  panel.querySelectorAll("[data-f-status]").forEach((node) =>
+    node.addEventListener("change", () => {
+      filters.status = node.value;
+      load();
+    })
+  );
 
   load();
 }

@@ -15,6 +15,13 @@ database_id = "e2d2dffd-33f5-4c0f-b03f-917bbc234f8f"
 binding = "SESSIONS"
 id = "5d5ae80ea4944ab7b54988ebf1cc850f"
 
+# 材料提交的附件存储（R2）。免费额度 10GB、出流量不收费。
+# 没配这个绑定时，functions/lib/blobstore.js 会自动退回 KV（总量 1GB，只够过渡）；
+# 配好之后新上传自动走 R2，已落在 KV 里的老附件按 work_files.storage 记录的来源照旧可读。
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "innovation-works"
+
 [vars]
 SITE_ORIGIN = "https://innovation.jinhuazhang.top"
 # 锁定模型。注意 API 的模型 ID 是 deepseek-flash，
