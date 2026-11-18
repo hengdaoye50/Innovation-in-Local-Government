@@ -1,5 +1,5 @@
 /** 调研足迹：图文阅读页 */
-import { esc, toast, zhWords, confirmDialog } from "../lib/dom.js";
+import { esc, toast, zhWords, confirmDialog, formatMonth } from "../lib/dom.js";
 import { surveys as surveysApi } from "../lib/api.js";
 import { renderProse, stripMarkdown } from "../lib/markdown.js";
 import { getState } from "../lib/store.js";
@@ -57,7 +57,7 @@ export async function mountSurveyDetail(root, id) {
         <header class="field-read__head">
           <div class="field-read__kicker">
             <span class="field-read__place"><span class="detail__place-dot"></span>${esc(placeOf(survey))}</span>
-            ${survey.visitedAt ? `<span class="meta mono">${esc(survey.visitedAt)} 走过</span>` : ""}
+            ${survey.visitedAt ? `<span class="meta mono">${esc(formatMonth(survey.visitedAt))} 走过</span>` : ""}
             <span class="meta mono">${words} 字</span>
             ${photos ? `<span class="meta mono">${photos} 张照片</span>` : ""}
             ${survey.status !== "published" ? `<span class="tag tag--quiet">已下架，仅自己可见</span>` : ""}
@@ -103,7 +103,7 @@ export async function mountSurveyDetail(root, id) {
               <div class="eyebrow">This footprint</div>
               <dl class="field-read__facts">
                 <dt>地点</dt><dd>${esc(placeOf(survey))}</dd>
-                ${survey.visitedAt ? `<dt>成行</dt><dd class="mono">${esc(survey.visitedAt)}</dd>` : ""}
+                ${survey.visitedAt ? `<dt>成行</dt><dd class="mono">${esc(formatMonth(survey.visitedAt))}</dd>` : ""}
                 <dt>记录</dt><dd class="mono">${esc((survey.createdAt || "").slice(0, 10))}</dd>
                 <dt>篇幅</dt><dd class="mono">${words} 字${photos ? ` · ${photos} 图` : ""}</dd>
               </dl>
@@ -113,7 +113,7 @@ export async function mountSurveyDetail(root, id) {
 
         <footer class="field-read__foot">
           <p class="field-read__sign">
-            这段路是 ${esc(survey.author)} 在 ${esc(survey.visitedAt || (survey.createdAt || "").slice(0, 7))} 走的，
+            这段路是 ${esc(survey.author)} 在 ${esc(formatMonth(survey.visitedAt || (survey.createdAt || "").slice(0, 7)))} 走的，
             留给下一次去的人当线索。
           </p>
           <a class="btn btn--ghost btn--sm" href="#/field/new">我也记一次</a>

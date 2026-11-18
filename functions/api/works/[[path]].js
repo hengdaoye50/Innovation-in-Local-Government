@@ -20,6 +20,7 @@ import {
   insertWorkFile,
   getWorkFile,
   syncWorkFiles,
+  filesOwnedBy,
   pruneOrphanWorkFiles,
   WORK_KINDS,
 } from "../../lib/works.js";
@@ -95,6 +96,13 @@ export async function onRequest(context) {
     const missing = checkBindings(env);
     if (missing) return fail(missing, 503);
 
+    // 迁移没跑时给出可执行的说明，而不是让每条路由各撞一个「no such table」500。
+    // 取附件（GET /works/files/:id）不依赖 works 表，放行。
+    const readExistingFile = first === "files" && Boolean(second) && request.method === "GET";
+    if (!readExistingFile && !(await hasWorks(env))) {
+      return fail("材料提交暂不可用：数据库迁移未完成，请先执行 0012 迁移", 503);
+    }
+
     /* —— 附件上传 —— */
     if (first === "files" && !second && request.method === "POST") {
       const session = await getSession(env, request);
@@ -127,15 +135,21 @@ export async function onRequest(context) {
 
       const fileId = randomId("wf");
       const storage = await putBlob(env, fileId, buffer, verdict.mime);
-      await insertWorkFile(env, {
-        id: fileId,
-        ownerId: session.id,
-        fileName,
-        mime: verdict.mime,
-        size: buffer.byteLength,
-        storage,
-        now: new Date().toISOString(),
-      });
+      try {
+        await insertWorkFile(env, {
+          id: fileId,
+          ownerId: session.id,
+          fileName,
+          mime: verdict.mime,
+          size: buffer.byteLength,
+          storage,
+          now: new Date().toISOString(),
+        });
+      } catch (err) {
+        // 元信息写不进去就把已经落盘的对象删掉，否则存储里会留下永远查不到的字节
+        await deleteBlob(env, fileId, storage);
+        throw err;
+      }
 
       return ok({ id: fileId, name: fileName, size: buffer.byteLength, storage });
     }
@@ -170,9 +184,6 @@ export async function onRequest(context) {
 
     /* —— 列表 —— */
     if (!first && request.method === "GET") {
-      if (!(await hasWorks(env))) {
-        return fail("材料提交暂不可用：数据库迁移未完成，请先执行 0012 迁移", 503);
-      }
       const url = new URL(request.url);
       const session = await getSession(env, request);
 
@@ -227,9 +238,6 @@ export async function onRequest(context) {
       const session = await getSession(env, request);
       if (!session) return fail("请先登录", 401);
       if (isReadOnly(session)) return fail("观察员账号只能浏览", 403);
-      if (!(await hasWorks(env))) {
-        return fail("材料提交暂不可用：数据库迁移未完成，请先执行 0012 迁移", 503);
-      }
 
       const limit = rateLimit(`work:${clientIp(request)}`, { limit: 12, windowMs: 10 * 60_000 });
       if (!limit.allowed) return fail("提交过于频繁，请稍后再试", 429);
@@ -239,6 +247,9 @@ export async function onRequest(context) {
       if (!data.files.length && !data.links.length) {
         return fail("至少交一个文件，或者填一个在线文档链接");
       }
+      // 附件必须是自己传的：别的材料的附件 id 会随公开列表下发，不拦就能被挂走
+      const stolen = await filesOwnedBy(env, data.files, [session.id]);
+      if (stolen.length) return fail("附件已失效，请重新上传后再提交", 409);
 
       const workId = randomId("work");
       const now = new Date().toISOString();
@@ -277,12 +288,18 @@ export async function onRequest(context) {
       if (work.status === "reviewed") {
         return fail("教师已经批阅过了，要改请先请教师退回", 409);
       }
+      // 归档是教师（或作者撤回）之后的终态，不能让一次改稿把它拉回批阅队列
+      if (work.status === "archived") {
+        return fail("这份材料已归档，如需重新提交请新建一份", 409);
+      }
 
       const data = readPayload(await readJson(request, 40_000));
       if (!data.title) return fail("给这份材料起个标题");
       if (!data.files.length && !data.links.length) {
         return fail("至少交一个文件，或者填一个在线文档链接");
       }
+      const stolen = await filesOwnedBy(env, data.files, [session.id, work.authorId]);
+      if (stolen.length) return fail("附件已失效，请重新上传后再提交", 409);
 
       await updateWorkContent(env, first, { ...data, now: new Date().toISOString() });
       const stale = await syncWorkFiles(env, first, data.files);

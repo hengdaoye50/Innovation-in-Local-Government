@@ -100,7 +100,7 @@
   font-size: 11.5px;
   line-height: 1.7;
   color: var(--ink-3);
-  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 .works__row-note {
@@ -210,7 +210,7 @@
 .works-files__name {
   font-size: 14px;
   color: var(--ink);
-  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 .works-files__meta {
@@ -350,7 +350,7 @@
 .work-file__name {
   flex: 1;
   min-width: 0;
-  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 .work-file__meta {
@@ -507,7 +507,7 @@
 
 .work-review__files a {
   color: var(--plum);
-  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 .work-review__preview {

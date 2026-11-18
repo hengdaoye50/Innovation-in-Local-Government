@@ -225,6 +225,31 @@ export async function deleteSurveyImage(env, id, ownerId) {
  * 但已被作者从正文里删掉的图，一并从库里清掉，不留孤儿。
  * 归属不按上传者过滤——教师改学生稿时插的图也得挂上，否则第二天会被当成孤儿清掉。
  */
+/**
+ * 这些配图 id 里，有哪些不是给定的人上传的。
+ * 图片 id 会随公开记录下发，不校验归属就能把别人的图挂到自己稿子上，
+ * 原作者下次保存时那些图会被当作孤儿删掉。
+ */
+export async function surveyImagesOwnedBy(env, ids, ownerIds) {
+  if (!ids.length) return [];
+  const owners = ownerIds.filter((id) => Number.isFinite(Number(id)) && Number(id) > 0);
+  if (!owners.length) return ids;
+  try {
+    const marks = ids.map(() => "?").join(",");
+    const ownerMarks = owners.map(() => "?").join(",");
+    const { results } = await env.DB.prepare(
+      `SELECT id FROM survey_images WHERE id IN (${marks}) AND owner_id IN (${ownerMarks})`
+    )
+      .bind(...ids, ...owners)
+      .all();
+    const ok = new Set((results || []).map((r) => r.id));
+    return ids.filter((id) => !ok.has(id));
+  } catch (err) {
+    if (/no such table/i.test(String(err?.message || ""))) return [];
+    throw err;
+  }
+}
+
 export async function syncSurveyImages(env, surveyId, body) {
   const ids = referencedImageIds(body);
   try {

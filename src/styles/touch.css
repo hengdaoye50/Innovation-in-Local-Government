@@ -22,4 +22,34 @@
   .draft__row--3 .select {
     font-size: 16px;
   }
+
+  /* 手指够不着的控件：按钮一类的热区补到 44px（DESIGN.md 定的下限）。
+     不改内边距，只加最小高度——视觉不动，命中区变大。 */
+  .btn,
+  .btn--sm,
+  .tool,
+  .chip,
+  .ctrl,
+  .layer-btn,
+  .admin__tab,
+  .nav__link--mobile {
+    min-height: 44px;
+  }
+
+  /* 圆形小按钮：用伪元素把热区扩到 44 而不改观感 */
+  .work-file__del,
+  .chat__attach,
+  .avatar-swatch,
+  .reading__mark-dot {
+    position: relative;
+  }
+
+  .work-file__del::after,
+  .chat__attach::after,
+  .avatar-swatch::after,
+  .reading__mark-dot::after {
+    content: '';
+    position: absolute;
+    inset: -12px;
+  }
 }

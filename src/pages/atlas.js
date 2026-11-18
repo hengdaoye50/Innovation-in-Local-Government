@@ -37,10 +37,10 @@ export function atlasSection() {
         <div class="map-canvas" data-pending="1"></div>
 
         <div class="atlas__layers" role="group" aria-label="地图图层">
-          <button class="layer-btn is-on" type="button" data-layer="case">
+          <button class="layer-btn is-on" type="button" data-layer="case" aria-pressed="true">
             案例<b class="mono" data-layer-count>0</b>
           </button>
-          <button class="layer-btn" type="button" data-layer="field">
+          <button class="layer-btn" type="button" data-layer="field" aria-pressed="false">
             调研<b class="mono" data-layer-count-field>0</b>
           </button>
         </div>
@@ -329,7 +329,12 @@ export async function mountAtlas(root) {
   async function switchLayer(next) {
     if (next === layer) return;
     layer = next;
-    layerButtons.forEach((btn) => btn.classList.toggle("is-on", btn.dataset.layer === next));
+    layerButtons.forEach((btn) => {
+      const on = btn.dataset.layer === next;
+      btn.classList.toggle("is-on", on);
+      // 读屏用户听不出 is-on 这个类名，得把选中态写进 aria
+      btn.setAttribute("aria-pressed", String(on));
+    });
     if (legendEl) legendEl.innerHTML = LEGENDS[next];
     if (hint) hint.innerHTML = defaultHint;
     closeFocusCard();

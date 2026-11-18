@@ -255,9 +255,43 @@ export async function getWorkFile(env, id) {
   return rowToWorkFile(row);
 }
 
+/** 这些附件 id 里，有哪些不属于给定的人（作者本人或正在操作的人） */
+export async function filesOwnedBy(env, ids, ownerIds) {
+  if (!ids.length) return [];
+  const owners = ownerIds.filter((id) => Number.isFinite(Number(id)) && Number(id) > 0);
+  if (!owners.length) return ids;
+  try {
+    const marks = ids.map(() => "?").join(",");
+    const ownerMarks = owners.map(() => "?").join(",");
+    const { results } = await env.DB.prepare(
+      `SELECT id FROM work_files WHERE id IN (${marks}) AND owner_id IN (${ownerMarks})`
+    )
+      .bind(...ids, ...owners)
+      .all();
+    const ok = new Set((results || []).map((r) => r.id));
+    return ids.filter((id) => !ok.has(id));
+  } catch (err) {
+    // 表还没建（迁移未跑）时不拦提交，交给上层的 hasWorks 守卫报错
+    if (/no such table/i.test(String(err?.message || ""))) return [];
+    throw err;
+  }
+}
+
+/** 附件本体从对象存储里删掉时用得到 */
+export async function dropWorkFileRows(env, ids) {
+  if (!ids.length) return;
+  const marks = ids.map(() => "?").join(",");
+  await env.DB.prepare(`DELETE FROM work_files WHERE id IN (${marks})`)
+    .bind(...ids)
+    .run();
+}
+
 /**
  * 提交/改稿后对齐附件：正文里点名的附件挂到这份材料上，
  * 之前挂在这份材料、这次没交的文件删掉元信息并清对象存储。
+ *
+ * 归属不按上传者过滤会让「知道附件 id 就能把它挂到自己材料上」成立，
+ * 而 featured 列表会把附件 id 原样下发；所以挂之前先由调用方校验归属（filesOwnedBy）。
  */
 export async function syncWorkFiles(env, workId, ids, { removeOld = true } = {}) {
   if (ids.length) {

@@ -837,7 +837,7 @@ async function renderInvites(panel, me) {
         toast(`已清理 ${res.purged.invites} 个历史作废邀请码`);
       }
     } catch (err) {
-      listEl.innerHTML = `<div class="empty">${esc(err.message || "读取失败")}</div>`;
+      listEl.innerHTML = `<div class="empty" data-tone="err">${esc(err.message || "读取失败，请稍后重试")}</div>`;
       return;
     }
 
@@ -1074,7 +1074,7 @@ async function renderUsers(panel) {
     try {
       data = await api.get("/api/admin/users");
     } catch (err) {
-      listEl.innerHTML = `<div class="empty">${esc(err.message || "读取失败")}</div>`;
+      listEl.innerHTML = `<div class="empty" data-tone="err">${esc(err.message || "读取失败，请稍后重试")}</div>`;
       return;
     }
 
@@ -1271,7 +1271,7 @@ async function renderWorksQueue(panel) {
         listHost.dataset.storage = "kv";
       }
     } catch (err) {
-      listHost.innerHTML = `<div class="empty">${esc(err.message || "读取失败")}</div>`;
+      listHost.innerHTML = `<div class="empty" data-tone="err">${esc(err.message || "读取失败，请稍后重试")}</div>`;
       return;
     }
 

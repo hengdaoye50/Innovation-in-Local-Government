@@ -28,6 +28,7 @@ import {
   updateSurvey,
   hideSurvey,
   syncSurveyImages,
+  surveyImagesOwnedBy,
   pruneOrphanImages,
   referencedImageIds,
 } from "../../lib/db.js";
@@ -111,6 +112,14 @@ export async function onRequest(context) {
       const invalid = validateSurvey(data, { body: true });
       if (invalid) return fail(invalid);
 
+      // 图片必须是自己传的：别人的图片 id 会随公开记录下发，不拦就能挂到自己稿子上
+      const stolen = await surveyImagesOwnedBy(
+        env,
+        referencedImageIds(data.body),
+        [session.id]
+      );
+      if (stolen.length) return fail("配图已失效，请重新上传后再发布", 409);
+
       const surveyId = randomId("survey");
       await insertSurvey(env, {
         id: surveyId,
@@ -148,6 +157,14 @@ export async function onRequest(context) {
       const data = readSurveyPayload(raw);
       const invalid = validateSurvey(data, { body: true });
       if (invalid) return fail(invalid);
+
+      // 作者本人的图、以及正在操作的教师自己上传的图可以挂；别人的不行
+      const stolen = await surveyImagesOwnedBy(
+        env,
+        referencedImageIds(data.body),
+        [item.authorId, session.id]
+      );
+      if (stolen.length) return fail("配图已失效，请重新上传后再保存", 409);
 
       await updateSurvey(env, id, {
         ...data,

@@ -40,7 +40,12 @@ export async function mountWorks(root) {
     const res = await worksApi.mine();
     items = Array.isArray(res?.items) ? res.items : [];
   } catch (err) {
-    shell.innerHTML = `<div class="empty">材料列表没读出来：${esc(err.message || "请稍后再试")}</div>`;
+    // 读取失败要和「一份都没有」区分开，并且给一个能重试的动作
+    shell.innerHTML = `<div class="empty" data-tone="err">
+      <div>材料列表没读出来：${esc(err.message || "请稍后再试")}</div>
+      <button class="btn btn--quiet btn--sm empty__retry" type="button">重试</button>
+    </div>`;
+    shell.querySelector(".empty__retry")?.addEventListener("click", () => mountWorks(root));
     return;
   }
 

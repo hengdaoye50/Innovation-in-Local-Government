@@ -1,4 +1,4 @@
-﻿# 地方政府创新案例库（Innovation in Local Government）
+# 地方政府创新案例库（Innovation in Local Government）
 
 ## 项目定位
 
@@ -201,6 +201,10 @@ work_files id, work_id, owner_id, file_name, mime, size, storage(r2|kv), created
 
 - **只收 Word（.docx / .doc）与 PDF（.pdf）**，单个 ≤20MB，一份材料最多 3 个附件。
   不收 PPT / ZIP / 图片：站点不做格式转换，课件要自己另存为 PDF，PDF 也是唯一能内嵌翻页的格式。
+- 附件的**归属要校验**：`work_files` / `survey_images` 回填 `work_id` / `survey_id` 时只允许
+  作者本人与正在操作的教师上传的那批，否则「知道附件 id 就能挂到自己材料上」成立——
+  而这批 id 会随公开列表下发。不匹配一律 409，让人重新上传。
+- 状态机里 `archived` 是终态：作者改稿不能把它拉回待批阅，只能新建一份。
 - 类型判定是扩展名 **AND** 文件头双检（`functions/lib/blobstore.js` 的 `verifyFileBytes`）：
   PDF 认 `%PDF-`，docx 认 zip 魔数，doc 认 OLE 魔数。改个后缀就想把别的格式混进来会直接被拒。
 - `FILES` 绑定缺失时 `blobstore.js` 自动退回 KV（总量 1GB，只够过渡），
@@ -220,9 +224,10 @@ work_files id, work_id, owner_id, file_name, mime, size, storage(r2|kv), created
 - 批量生成前必须过一道确认窗（角色、数量、备注、是否导出），导出的是**这一批**的码表，
   不是整张列表——导出逻辑在 `src/pages/admin.js` 的 `exportInviteCsv`，只吃生成接口的返回值。
 - 停用的账号在打开「用户管理」时自动清理，条件是**名下零内容**（没有案例、展位、留言、调研、
-  批注，也没签发过邀请码）。有内容的停用账号永不自动删除，只在界面报数，
+  批注、材料，也没签发过邀请码）。有内容的停用账号永不自动删除，只在界面报数，
   清理规则集中在 `functions/lib/purge.js`。停用这个动作本身会连带出「可能被自动清理」的后果，
-  所以停用按钮带确认窗，别把确认去掉。
+  所以停用按钮带确认窗，别把确认去掉。**新增任何「挂在用户名下的表」都要同步加进 purge 的判据**，
+  否则停用即删人，那些记录会变成对不上人的孤儿。
 
 ## 部署
 

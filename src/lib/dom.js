@@ -155,11 +155,17 @@ export function confirmDialog({
 
   return new Promise((resolve) => {
     const previous = document.activeElement;
-    const root = el("div", { class: "dialog", role: "dialog", "aria-modal": "true" });
+    const titleId = `dialog-title-${Date.now().toString(36)}`;
+    const root = el("div", {
+      class: "dialog",
+      role: "dialog",
+      "aria-modal": "true",
+      "aria-labelledby": titleId,
+    });
     root.innerHTML = `
       <div class="dialog__veil" data-close></div>
       <div class="dialog__panel" role="document">
-        <h2 class="dialog__title">${esc(title)}</h2>
+        <h2 class="dialog__title" id="${titleId}">${esc(title)}</h2>
         <div class="dialog__body">${html}</div>
         <div class="dialog__actions">
           <button class="btn btn--quiet btn--sm" type="button" data-close>${esc(cancelText)}</button>
@@ -170,10 +176,25 @@ export function confirmDialog({
       </div>
     `;
 
+    // Tab 只在对话框内循环：不加这一层，键盘焦点会跑到遮罩后面的顶栏与表单里
+    const focusables = () => Array.from(root.querySelectorAll("button")).filter((n) => !n.disabled);
     const onKeydown = (e) => {
       if (e.key === "Escape") {
         e.preventDefault();
         close(false);
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const list = focusables();
+      if (!list.length) return;
+      const first = list[0];
+      const last = list[list.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
       }
     };
 
@@ -222,6 +243,17 @@ export function timeAgo(iso) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
     d.getDate()
   ).padStart(2, "0")}`;
+}
+
+/**
+ * 调研月份：库里存的是 2026-04，但中文句子里写「2026-04 走的」很生硬。
+ * 统一成「2026 年 4 月」，解析不了就原样返回，别把用户输入吃掉。
+ */
+export function formatMonth(value) {
+  const text = String(value || "").trim();
+  const m = text.match(/^(\d{4})-(\d{2})$/);
+  if (!m) return text;
+  return `${m[1]} 年 ${Number(m[2])} 月`;
 }
 
 export function formatDate(iso) {

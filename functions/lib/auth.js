@@ -142,6 +142,23 @@ export function tokenFromRequest(request) {
   return match ? match[1] : null;
 }
 
+/**
+ * 头像列是后加的（0010 迁移）。迁移没跑齐时，写死 SELECT avatar 会让登录直接 500，
+ * 用户看到的是「服务暂时不可用」——密码对也进不来，还查不出原因。
+ * 这里先探一次，探不到就退回不带 avatar 的查询，登录照常可用，只是头像为空。
+ */
+let avatarColumnKnown = null;
+async function hasAvatarColumn(env) {
+  if (avatarColumnKnown !== null) return avatarColumnKnown;
+  try {
+    await env.DB.prepare("SELECT avatar FROM users LIMIT 1").first();
+    avatarColumnKnown = true;
+  } catch {
+    avatarColumnKnown = false;
+  }
+  return avatarColumnKnown;
+}
+
 /** 取当前会话；用户被停用时立即失效 */
 export async function getSession(env, request) {
   const token = tokenFromRequest(request);
@@ -154,8 +171,10 @@ export async function getSession(env, request) {
   } catch {
     return null;
   }
+  const withAvatar = await hasAvatarColumn(env);
   const user = await env.DB.prepare(
-    "SELECT id, username, display_name, role, status, avatar FROM users WHERE id = ?"
+    `SELECT id, username, display_name, role, status${withAvatar ? ", avatar" : ""}
+       FROM users WHERE id = ?`
   )
     .bind(payload.userId)
     .first();

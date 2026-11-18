@@ -76,6 +76,7 @@ export function mountNav(actions = {}) {
         <a class="nav__link nav__link--mobile" href="#/login">登录 / 注册</a>
         <a class="nav__link nav__link--mobile" href="#/me">个人页</a>
         <a class="nav__link nav__link--mobile" href="#/admin">教师后台</a>
+        <button class="nav__link nav__link--mobile" type="button" data-action="logout">登出</button>
       </nav>
       <div class="nav__actions">
         <span class="nav__user-slot"></span>
@@ -91,9 +92,28 @@ export function mountNav(actions = {}) {
 
   const toggle = host.querySelector(".nav__toggle");
   const links = host.querySelector(".nav__links");
+
+  const closeMenu = () => {
+    if (!links.classList.contains("is-open")) return;
+    links.classList.remove("is-open");
+    toggle.setAttribute("aria-expanded", "false");
+  };
+
   toggle.addEventListener("click", () => {
     const open = links.classList.toggle("is-open");
     toggle.setAttribute("aria-expanded", String(open));
+  });
+
+  // 菜单收起的三条路：点了别的路由、按 Esc、点菜单外面。
+  // 少任何一条，手机上都会出现「跳过去了但菜单还盖在新页面顶部」。
+  window.addEventListener("hashchange", closeMenu);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeMenu();
+  });
+  document.addEventListener("click", (event) => {
+    if (!links.classList.contains("is-open")) return;
+    if (host.contains(event.target)) return;
+    closeMenu();
   });
 
   const onScroll = () => {
@@ -110,11 +130,18 @@ export function mountNav(actions = {}) {
   onScroll();
 
   host.addEventListener("click", (event) => {
+    // 手机菜单里的「登出」：顶栏的账号槽位在窄屏是隐藏的，
+    // 这里是手机上唯一的登出入口，不接就等于登录后走不掉
+    const logout = event.target.closest('[data-action="logout"]');
+    if (logout) {
+      closeMenu();
+      actions.onLogout?.();
+      return;
+    }
     const link = event.target.closest("[data-target]");
     if (!link) return;
     event.preventDefault();
-    links.classList.remove("is-open");
-    toggle.setAttribute("aria-expanded", "false");
+    closeMenu();
     goToSection(link.dataset.target);
   });
 
@@ -175,10 +202,12 @@ function renderUser(host, actions) {
   // 登录之后不该还看到「登录 / 注册」，学生也不该看到「教师后台」
   const mobileLogin = host.querySelector('.nav__link--mobile[href="#/login"]');
   const mobileAdmin = host.querySelector('.nav__link--mobile[href="#/admin"]');
+  const mobileLogout = host.querySelector('.nav__link--mobile[data-action="logout"]');
   if (mobileLogin) mobileLogin.hidden = !!user;
   if (mobileAdmin) {
     mobileAdmin.hidden = !user || (user.role !== "admin" && user.role !== "teacher");
   }
+  if (mobileLogout) mobileLogout.hidden = !user;
   if (!user) {
     slot.innerHTML = `<a class="nav__link" href="#/login">登录</a>`;
     return;

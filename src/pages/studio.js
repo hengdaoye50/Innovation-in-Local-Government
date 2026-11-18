@@ -221,7 +221,7 @@ export function studioSection() {
                 <div class="draft__tags" data-draft-tags>
                   ${DOMAINS.map(
                     (d) =>
-                      `<button type="button" class="chip" data-domain="${esc(d)}">${esc(d)}</button>`
+                      `<button type="button" class="chip" data-domain="${esc(d)}" aria-pressed="false">${esc(d)}</button>`
                   ).join("")}
                 </div>
               </section>
@@ -678,6 +678,13 @@ export function mountStudio(root) {
   const wordCount = qs("[data-word-count]", section);
   const wordBar = qs("[data-word-bar]", section);
   const tagBox = qs("[data-draft-tags]", section);
+
+  /** 领域标签的选中态：类名管样式，aria-pressed 管读屏 */
+  function setChip(chip, on) {
+    if (!chip) return;
+    chip.classList.toggle("is-on", on);
+    chip.setAttribute("aria-pressed", String(Boolean(on)));
+  }
   const sourceBox = qs("[data-draft-sources]", section);
   const statusText = qs("[data-draft-status]", section);
 
@@ -803,14 +810,14 @@ export function mountStudio(root) {
     const value = chip.dataset.domain;
     if (draft.tags.has(value)) {
       draft.tags.delete(value);
-      chip.classList.remove("is-on");
+      setChip(chip, false);
     } else {
       if (draft.tags.size >= 3) {
         toast("最多选择 3 个领域标签", { type: "error" });
         return;
       }
       draft.tags.add(value);
-      chip.classList.add("is-on");
+      setChip(chip, true);
     }
   });
 
@@ -879,7 +886,7 @@ export function mountStudio(root) {
     bodyInput.value = data.body || "";
     draft.tags = new Set(data.tags || []);
     tagBox.querySelectorAll("[data-domain]").forEach((chip) => {
-      chip.classList.toggle("is-on", draft.tags.has(chip.dataset.domain));
+      setChip(chip, draft.tags.has(chip.dataset.domain));
     });
     draft.sources = Array.isArray(data.sources) ? data.sources : [];
     renderSources();
@@ -933,7 +940,7 @@ export function mountStudio(root) {
     titleInput.value = "";
     bodyInput.value = "";
     draft.tags.clear();
-    tagBox.querySelectorAll(".chip").forEach((c) => c.classList.remove("is-on"));
+    tagBox.querySelectorAll(".chip").forEach((c) => setChip(c, false));
     draft.sources = [];
     renderSources();
     resetSelect(provinceSel);
@@ -1109,7 +1116,7 @@ export function mountStudio(root) {
         const chip = tagBox.querySelector(`[data-domain="${CSS.escape(t)}"]`);
         if (chip && !draft.tags.has(t)) {
           draft.tags.add(t);
-          chip.classList.add("is-on");
+          setChip(chip, true);
         }
       }
       updateWords();

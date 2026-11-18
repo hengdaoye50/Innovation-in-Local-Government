@@ -247,6 +247,27 @@
   pointer-events: none;
 }
 
+/* 禁用的输入与下拉：原来只有按钮有禁用样式，输入框被禁用后看起来仍可点 */
+.input:disabled,
+.select:disabled,
+.textarea:disabled,
+.input[readonly] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: var(--paper-2);
+}
+
+/* 读取失败不该长得像「暂无数据」：给错误态一条自己能认出来的样子 */
+.empty[data-tone="err"] {
+  border-color: rgba(163, 32, 32, 0.35);
+  color: var(--err);
+}
+
+.empty__retry {
+  display: inline-flex;
+  margin-top: 12px;
+}
+
 /* —— 标签 —— */
 .tag {
   display: inline-flex;

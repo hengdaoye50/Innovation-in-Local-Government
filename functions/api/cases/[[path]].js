@@ -45,7 +45,7 @@ export async function onRequest(context) {
 
     if (!id && method === "GET") return await listHandler(request, env);
     if (id === "points" && method === "GET") return ok(await listCasePoints(env));
-    if (id && method === "GET") return await detailHandler(env, id);
+    if (id && method === "GET") return await detailHandler(env, id, request);
     if (!id && method === "POST") return await createHandler(context);
     if (id && method === "PUT") return await updateOwnHandler(context, id);
     if (id && method === "PATCH") return await statusHandler(context, id);
@@ -90,10 +90,17 @@ async function listHandler(request, env) {
   return ok({ items });
 }
 
-async function detailHandler(env, id) {
+async function detailHandler(env, id, request) {
   const item = await getCase(env, id);
   if (!item) return fail("案例不存在", 404);
-  if (item.status === "hidden") return fail("该案例已下架", 410);
+  // 未发布的稿子（待质检 / 已退回 / 已下架）只给作者本人和教师看；
+  // 对其他人一律当作不存在——410 会暴露「这条曾经存在」，与全站口径也不一致。
+  if (item.status !== "published") {
+    const session = await getSession(env, request);
+    const allowed =
+      session && (isStaff(session) || (item.authorId && item.authorId === session.id));
+    if (!allowed) return fail("案例不存在", 404);
+  }
   return ok(item);
 }
 

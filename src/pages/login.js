@@ -83,7 +83,7 @@ export function mountAuth(root) {
   function fillError(form, message) {
     let node = form.querySelector(".auth__error");
     if (!node) {
-      node = el("p", { class: "auth__error" });
+      node = el("p", { class: "auth__error", role: "alert" });
       form.querySelector('button[type="submit"]').before(node);
     }
     node.textContent = message;

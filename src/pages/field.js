@@ -1,5 +1,5 @@
 /** 调研足迹 —— 第五屏：师生实地调研的见闻记录 */
-import { esc, mountReveal } from "../lib/dom.js";
+import { esc, mountReveal, formatMonth } from "../lib/dom.js";
 import { surveys as surveysApi } from "../lib/api.js";
 import { stripMarkdown } from "../lib/markdown.js";
 
@@ -67,7 +67,7 @@ function rowHtml(survey, index, total) {
   const place = [survey.province, survey.city, survey.district]
     .filter((p, i, arr) => p && arr.indexOf(p) === i)
     .join(" · ");
-  const when = survey.visitedAt || (survey.createdAt || "").slice(0, 7);
+  const when = formatMonth(survey.visitedAt || (survey.createdAt || "").slice(0, 7));
   // 摘要里不要小标题：把「## 取号机旁边多了一个人」原样拼进摘要，读起来像断裂的句子
   const excerpt = stripMarkdown(
     String(survey.body || "").replace(/^#{1,6}[ \t].*$/gm, ""),

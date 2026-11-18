@@ -496,3 +496,10 @@
     width: 200px;
   }
 }
+
+/* 页内跳转统一避开固定顶栏（文献目录、边注定位都走这里） */
+.reading__section,
+.reading__note,
+.reading__para {
+  scroll-margin-top: 88px;
+}

@@ -65,23 +65,38 @@ export async function onRequest(context) {
 }
 
 async function register({ request, env }) {
-  const limit = rateLimit(`reg:${clientIp(request)}`, { limit: 6, windowMs: 10 * 60_000 });
-  if (!limit.allowed) return fail("尝试过于频繁，请稍后再试", 429);
+  // 注册同样别按 IP 卡死：一个班可能共用出口 IP，谁先在名单上谁就注册不了。
+  // 宽额度兜刷量，真正的闸口在邀请码本身（一次性 + 角色由码决定）。
+  const ipLimit = rateLimit(`reg-ip:${clientIp(request)}`, { limit: 60, windowMs: 10 * 60_000 });
+  if (!ipLimit.allowed) return fail("尝试过于频繁，请稍后再试", 429);
 
   const body = await readJson(request, 8_000);
   const invite = String(body.invite || "").trim().toUpperCase();
   if (!invite) return fail("请填写邀请码");
+
+  const codeLimit = rateLimit(`reg:${invite}`, { limit: 8, windowMs: 10 * 60_000 });
+  if (!codeLimit.allowed) return fail("这个邀请码尝试次数过多，请稍后再试", 429);
 
   const name = validateUsername(body.username);
   if (!name.ok) return fail(name.message);
   const pwd = validatePassword(body.password);
   if (!pwd.ok) return fail(pwd.message);
 
-  const inviteRow = await env.DB.prepare(
-    "SELECT code, used_by, role, revoked_at FROM invites WHERE code = ?"
-  )
-    .bind(invite)
-    .first();
+  // revoked_at 是后加的列（0005 迁移）：缺列时按「未作废」处理，别让注册整块 500
+  let inviteRow = null;
+  try {
+    inviteRow = await env.DB.prepare(
+      "SELECT code, used_by, role, revoked_at FROM invites WHERE code = ?"
+    )
+      .bind(invite)
+      .first();
+  } catch {
+    inviteRow = await env.DB.prepare(
+      "SELECT code, used_by, role FROM invites WHERE code = ?"
+    )
+      .bind(invite)
+      .first();
+  }
   if (!inviteRow) return fail("邀请码无效");
   if (inviteRow.revoked_at) return fail("该邀请码已作废，请联系任课教师重新领取");
   if (inviteRow.used_by) return fail("该邀请码已被使用");
@@ -127,16 +142,27 @@ async function register({ request, env }) {
 }
 
 async function login({ request, env }) {
-  const limit = rateLimit(`login:${clientIp(request)}`, { limit: 10, windowMs: 10 * 60_000 });
-  if (!limit.allowed) return fail("尝试过于频繁，请稍后再试", 429);
+  // 只是兜住脚本刷量，额度要给得宽：教室与校园网是同一个出口 IP，
+  // 按 IP 卡 10 次/10 分钟的话，第一节课上到第 11 个同学就整班被挡。
+  const ipLimit = rateLimit(`login-ip:${clientIp(request)}`, { limit: 80, windowMs: 10 * 60_000 });
+  if (!ipLimit.allowed) return fail("尝试过于频繁，请稍后再试", 429);
 
   const body = await readJson(request, 4_000);
   const username = String(body.username || "").trim();
   const password = String(body.password || "");
   if (!username || !password) return fail("请填写用户名与密码");
 
+  // 真正防爆破的额度按账号算：一个人输错十次，只锁他自己
+  const accountLimit = rateLimit(`login:${username.toLowerCase()}`, {
+    limit: 10,
+    windowMs: 10 * 60_000,
+  });
+  if (!accountLimit.allowed) {
+    return fail("这个账号密码错误次数过多，请十分钟后再试，或联系助教重置", 429);
+  }
+
   const user = await env.DB.prepare(
-    "SELECT id, username, password_hash, display_name, role, status, avatar FROM users WHERE username = ?"
+    "SELECT id, username, password_hash, display_name, role, status FROM users WHERE username = ?"
   )
     .bind(username)
     .first();
@@ -164,10 +190,20 @@ async function login({ request, env }) {
       username: user.username,
       displayName: user.display_name || user.username,
       role: user.role,
-      avatar: user.avatar || "",
+      avatar: await readAvatar(env, user.id),
     },
   });
   return withCookie(res, sessionCookie(token));
+}
+
+/** 头像列是后加的：单独取，缺列时返回空串，不影响登录本身 */
+async function readAvatar(env, userId) {
+  try {
+    const row = await env.DB.prepare("SELECT avatar FROM users WHERE id = ?").bind(userId).first();
+    return row?.avatar || "";
+  } catch {
+    return "";
+  }
 }
 
 async function logout({ request, env }) {

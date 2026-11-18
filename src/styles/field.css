@@ -528,6 +528,9 @@ body.is-lightbox {
   display: flex;
   align-items: center;
   gap: 6px;
+  /* 手机上九宫格按钮放不下一行：允许换行，别让整页横向溢出 */
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .field-editor__views {
@@ -603,6 +606,13 @@ body.is-lightbox {
   color: var(--ink);
   resize: none;
   outline: none;
+}
+
+/* 键盘 Tab 进正文区时要有落点：原来只写了 outline:none，没有任何焦点反馈 */
+.field-editor__input:focus-visible {
+  outline: 2px solid rgba(63, 107, 131, 0.5);
+  outline-offset: -3px;
+  border-radius: 2px;
 }
 
 .field-editor__input::placeholder {
@@ -899,9 +909,7 @@ body.is-lightbox {
   .field-editor__toolbar {
     gap: 8px 12px;
   }
-  .field-read__progress {
-    top: 56px;
-  }
+
 }
 
 @media (max-width: 620px) {

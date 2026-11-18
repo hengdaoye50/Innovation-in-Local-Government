@@ -42,6 +42,11 @@ export async function onRequest(context) {
       if (buf.byteLength > 20 * 1024 * 1024) {
         return fail("PDF 超过 20MB，请压缩后再传", 413);
       }
+      // Content-Type 是上传方自己写的，靠不住：按文件头确认它真的是 PDF
+      const head = new Uint8Array(buf.slice(0, 5));
+      if (!(head[0] === 0x25 && head[1] === 0x50 && head[2] === 0x44 && head[3] === 0x46 && head[4] === 0x2d)) {
+        return fail("这个文件的内容不像 PDF，请重新导出后再上传", 415);
+      }
 
       await env.SESSIONS.put(`slidefile:${id}`, buf);
       await env.DB.prepare("UPDATE slides SET file_url = ? WHERE id = ?")

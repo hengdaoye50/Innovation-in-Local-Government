@@ -1017,6 +1017,11 @@ label.btn {
 }
 
 @media (max-width: 1080px) {
+  /* 窄屏下稿件面板改成整页滚动，头部吸顶要避开固定顶栏 */
+  .draft__head {
+    top: 64px;
+  }
+
   .studio__grid {
     grid-template-columns: 1fr;
   }
