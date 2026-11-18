@@ -38,8 +38,8 @@ export async function onRequest(context) {
       .run();
 
     return ok({ recorded: true });
-  } catch (err) {
-    // 埋点失败不能影响页面，一律吞掉报错
-    return handleError(err);
+  } catch {
+    // 埋点失败不能影响页面：这里连日志都不往上抛，前端拿到 recorded:false 就算了
+    return ok({ recorded: false });
   }
 }

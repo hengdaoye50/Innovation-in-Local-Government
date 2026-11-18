@@ -98,6 +98,20 @@ export function mountAdmin(root) {
   mountReveal(root);
 }
 
+/** 列表读取失败：给错误色标 + 一个重试入口，别让人只能刷新整页 */
+function errorBlock(container, err, retry) {
+  container.innerHTML = `<div class="empty" data-tone="err">
+    <div>${esc(err?.message || "读取失败，请稍后重试")}</div>
+  </div>`;
+  if (typeof retry !== "function") return;
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn btn--quiet btn--sm empty__retry";
+  btn.textContent = "重试";
+  btn.addEventListener("click", retry);
+  container.querySelector(".empty")?.append(btn);
+}
+
 /* ————————— 案例审核 ————————— */
 
 /* ————————— 数据面板 ————————— */
@@ -837,7 +851,7 @@ async function renderInvites(panel, me) {
         toast(`已清理 ${res.purged.invites} 个历史作废邀请码`);
       }
     } catch (err) {
-      listEl.innerHTML = `<div class="empty" data-tone="err">${esc(err.message || "读取失败，请稍后重试")}</div>`;
+      errorBlock(listEl, err, load);
       return;
     }
 
@@ -1074,7 +1088,7 @@ async function renderUsers(panel) {
     try {
       data = await api.get("/api/admin/users");
     } catch (err) {
-      listEl.innerHTML = `<div class="empty" data-tone="err">${esc(err.message || "读取失败，请稍后重试")}</div>`;
+      errorBlock(listEl, err, load);
       return;
     }
 
@@ -1271,7 +1285,7 @@ async function renderWorksQueue(panel) {
         listHost.dataset.storage = "kv";
       }
     } catch (err) {
-      listHost.innerHTML = `<div class="empty" data-tone="err">${esc(err.message || "读取失败，请稍后重试")}</div>`;
+      errorBlock(listHost, err, load);
       return;
     }
 

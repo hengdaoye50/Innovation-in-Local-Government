@@ -8,6 +8,7 @@
  */
 import { ok, fail, methodNotAllowed, readJson, handleError } from "../../../../lib/http.js";
 import { getSession, isReadOnly, checkBindings } from "../../../../lib/auth.js";
+import { maskName } from "../../../../lib/db.js";
 
 // 与 public/data/readings/*.json 对应；未登记的文献不接受标注
 const READING_IDS = new Set(["flyvbjerg-case-study"]);
@@ -110,7 +111,8 @@ export async function onRequest(context) {
         .bind(
           id,
           session.id,
-          session.username || "",
+          // 署名走展示名 + 脱敏：直接用登录名等于把学号/账号显示给全班
+          maskName(session.displayName || session.username) || "同学",
           paragraphKey,
           start,
           end,

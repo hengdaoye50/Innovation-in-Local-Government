@@ -172,11 +172,18 @@ export async function insertWork(env, data) {
     .run();
 }
 
-/** 学生改稿：退回状态下的重交会回到 submitted，等教师再看一遍 */
+/**
+ * 学生改稿：退回状态下的重交会回到 submitted，等教师再看一遍。
+ *
+ * 重交时上一轮的结论要撤掉（结论、展出标记），否则详情页会把旧结论当成现行结论挂着；
+ * 但**评语保留**——学生正是照着那句评语在改，重交后立刻抹掉等于把批改意见收走了。
+ * 前端据此把它标成「上一轮批阅意见」。
+ */
 export async function updateWorkContent(env, id, data) {
   await env.DB.prepare(
     `UPDATE works SET kind = ?, title = ?, course = ?, term = ?, group_name = ?, members = ?,
-       summary = ?, links_json = ?, status = 'submitted', updated_at = ? WHERE id = ?`
+       summary = ?, links_json = ?, status = 'submitted', verdict = NULL,
+       featured = 0, featured_at = NULL, comment_public = 0, updated_at = ? WHERE id = ?`
   )
     .bind(
       data.kind,

@@ -142,8 +142,8 @@ function parseCasePayload(body) {
       province,
       city,
       district,
-      lng: Number.isFinite(lng) ? lng : null,
-      lat: Number.isFinite(lat) ? lat : null,
+      lng: lng >= 73 && lng <= 136 ? lng : null,
+      lat: lat >= 3 && lat <= 54 ? lat : null,
       domains,
       sources,
       body: text,
@@ -264,12 +264,21 @@ async function statusHandler({ request, env }, id) {
   const existing = await getCase(env, id);
   if (!existing) return fail("案例不存在", 404);
 
+  // 分数只接受有限的数字：教师那栏填了别的字符时，Number() 会得到 NaN，
+  // 绑进 D1 会直接报错或写进一个不是数字的值
+  let score;
+  if (body.score !== undefined && body.score !== null && body.score !== "") {
+    const parsed = Number(body.score);
+    if (!Number.isFinite(parsed)) return fail("分数要填数字");
+    score = Math.max(0, Math.min(100, Math.round(parsed)));
+  }
+
   const changed = await updateCaseStatus(
     env,
     id,
     status,
     body.review !== undefined ? String(body.review).slice(0, 500) : undefined,
-    body.score !== undefined ? Number(body.score) : undefined
+    score
   );
   if (!changed) return fail("更新失败", 500);
 

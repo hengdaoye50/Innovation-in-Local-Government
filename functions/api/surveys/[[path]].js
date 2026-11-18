@@ -34,6 +34,13 @@ import {
 } from "../../lib/db.js";
 
 const MAX_BODY = 20_000;
+/** 经纬度落在国界之外一律视为无效：lng: 999 会让光点飞出地图 */
+function clampCoord(value, min, max) {
+  const num = Number(value);
+  if (!Number.isFinite(num) || num < min || num > max) return null;
+  return num;
+}
+
 const MAX_IMAGES = 9;
 
 /** 新建与修改共用一套字段整理，避免两处校验慢慢跑偏 */
@@ -45,8 +52,8 @@ function readSurveyPayload(body) {
     district: String(body.district || "").trim().slice(0, 30),
     body: String(body.body || "").trim(),
     visitedAt: String(body.visitedAt || "").trim().slice(0, 10),
-    lng: Number(body.lng),
-    lat: Number(body.lat),
+    lng: clampCoord(body.lng, 73, 136),
+    lat: clampCoord(body.lat, 3, 54),
   };
 }
 

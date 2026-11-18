@@ -211,7 +211,9 @@ export async function mountWorkDetail(root, id) {
           ${
             work.commentVisible && work.comment
               ? `<section class="works-review">
-                  <div class="eyebrow">教师批阅${work.reviewer ? ` · ${esc(work.reviewer)}` : ""}</div>
+                  <div class="eyebrow">${
+                    work.status === "submitted" ? "上一轮批阅意见" : "教师批阅"
+                  }${work.reviewer ? ` · ${esc(work.reviewer)}` : ""}</div>
                   <div class="works-review__body">${renderMarkdown(work.comment)}</div>
                   ${work.reviewedAt ? `<div class="meta mono">${esc(work.reviewedAt.slice(0, 10))}</div>` : ""}
                 </section>`
