@@ -39,7 +39,7 @@
 
 ## 维护原则
 
-1. 修改前先读本文件、`DESIGN.md`、`git status` 和相关文件引用关系。
+1. 修改前先读本文件、`DESIGN.md`、`HANDOFF.md`（当前状态、运行手册、踩过的坑）、`git status` 和相关文件引用关系。
 2. 不提交 `node_modules/`、`dist/`、`.wrangler/`、`.dev.vars`、编辑器配置。
 3. 不把密钥、token、密码写入代码、提交或日志。`DEEPSEEK_API_KEY`、`SEARCH_API_KEY`、
    `AUTH_SECRET`、`CLOUDFLARE_API_TOKEN` 只存在于部署平台 Secrets。
@@ -55,6 +55,7 @@ MPA课程AI辅学项目开发/
 ├── CLAUDE.md                 # 项目规范（本文件）
 ├── DESIGN.md                 # 视觉与交互设计规范
 ├── PLAN.md                   # 架构方案与实施阶段
+├── HANDOFF.md                # 交接文件：当前状态、运行手册、验证范围、踩过的坑、下一步
 ├── README.md                 # 仓库说明与部署步骤
 ├── package.json
 ├── vite.config.js
