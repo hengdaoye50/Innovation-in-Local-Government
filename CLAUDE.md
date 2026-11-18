@@ -214,6 +214,8 @@ work_files id, work_id, owner_id, file_name, mime, size, storage(r2|kv), created
 
 - 复用 `polihot` 的邀请码体系：`PH-XXXX-XXXX` 风格改为本站前缀，全局唯一、一次性。
 - 密码 PBKDF2 校验；会话存 KV，Cookie `HttpOnly` + `SameSite=Lax`。
+- 登录限流按**账号**计（10 次 / 10 分钟），不按 IP：教室与校园网同出口 IP，按 IP 卡会把整班挡在门外。
+  IP 只留一条宽额度（80 次 / 10 分钟）兜脚本刷量，注册同理按邀请码计。
 - 用户名：字母数字，长度 ≥ 6。密码：8–18 位，含大写、小写、数字。
 - 角色：`admin` / `teacher` / `student`。
 
