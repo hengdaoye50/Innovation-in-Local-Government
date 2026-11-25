@@ -1095,6 +1095,8 @@ async function renderUsers(panel) {
     const items = data?.items || [];
     const counts = data?.counts || {};
     const purged = data?.purged || {};
+    // 默认口令由服务端下发，界面不另写一份（见 functions/api/admin/users/index.js）
+    const defaultPassword = data?.defaultPassword || "默认密码";
     countEl.textContent = `管理员 ${counts.admins || 0} · 教师 ${counts.teachers || 0} · 学生 ${
       counts.students || 0
     } · 观察员 ${counts.observers || 0}`;
@@ -1141,9 +1143,10 @@ async function renderUsers(panel) {
           ${
             u.isSelf
               ? ""
-              : `<button class="btn ${u.status === "disabled" ? "btn--ghost" : "btn--quiet"} btn--sm" data-toggle-status data-status="${
-                  u.status === "disabled" ? "active" : "disabled"
-                }">${u.status === "disabled" ? "启用" : "停用"}</button>`
+              : `<button class="btn btn--quiet btn--sm" data-reset-password>重置密码</button>
+                 <button class="btn ${u.status === "disabled" ? "btn--ghost" : "btn--quiet"} btn--sm" data-toggle-status data-status="${
+                   u.status === "disabled" ? "active" : "disabled"
+                 }">${u.status === "disabled" ? "启用" : "停用"}</button>`
           }
         </div>
       </article>`
@@ -1195,6 +1198,35 @@ async function renderUsers(panel) {
           load();
         } catch (err) {
           toast(err.message || "操作失败", { type: "error" });
+          btn.disabled = false;
+        }
+      });
+    });
+
+    qsa("[data-reset-password]", listEl).forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const row = btn.closest("[data-user]");
+        const id = row.dataset.user;
+        const username = row.dataset.username || "该账号";
+
+        // 重置是个不可撤销的动作：旧密码连自己都恢复不了，把它和「会被踢下线」都写清楚
+        const confirmed = await confirmDialog({
+          title: `重置 ${username} 的密码？`,
+          html: `<p>密码会改成默认口令 <b>${esc(defaultPassword)}</b>，请当面或私下告知本人，
+                   并提醒尽快到「我的」页面改成自己的密码。</p>
+                 <p style="margin-top:10px">该账号当前所有设备的登录会立刻失效，需要用新口令重新登录。</p>`,
+          confirmText: "重置密码",
+          danger: true,
+        });
+        if (!confirmed) return;
+
+        btn.disabled = true;
+        try {
+          const res = await api.patch(`/api/admin/users/${id}`, { resetPassword: true });
+          toast(`已重置为 ${res?.defaultPassword || defaultPassword}，请提醒本人尽快改密码`);
+          load();
+        } catch (err) {
+          toast(err.message || "重置失败", { type: "error" });
           btn.disabled = false;
         }
       });

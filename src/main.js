@@ -43,6 +43,7 @@ import { mountSlideDetail, mountPostDetail } from "./pages/detail.js";
 import { mountAuth } from "./pages/login.js";
 import { mountAdmin } from "./pages/admin.js";
 import { mePage, mountMe } from "./pages/me.js";
+import { mountPasswordGate } from "./pages/password.js";
 
 const app = document.getElementById("app");
 const boot = document.getElementById("boot");
@@ -255,7 +256,6 @@ function reportView(path) {
 
 async function boot0() {
   // 先查会话：未登录时只渲染登录页，不挂导航、不请求任何内容数据。
-  // 服务端 _middleware.js 也会把页面入口带上 gate 标记，两层一起生效。
   let user = null;
   try {
     const me = await authApi.me();
@@ -277,6 +277,15 @@ async function boot0() {
     document.body.classList.add("page-auth");
     app.innerHTML = `<main id="auth-root"></main>`;
     mountAuth(app.querySelector("#auth-root"));
+    hideBoot();
+    return;
+  }
+
+  // 被管理员重置过密码的账号先过这一关：服务端 _middleware.js 已经挡掉了
+  // 其它接口，这里只渲染改密表单，不挂导航、也不启动路由——放出去也全是 403。
+  if (user.mustChangePassword) {
+    app.innerHTML = `<main id="pwd-root"></main>`;
+    mountPasswordGate(app.querySelector("#pwd-root"), user);
     hideBoot();
     return;
   }

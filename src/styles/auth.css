@@ -169,6 +169,32 @@
   pointer-events: none;
 }
 
+/* 强制改密：被管理员重置口令后，登录进来唯一能待的一页 */
+.pwd-gate {
+  max-width: 560px;
+  padding-top: clamp(48px, 10vw, 96px);
+  padding-bottom: clamp(80px, 14vw, 140px);
+}
+
+.pwd-gate__form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 28px;
+  padding: 26px 24px;
+}
+
+.pwd-gate__form .field__hint {
+  margin: 0;
+}
+
+.pwd-gate__actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
 /* 登录页顶栏落在深色版面上，给一层纸色底以免看不清 */
 body.page-auth .nav {
   background: rgba(253, 248, 240, 0.94);

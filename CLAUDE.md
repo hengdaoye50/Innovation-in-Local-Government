@@ -66,7 +66,7 @@ MPA课程AI辅学项目开发/
 │   ├── styles/               # tokens / base / map / studio / boards / detail / auth / touch
 │   ├── pages/                # atlas / studio / slides / blog / field / survey（阅读）/
 │   │                         # survey-editor（编写与编辑）/ works / work-editor（材料提交）/
-│   │                         # case / detail / reading / me / login / admin
+│   │                         # case / detail / reading / me / login / password（强制改密）/ admin
 │   ├── components/           # map（SVG 浮雕地图）、chrome（顶栏页脚）、comments
 │   └── lib/                  # api / router / store / dom / markdown / image（压图）/ docx（Word 转换）/ demo
 ├── public/
@@ -82,6 +82,7 @@ MPA课程AI辅学项目开发/
 │   ├── sample-case.md        # Markdown 版
 │   └── sample-case.docx      # Word 版（同内容的转换产物）
 ├── functions/
+│   ├── _middleware.js        # 全局闸口：强制改密未完成时只放行认证三件套
 │   ├── api/                  # Pages Functions（auth / cases / chat / slides / posts / surveys /
 │   │                         # survey-images / works / readings / comments / views / admin）
 │   └── lib/                  # 服务端共享模块（http / auth / db / works / blobstore / llm / search / review）
@@ -219,6 +220,17 @@ work_files id, work_id, owner_id, file_name, mime, size, storage(r2|kv), created
   IP 只留一条宽额度（80 次 / 10 分钟）兜脚本刷量，注册同理按邀请码计。
 - 用户名：字母数字，长度 ≥ 6。密码：8–18 位，含大写、小写、数字。
 - 角色：`admin` / `teacher` / `student`。
+- **忘记密码只能由管理员在后台重置**（本站不提供自助找回）。重置于「用户管理」每行的
+  「重置密码」，密码改回默认口令 `Aa123456`（常量 `DEFAULT_RESET_PASSWORD`，在
+  `functions/lib/auth.js`，随账号列表下发，界面不另写一份），并立刻作废该账号的全部会话——
+  否则重置只是换了下一次登录的密码，已经登录着的人照样在里面。管理员不能重置自己的密码
+  （会把自己踢下线），要走「我的」页面的改密码。
+- **重置之后强制改密**：重置时置 `users.must_change_password = 1`，该账号登录进来先落在
+  `src/pages/password.js` 那一页，改成自己的密码才放行。闸口在服务端
+  `functions/_middleware.js`：标记为真时 `/api/**` 只放行 `me` / `password` / `logout`，
+  其余 403 带 `detail: "password_change_required"`。**别把这道闸口挪到前端**——站点是静态壳 +
+  接口取数，前端守卫只是皮，地址栏直接敲 `#/works` 就绕过去了。新密码不许取 `Aa123456`，
+  否则「必须改」自己就架空了。
 
 ### 邀请码与账号清理
 

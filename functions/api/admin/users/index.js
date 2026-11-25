@@ -5,7 +5,7 @@
  * 名下有作品的停用账号不会动，只把数字报回去（purged.skipped）。
  */
 import { ok, fail, methodNotAllowed, handleError } from "../../../lib/http.js";
-import { getSession, checkBindings } from "../../../lib/auth.js";
+import { getSession, checkBindings, DEFAULT_RESET_PASSWORD } from "../../../lib/auth.js";
 import { purgeEmptyDisabledUsers } from "../../../lib/purge.js";
 
 export async function onRequest(context) {
@@ -63,6 +63,9 @@ export async function onRequest(context) {
         observers: Number(counts?.observers) || 0,
       },
       purged,
+      // 重置密码用的默认口令：随列表下发，前端确认窗与提示语直接用这个值，
+      // 别在界面里另写一份，改了口令两边就会对不上。
+      defaultPassword: DEFAULT_RESET_PASSWORD,
     });
   } catch (err) {
     return handleError(err);

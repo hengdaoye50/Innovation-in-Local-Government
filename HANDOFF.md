@@ -48,7 +48,8 @@ git push origin main                                             # 触发部署�
 | 文献共读 | `#/`（区块 `#blog`）、`#/reading/:id` | 方法论文献：划线、边注、脉络图、讨论 | `pages/blog.js`、`pages/reading.js`、`api/readings/*` | `annotations`、`comments` |
 | 调研足迹 | `#/`（区块 `#field`）、`#/field/:id`、`#/field/new`、`#/field/:id/edit` | 图文游记：Markdown 双栏编辑、压图上传、点图放大；作者与教师可改稿 | `pages/field.js`、`pages/survey.js`、`pages/survey-editor.js` | `surveys`、`survey_images` |
 | 个人页 | `#/me` | 昵称、头像、改密码、我的作品/材料/调研 | `pages/me.js` | `users` |
-| 教师后台 | `#/admin` | 数据看板、案例审核、材料批阅、展位管理、拓展材料、邀请码、用户管理 | `pages/admin.js`、`api/admin/*` | 全部 |
+| 强制改密 | 登录后自动接管 | 被重置过密码的账号先落在这一页，改完才放行其它功能 | `pages/password.js`、`functions/_middleware.js` | `users` |
+| 教师后台 | `#/admin` | 数据看板、案例审核、材料批阅、展位管理、拓展材料、邀请码、用户管理（角色、停用、重置密码为默认口令并强制改密） | `pages/admin.js`、`api/admin/*` | 全部 |
 | 登录 | `#/login` | 登录 / 邀请码注册 | `pages/login.js`、`api/auth/*` | `users`、`invites` |
 
 四个角色：`admin` / `teacher` / `student` / `observer`（观察员只读，写接口一律 403）。
@@ -126,7 +127,7 @@ FROM users WHERE username='e2eadmin';
 
 ### 4.4 数据库迁移
 
-迁移目录 `migrations/0001…0012`。**上线前必须先核对线下记账与线上真实结构**，这个坑已经踩过一次，详见 `CLAUDE.md`「数据库迁移」：
+迁移目录 `migrations/0001…0013`。**上线前必须先核对线下记账与线上真实结构**，这个坑已经踩过一次，详见 `CLAUDE.md`「数据库迁移」：
 
 ```powershell
 npx wrangler d1 execute innovation-localgov --remote --command "SELECT name FROM d1_migrations ORDER BY name"
@@ -137,7 +138,7 @@ npx wrangler d1 migrations list innovation-localgov --remote
 铁律：
 
 - `ALTER TABLE ADD COLUMN` 在 SQLite 没有 `IF NOT EXISTS`，**重跑必炸**。记账缺失时不要盲目 `migrations apply`，按 `scripts/repair-migrations-0003-0007.sql` 的做法手工补表/补列，再 `INSERT OR IGNORE` 版本号。
-- 凡是 `ALTER TABLE` 新增的列，代码里都要留**缺列降级**（现在 `users.avatar`、`invites.revoked_at`、`surveys.updated_at`、`slides.visibility` 都有降级）。
+- 凡是 `ALTER TABLE` 新增的列，代码里都要留**缺列降级**（现在 `users.avatar`、`users.must_change_password`、`invites.revoked_at`、`surveys.updated_at`、`slides.visibility` 都有降级）。`0013`（`users.must_change_password`）只加了列、没碰数据，已在本地跑过；线上还没跑。
 - 新增「挂在用户名下的表」时，同步把这张表加进 `functions/lib/purge.js` 的 owner 判据，否则停用账号会被硬删、记录成孤儿。
 
 ### 4.5 部署
@@ -173,6 +174,8 @@ CLI 不提供「查看 Pages 项目绑定」的命令，可以只读查 API。�
 | 学生写流程 | 浏览器 | 留言、改昵称（顶栏实时同步）、提交材料（PDF 上传→R2）、调研编辑器（省市区联动、双栏预览） |
 | 教师流程 | 浏览器 + API | 批阅（PATCH → `reviewed` + 展出）、案例通过/下架、展位上传 PDF 并内嵌、邀请码批量生成 |
 | 观察员 | API | 提交 / 留言均 403，顶栏显示「观察员」标记 |
+| 后台重置密码 | API + 浏览器 | 管理员重置学生 → 默认口令 `Aa123456` 可登录、原密码 401、被重置账号在别处的会话立即失效；重置自己 400、非管理员 403、`resetPassword` 非 true 400、不存在的账号 404；390px 下操作区自动换行不溢出 |
+| 强制改密 | API + 浏览器 | 重置后登录落改密页（无导航），`/api/cases`、`/api/surveys`、留言、埋点全 403 且 `detail=password_change_required`，`me`/`password`/`logout` 放行；新密码取默认口令被拒；改完标记清零、旧会话失效、普通接口恢复 200；地址栏直接敲 `#/works` 也进不去；390px 无溢出；退出登录可用 |
 | 材料全链路 | 浏览器 | 提交 → 待批阅 → 教师批阅 → 上展示板 → 学生看到评语；归档后改稿被拒（409） |
 | Word 导入 | 浏览器 | 表格还原成 Markdown 表（含单元格内 `|` 转义）、图片丢弃并提示张数、标题自动填 |
 | 全站链接 | 无头 Chrome 扫 17 个地址 | 区块锚点（`#studio` 等）、`#/xxx` 路由、404、空态都正常 |
@@ -284,7 +287,11 @@ GET    /api/readings/:id/mindmap               GET|POST /api/readings/:id/annota
 GET|POST /api/comments                         POST /api/views
 GET    /api/posts?limit=                       GET /api/posts/:id
 GET    /api/admin/stats|users|invites          POST /api/admin/invites  DELETE /api/admin/invites/:code
+PATCH  /api/admin/users/:id                    { role?, status?, resetPassword? }（重置置强制改密标记）
 ```
+
+强制改密未完成时，除 `GET /api/auth/me`、`POST /api/auth/password|logout` 外，
+所有 `/api/**` 返回 403 `{ ok:false, error:"请先修改密码", detail:"password_change_required" }`。
 
 ### 9.2 数据模型要点
 
@@ -296,11 +303,12 @@ GET    /api/admin/stats|users|invites          POST /api/admin/invites  DELETE /
 - `work_files`：`storage` 记 `r2` / `kv`（历史附件可能落在 KV，按此字段取），`work_id` 为空表示还没挂到材料上（24 小时后由 `pruneOrphanWorkFiles` 清理）。
 - `survey_images`：BLOB 直接存 D1，`survey_id` 为空表示草稿图（一天后由 `pruneOrphanImages` 清理）。
 - `comments`：`target_type` ∈ case / slide / post / reading / work；`author_role='ai'` 是模型评语，不进普通留言流。
+- `users.must_change_password`：1 = 管理员重置过口令、还没改成自己的，此时 `_middleware.js` 挡掉除认证外的所有接口。
 
 ### 9.3 前端代码地图
 
 ```text
-src/main.js              路由表、页面挂载、访问埋点、启动流程
+src/main.js              路由表、页面挂载、访问埋点、启动流程（含强制改密的分流）
 src/lib/router.js        hash 路由 + scrollToSection（含三层落点保护）
 src/lib/dom.js           esc / el / toast / confirmDialog（焦点环 + aria）/ zhWords / 日期
 src/lib/markdown.js      marked + DOMPurify；renderProse 把独占段落的图立成 figure
@@ -315,6 +323,7 @@ src/styles/*.css         tokens → base → 各模块；touch.css 必须最后�
 ### 9.4 服务端代码地图
 
 ```text
+functions/_middleware.js 全局闸口：强制改密未完成时只放行 me / password / logout
 functions/api/**         每个目录一个资源；[[path]].js 是 catch-all 路由
 functions/lib/http.js    ok / fail / readJson（带上限）/ rateLimit（内存桶）/ randomId
 functions/lib/auth.js    会话（KV）、PBKDF2、角色判定、缺列降级

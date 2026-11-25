@@ -33,6 +33,8 @@ import {
   getSession,
   publicUser,
   checkBindings,
+  hasMustChangeColumn,
+  DEFAULT_RESET_PASSWORD,
 } from "../../lib/auth.js";
 
 export async function onRequest(context) {
@@ -191,6 +193,7 @@ async function login({ request, env }) {
       displayName: user.display_name || user.username,
       role: user.role,
       avatar: await readAvatar(env, user.id),
+      mustChangePassword: await readMustChange(env, user.id),
     },
   });
   return withCookie(res, sessionCookie(token));
@@ -203,6 +206,18 @@ async function readAvatar(env, userId) {
     return row?.avatar || "";
   } catch {
     return "";
+  }
+}
+
+/** 强制改密标记同理：缺列（0013 没跑）时当 false，别让登录 500 */
+async function readMustChange(env, userId) {
+  try {
+    const row = await env.DB.prepare("SELECT must_change_password FROM users WHERE id = ?")
+      .bind(userId)
+      .first();
+    return Boolean(row?.must_change_password);
+  } catch {
+    return false;
   }
 }
 
@@ -259,6 +274,9 @@ async function updateProfile({ request, env }) {
  * 改密码：先验当前密码，再按同一套强度规则校验新密码。
  * 改完把该账号的所有会话作废，再给当前这台设备发一张新会话——
  * 别的设备被踢下线，这里不至于被自己的操作踢掉。
+ *
+ * 被管理员重置过的账号靠这一条解开强制改密：清掉标记，其余接口才放行。
+ * 新密码不许沿用默认口令，否则「必须改」这件事自己就架空了。
  */
 async function changePassword({ request, env }) {
   const session = await getSession(env, request);
@@ -271,6 +289,9 @@ async function changePassword({ request, env }) {
   const current = String(body.currentPassword || "");
   const next = validatePassword(body.newPassword);
   if (!next.ok) return fail(next.message);
+  if (next.value === DEFAULT_RESET_PASSWORD) {
+    return fail("新密码不能是默认口令，请另设一个");
+  }
 
   const row = await env.DB.prepare("SELECT password_hash FROM users WHERE id = ?")
     .bind(session.id)
@@ -284,6 +305,12 @@ async function changePassword({ request, env }) {
   await env.DB.prepare("UPDATE users SET password_hash = ? WHERE id = ?")
     .bind(hash, session.id)
     .run();
+
+  if (await hasMustChangeColumn(env)) {
+    await env.DB.prepare("UPDATE users SET must_change_password = 0 WHERE id = ?")
+      .bind(session.id)
+      .run();
+  }
 
   await destroyUserSessions(env, session.id);
   const token = await createSession(env, {

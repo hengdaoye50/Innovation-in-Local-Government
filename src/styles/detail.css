@@ -1034,6 +1034,9 @@
   display: flex;
   gap: 6px;
   flex: none;
+  /* 用户行里的操作有三个（角色、重置密码、停用），窄屏会挤出去 */
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .admin__side {

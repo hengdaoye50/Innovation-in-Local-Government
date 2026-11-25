@@ -19,6 +19,13 @@ function fromHex(hex) {
   return out;
 }
 
+/**
+ * 管理员重置密码时用的默认口令。
+ * 只有后台重置这一条路会写它，学生自己改密码仍须过 validatePassword。
+ * 口令本身不保密（界面会直接显示给人看），保密的是「谁被重置了」这件事。
+ */
+export const DEFAULT_RESET_PASSWORD = "Aa123456";
+
 export function validateUsername(value) {
   const u = String(value || "").trim();
   if (!/^[A-Za-z0-9]+$/.test(u)) return { ok: false, message: "用户名只能包含字母和数字" };
@@ -143,20 +150,32 @@ export function tokenFromRequest(request) {
 }
 
 /**
- * 头像列是后加的（0010 迁移）。迁移没跑齐时，写死 SELECT avatar 会让登录直接 500，
+ * 后加列的探测：迁移没跑齐时，写死 SELECT 会让登录直接 500，
  * 用户看到的是「服务暂时不可用」——密码对也进不来，还查不出原因。
- * 这里先探一次，探不到就退回不带 avatar 的查询，登录照常可用，只是头像为空。
+ * 这里先探一次，探不到就退回不带该列的查询，登录照常可用，只是那个字段为空。
+ * 结果按 isolate 缓存，不每次都查。
  */
-let avatarColumnKnown = null;
-async function hasAvatarColumn(env) {
-  if (avatarColumnKnown !== null) return avatarColumnKnown;
+const columnKnown = { avatar: null, mustChange: null };
+
+async function hasColumn(env, key, probeSql) {
+  if (columnKnown[key] !== null) return columnKnown[key];
   try {
-    await env.DB.prepare("SELECT avatar FROM users LIMIT 1").first();
-    avatarColumnKnown = true;
+    await env.DB.prepare(probeSql).first();
+    columnKnown[key] = true;
   } catch {
-    avatarColumnKnown = false;
+    columnKnown[key] = false;
   }
-  return avatarColumnKnown;
+  return columnKnown[key];
+}
+
+/** avatar（0010 迁移）：没有这一列就退回不带头像的查询 */
+export function hasAvatarColumn(env) {
+  return hasColumn(env, "avatar", "SELECT avatar FROM users LIMIT 1");
+}
+
+/** must_change_password（0013 迁移）：后台重置密码后强制改密用的标记 */
+export function hasMustChangeColumn(env) {
+  return hasColumn(env, "mustChange", "SELECT must_change_password FROM users LIMIT 1");
 }
 
 /** 取当前会话；用户被停用时立即失效 */
@@ -172,8 +191,11 @@ export async function getSession(env, request) {
     return null;
   }
   const withAvatar = await hasAvatarColumn(env);
+  const withMustChange = await hasMustChangeColumn(env);
   const user = await env.DB.prepare(
-    `SELECT id, username, display_name, role, status${withAvatar ? ", avatar" : ""}
+    `SELECT id, username, display_name, role, status${withAvatar ? ", avatar" : ""}${
+      withMustChange ? ", must_change_password" : ""
+    }
        FROM users WHERE id = ?`
   )
     .bind(payload.userId)
@@ -186,6 +208,7 @@ export async function getSession(env, request) {
     displayName: user.display_name || user.username,
     role: user.role,
     avatar: user.avatar || "",
+    mustChangePassword: Boolean(user.must_change_password),
   };
 }
 
@@ -235,6 +258,7 @@ export function publicUser(session) {
     displayName: session.displayName,
     role: session.role,
     avatar: session.avatar || "",
+    mustChangePassword: Boolean(session.mustChangePassword),
   };
 }
 
