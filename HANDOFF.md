@@ -3,7 +3,7 @@
 > 给下一位接手这个仓库的人/agent 看的。目标：读完这一份，能在半小时内把项目跑起来、知道哪些地方碰过、哪些坑别踩第二遍。
 > 规范类文档（必须遵守）是 `CLAUDE.md`（工程约定）、`DESIGN.md`（视觉体系）、`PLAN.md`（架构与选型）。本文件只补充「当下状态 + 运行手册 + 踩过的坑 + 下一步」。
 >
-> 最后更新：2026-11-18 · 对应提交 `0eafef1`
+> 最后更新：2026-11-25 · 对应提交 `0f35ff9`
 
 ---
 
@@ -13,7 +13,7 @@
 | --- | --- |
 | 线上站点 | <https://innovation.jinhuazhang.top>（Pages 默认域 `innovation-localgov.pages.dev` 同时可用） |
 | 仓库 | `hengdaoye50/Innovation-in-Local-Government`，主分支 `main` |
-| 当前提交 | `0eafef1`，工作区干净，与 `origin/main` 一致 |
+| 当前提交 | `0f35ff9`，工作区干净，与 `origin/main` 一致 |
 | Cloudflare 账号 | `f759170b06c5d376c6fc3829c1b58cbe` |
 | Pages 项目 | `innovation-localgov` |
 | 绑定 | D1 `DB` → `innovation-localgov`；KV `SESSIONS`；R2 `FILES` → `innovation-works` |
@@ -138,7 +138,7 @@ npx wrangler d1 migrations list innovation-localgov --remote
 铁律：
 
 - `ALTER TABLE ADD COLUMN` 在 SQLite 没有 `IF NOT EXISTS`，**重跑必炸**。记账缺失时不要盲目 `migrations apply`，按 `scripts/repair-migrations-0003-0007.sql` 的做法手工补表/补列，再 `INSERT OR IGNORE` 版本号。
-- 凡是 `ALTER TABLE` 新增的列，代码里都要留**缺列降级**（现在 `users.avatar`、`users.must_change_password`、`invites.revoked_at`、`surveys.updated_at`、`slides.visibility` 都有降级）。`0013`（`users.must_change_password`）只加了列、没碰数据，已在本地跑过；线上还没跑。
+- 凡是 `ALTER TABLE` 新增的列，代码里都要留**缺列降级**（现在 `users.avatar`、`users.must_change_password`、`invites.revoked_at`、`surveys.updated_at`、`slides.visibility` 都有降级）。`0013`（`users.must_change_password`）只加了列、没碰数据，本地与线上都已跑过（线上存量 23 个账号全部为 0，不受影响）。
 - 新增「挂在用户名下的表」时，同步把这张表加进 `functions/lib/purge.js` 的 owner 判据，否则停用账号会被硬删、记录成孤儿。
 
 ### 4.5 部署
