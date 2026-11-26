@@ -3,7 +3,7 @@
 > 给下一位接手这个仓库的人/agent 看的。目标：读完这一份，能在半小时内把项目跑起来、知道哪些地方碰过、哪些坑别踩第二遍。
 > 规范类文档（必须遵守）是 `CLAUDE.md`（工程约定）、`DESIGN.md`（视觉体系）、`PLAN.md`（架构与选型）。本文件只补充「当下状态 + 运行手册 + 踩过的坑 + 下一步」。
 >
-> 最后更新：2026-11-25 · 对应提交 `0f35ff9`
+> 最后更新：2026-11-26 · 对应提交 `ea17ccf`
 
 ---
 
@@ -13,7 +13,7 @@
 | --- | --- |
 | 线上站点 | <https://innovation.jinhuazhang.top>（Pages 默认域 `innovation-localgov.pages.dev` 同时可用） |
 | 仓库 | `hengdaoye50/Innovation-in-Local-Government`，主分支 `main` |
-| 当前提交 | `0f35ff9`，工作区干净，与 `origin/main` 一致 |
+| 当前提交 | `ea17ccf`，工作区干净，与 `origin/main` 一致 |
 | Cloudflare 账号 | `f759170b06c5d376c6fc3829c1b58cbe` |
 | Pages 项目 | `innovation-localgov` |
 | 绑定 | D1 `DB` → `innovation-localgov`；KV `SESSIONS`；R2 `FILES` → `innovation-works` |
