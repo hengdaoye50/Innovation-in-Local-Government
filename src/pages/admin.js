@@ -3,6 +3,7 @@ import { esc, qs, qsa, toast, timeAgo, formatDate, zhWords, mountReveal, confirm
 import { admin as adminApi, cases as casesApi, api, works as worksApi, workFiles } from "../lib/api.js";
 import { getState, ROLE_LABEL } from "../lib/store.js";
 import { COURSES, TERMS, WORK_KINDS } from "../lib/courses.js";
+import { mountDocPreview } from "../components/doc-preview.js";
 
 const STATUS_LABEL = {
   pending: { text: "待质检", cls: "tag--warn" },
@@ -1377,7 +1378,6 @@ async function renderWorksQueue(panel) {
     }
 
     const files = work.files || [];
-    const pdf = files.find((f) => /^application\/pdf$/i.test(f.mime));
     const verdict = work.verdict || "pass";
 
     listHost.innerHTML = `
@@ -1419,12 +1419,7 @@ async function renderWorksQueue(panel) {
           ${!files.length && !(work.links || []).length ? `<span class="meta">没有附件</span>` : ""}
         </div>
 
-        ${
-          pdf
-            ? `<iframe class="work-review__preview" src="${workFiles.url(pdf.id)}"
-                 title="${esc(pdf.name)}" loading="lazy"></iframe>`
-            : `<p class="field__hint">这份材料没有 PDF，点上面的文件名下载后查看。</p>`
-        }
+        <div data-preview-host></div>
 
         <form class="work-review__form" data-review-form>
           <div class="work-review__verdicts">
@@ -1467,6 +1462,7 @@ async function renderWorksQueue(panel) {
     `;
 
     listHost.querySelector("[data-back]").addEventListener("click", load);
+    mountDocPreview(listHost.querySelector("[data-preview-host]"), files, { compact: true });
 
     const form = qs("[data-review-form]", listHost);
     const statusText = qs("[data-review-status]", listHost);

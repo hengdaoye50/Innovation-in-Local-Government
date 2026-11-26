@@ -3,6 +3,7 @@ import { esc, toast, confirmDialog, mountReveal } from "../lib/dom.js";
 import { works as worksApi, workFiles } from "../lib/api.js";
 import { renderMarkdown } from "../lib/markdown.js";
 import { createCommentBlock } from "../components/comments.js";
+import { mountDocPreview } from "../components/doc-preview.js";
 import { getState } from "../lib/store.js";
 import { SITE } from "../components/chrome.js";
 
@@ -174,7 +175,6 @@ export async function mountWorkDetail(root, id) {
   const verdict = VERDICT[work.verdict];
   const files = work.files || [];
   const own = work.canEdit;
-  const preview = files.find((f) => /^application\/pdf$/i.test(f.mime));
 
   root.innerHTML = `
     <main class="detail-page">
@@ -261,14 +261,7 @@ export async function mountWorkDetail(root, id) {
             }
           </section>
 
-          ${
-            preview
-              ? `<div class="works-preview">
-                  <div class="eyebrow">预览 · ${esc(preview.name)}</div>
-                  <iframe src="${workFiles.url(preview.id)}" title="${esc(preview.name)}" loading="lazy"></iframe>
-                </div>`
-              : ""
-          }
+          <div data-preview-host></div>
         </div>
 
         ${
@@ -304,5 +297,6 @@ export async function mountWorkDetail(root, id) {
   });
 
   document.title = `${work.title} · 材料提交`;
+  mountDocPreview(root.querySelector("[data-preview-host]"), files);
   mountReveal(root);
 }

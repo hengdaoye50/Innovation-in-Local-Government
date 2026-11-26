@@ -67,7 +67,8 @@ MPA课程AI辅学项目开发/
 │   ├── pages/                # atlas / studio / slides / blog / field / survey（阅读）/
 │   │                         # survey-editor（编写与编辑）/ works / work-editor（材料提交）/
 │   │                         # case / detail / reading / me / login / password（强制改密）/ admin
-│   ├── components/           # map（SVG 浮雕地图）、chrome（顶栏页脚）、comments
+│   ├── components/           # map（SVG 浮雕地图）、chrome（顶栏页脚）、comments、
+│   │                         # doc-preview（附件预览：PDF 内嵌 / Word 转网页排版）
 │   └── lib/                  # api / router / store / dom / markdown / image（压图）/ docx（Word 转换）/ demo
 ├── public/
 │   ├── data/china.json       # 中国省级 GeoJSON（已修正环绕向，见 scripts/fix-geojson.mjs）
@@ -112,7 +113,7 @@ MPA课程AI辅学项目开发/
 | 足迹编写 | `/#/field/new`、`/#/field/:id/edit` | Markdown 分栏编辑、实时预览、照片上传、本机草稿 |
 | 课堂展示 | `/#/slides` | 展示板：教师放上来的材料 + 历史展位，含投影模式 |
 | 材料提交 | `/#/works` | 学生交案例分析报告、课件、读书报告、文献评析；站点不预处理 |
-| 材料详情 | `/#/works/:id` | 附件下载 / PDF 内嵌预览、教师批阅结论与评语 |
+| 材料详情 | `/#/works/:id` | 附件下载、PDF 内嵌预览与 Word 转网页排版预览、教师批阅结论与评语 |
 | 提交与改稿 | `/#/works/new`、`/#/works/:id/edit` | 类型、课程学期、组别、说明、附件、外链 |
 | 教师后台 | `/#/admin` | 邀请码、案例审核、材料批阅、展位管理 |
 
@@ -203,6 +204,11 @@ work_files id, work_id, owner_id, file_name, mime, size, storage(r2|kv), created
 
 - **只收 Word（.docx / .doc）与 PDF（.pdf）**，单个 ≤20MB，一份材料最多 3 个附件。
   不收 PPT / ZIP / 图片：站点不做格式转换，课件要自己另存为 PDF，PDF 也是唯一能内嵌翻页的格式。
+- **在线预览由前端做，服务端仍是纯通道**（`src/components/doc-preview.js`）：PDF 交给浏览器 iframe；
+  `.docx` 取回字节后用 mammoth 转成网页排版（标题、段落、列表、表格、图片都在，分栏/页码/
+  页眉页脚不保留），转出来的 HTML 过一遍 DOMPurify，图片按 30 张 / 8MB 设预算，超了丢图并提示。
+  旧版 `.doc` 是 OLE 二进制，浏览器端解不开，只给「下载后用 Word 打开」的说明。
+  **上传的体积上限、类型双检与这个预览无关**，改任何一边都别指望另一边兜住。
 - 附件的**归属要校验**：`work_files` / `survey_images` 回填 `work_id` / `survey_id` 时只允许
   作者本人与正在操作的教师上传的那批，否则「知道附件 id 就能挂到自己材料上」成立——
   而这批 id 会随公开列表下发。不匹配一律 409，让人重新上传。

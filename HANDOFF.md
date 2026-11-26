@@ -44,7 +44,7 @@ git push origin main                                             # 触发部署�
 | 案例地图 | `#/`、`#/case/:id` | 首页首屏。SVG 浮雕中国地图 + 光点，点光点出浮卡，进案例详情 | `pages/atlas.js`、`components/map.js` | `cases` |
 | 协作工作台 | `#/`（区块 `#studio`） | 与模型对话检索材料 → 右侧写 1000–1500 字梗概 → 提交（自动质检） | `pages/studio.js`、`api/chat/*`、`lib/review.js` | `cases` |
 | 课堂展示 | `#/`（区块 `#slides`）、`#/slide/:id` | 展示墙：教师放上来的材料 + 历史展位，含投影模式与讨论 | `pages/slides.js`、`pages/detail.js` | `works`、`slides`、`comments` |
-| 材料提交 | `#/works`、`#/works/new`、`#/works/:id`、`#/works/:id/edit` | 学生交案例报告/课件/读书报告/文献评析；教师批阅三档结论；择优上展示板 | `pages/works.js`、`pages/work-editor.js`、`api/works/*`、`lib/works.js` | `works`、`work_files` |
+| 材料提交 | `#/works`、`#/works/new`、`#/works/:id`、`#/works/:id/edit` | 学生交案例报告/课件/读书报告/文献评析；教师批阅三档结论；择优上展示板；附件在线预览（PDF 内嵌 + Word 转网页排版） | `pages/works.js`、`pages/work-editor.js`、`api/works/*`、`lib/works.js`、`components/doc-preview.js` | `works`、`work_files` |
 | 文献共读 | `#/`（区块 `#blog`）、`#/reading/:id` | 方法论文献：划线、边注、脉络图、讨论 | `pages/blog.js`、`pages/reading.js`、`api/readings/*` | `annotations`、`comments` |
 | 调研足迹 | `#/`（区块 `#field`）、`#/field/:id`、`#/field/new`、`#/field/:id/edit` | 图文游记：Markdown 双栏编辑、压图上传、点图放大；作者与教师可改稿 | `pages/field.js`、`pages/survey.js`、`pages/survey-editor.js` | `surveys`、`survey_images` |
 | 个人页 | `#/me` | 昵称、头像、改密码、我的作品/材料/调研 | `pages/me.js` | `users` |
@@ -175,6 +175,7 @@ CLI 不提供「查看 Pages 项目绑定」的命令，可以只读查 API。�
 | 教师流程 | 浏览器 + API | 批阅（PATCH → `reviewed` + 展出）、案例通过/下架、展位上传 PDF 并内嵌、邀请码批量生成 |
 | 观察员 | API | 提交 / 留言均 403，顶栏显示「观察员」标记 |
 | 后台重置密码 | API + 浏览器 | 管理员重置学生 → 默认口令 `Aa123456` 可登录、原密码 401、被重置账号在别处的会话立即失效；重置自己 400、非管理员 403、`resetPassword` 非 true 400、不存在的账号 404；390px 下操作区自动换行不溢出 |
+| 附件预览 | 浏览器（造了带图表与图片的 .docx） | 后台批阅面板与材料详情都能看 Word：标题/列表/表格/内嵌图片都在，两份附件可切页签，PDF 仍走内嵌；旧版 .doc 给下载提示；390px 无横向溢出；控制台无报错 |
 | 强制改密 | API + 浏览器 | 重置后登录落改密页（无导航），`/api/cases`、`/api/surveys`、留言、埋点全 403 且 `detail=password_change_required`，`me`/`password`/`logout` 放行；新密码取默认口令被拒；改完标记清零、旧会话失效、普通接口恢复 200；地址栏直接敲 `#/works` 也进不去；390px 无溢出；退出登录可用 |
 | 材料全链路 | 浏览器 | 提交 → 待批阅 → 教师批阅 → 上展示板 → 学生看到评语；归档后改稿被拒（409） |
 | Word 导入 | 浏览器 | 表格还原成 Markdown 表（含单元格内 `|` 转义）、图片丢弃并提示张数、标题自动填 |
@@ -316,6 +317,7 @@ src/lib/docx.js          Word → Markdown（表格还原、图片丢弃计数�
 src/lib/image.js         上传前压图（长边 1600，WebP 优先）
 src/lib/api.js           所有请求都走这里；surveys / works / workFiles 等业务域
 src/components/chrome.js 顶栏（含移动菜单、登出、区块跳转代理）与页脚
+src/components/doc-preview.js 附件预览：PDF 走 iframe，.docx 用 mammoth 转网页（懒加载）
 src/components/map.js    SVG 浮雕地图、光点、分析态、附图
 src/styles/*.css         tokens → base → 各模块；touch.css 必须最后加载
 ```

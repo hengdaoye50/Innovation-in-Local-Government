@@ -5,7 +5,10 @@
  * 所以这里先取 HTML，再用一个只服务 mammoth 输出的小转换器落到 Markdown。
  * 只处理它真会吐的那套标签（p / h1-h6 / strong / em / a / ul / ol / li / blockquote / table / br / pre / code），
  * 不追求通用 HTML→Markdown。图片一律丢弃并计数——案例只收文字，base64 会撑爆提交上限。
+ *
+ * 文件末尾另有一条相反的路：docxToPreviewHtml，把 Word 转成网页排版用来预览（保留图片）。
  */
+import DOMPurify from "dompurify";
 
 const COUNTED_IMAGES = { count: 0 };
 
@@ -190,4 +193,84 @@ export async function docxToMarkdown(mammoth, arrayBuffer) {
   ).length;
 
   return { markdown, droppedImages: COUNTED_IMAGES.count, otherWarnings };
+}
+
+/* ——————————— 预览：Word → 网页排版 ——————————— */
+
+/**
+ * 与上面的导入路径方向相反：导入只收文字（图片全丢，案例提交有体积上限），
+ * 预览要正文 + 表格 + 图片一起看。所以图片保留，但要设预算——
+ * mammoth 默认把图转成 base64，一篇带二十张照片的报告能到几十 MB，
+ * 直接塞进 DOM 会让批阅页面卡死。超预算的图整张丢掉并计数，由界面提示。
+ */
+const PREVIEW_IMAGE_LIMIT = 30;
+const PREVIEW_IMAGE_BUDGET = 8 * 1024 * 1024;
+
+const PREVIEW_PURIFY_CONFIG = {
+  ALLOWED_TAGS: [
+    "p", "br", "strong", "em", "del", "u", "s", "sub", "sup", "code", "pre",
+    "blockquote", "ul", "ol", "li", "h1", "h2", "h3", "h4", "h5", "h6",
+    "a", "hr", "table", "thead", "tbody", "tr", "th", "td", "img",
+  ],
+  ALLOWED_ATTR: ["href", "title", "src", "alt"],
+  // 预览要把图片以 data URI 内嵌，但仍只放行图片类型的数据，别的一概不认
+  ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|#|\/|data:image\/)/i,
+};
+
+/**
+ * @param {object} mammoth 已加载的 mammoth 模块
+ * @param {ArrayBuffer} arrayBuffer
+ * @returns {Promise<{html: string, droppedImages: number, empty: boolean}>}
+ */
+export async function docxToPreviewHtml(mammoth, arrayBuffer) {
+  let used = 0;
+  let kept = 0;
+  let droppedImages = 0;
+
+  const result = await mammoth.convertToHtml(
+    { arrayBuffer },
+    {
+      // Word 的「标题」样式默认被 mammoth 当成普通段落，落到网页里就是一坨正文。
+      // 预览要看清结构，把这两档认成标题与副标题。
+      styleMap: [
+        "p[style-name='Title'] => h1:fresh",
+        "p[style-name='Subtitle'] => p:fresh",
+      ],
+      convertImage: mammoth.images.imgElement(async (image) => {
+        const base64 = await image.read("base64");
+        if (kept >= PREVIEW_IMAGE_LIMIT || used + base64.length > PREVIEW_IMAGE_BUDGET) {
+          droppedImages += 1;
+          return { src: "" };
+        }
+        kept += 1;
+        used += base64.length;
+        return { src: `data:${image.contentType};base64,${base64}` };
+      }),
+    }
+  );
+
+  const doc = new DOMParser().parseFromString(
+    `<div id="docx-root">${result.value || ""}</div>`,
+    "text/html"
+  );
+  const root = doc.getElementById("docx-root");
+
+  // 超预算的图在转换时就返回了空 src，这里摘掉，别在版面上留下碎图标
+  root.querySelectorAll("img").forEach((img) => {
+    if (!img.getAttribute("src")) img.remove();
+  });
+
+  // Word 的标题放进半屏高的预览窗里偏大，统一降一级
+  root.querySelectorAll("h1").forEach((h1) => {
+    const h2 = doc.createElement("h2");
+    while (h1.firstChild) h2.appendChild(h1.firstChild);
+    h1.replaceWith(h2);
+  });
+
+  const text = (root.textContent || "").replace(/\s+/g, "");
+  return {
+    html: DOMPurify.sanitize(root.innerHTML, PREVIEW_PURIFY_CONFIG),
+    droppedImages,
+    empty: text.length === 0 && !root.querySelector("img"),
+  };
 }

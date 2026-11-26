@@ -231,17 +231,110 @@
   color: var(--plum);
 }
 
-.works-preview {
-  margin: 28px 0;
+/* —————— 附件预览：PDF 交给浏览器内嵌，Word 转成网页排版 —————— */
+
+.doc-preview {
+  margin: 20px 0;
 }
 
-.works-preview iframe {
+.doc-preview__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.doc-preview__tab {
+  max-width: 100%;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink-2);
+  background: transparent;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+
+.doc-preview__tab:hover {
+  color: var(--plum);
+  border-color: var(--gold);
+}
+
+.doc-preview__tab.is-on {
+  color: var(--plum);
+  border-color: var(--plum);
+  background: rgba(126, 12, 110, 0.05);
+}
+
+.doc-preview iframe,
+.doc-preview__paper {
+  display: block;
   width: 100%;
   height: min(72vh, 620px);
   margin-top: 12px;
   border: 1px solid var(--line-2);
   border-radius: var(--radius-sm);
-  background: var(--paper-2);
+  background: var(--paper-raised);
+}
+
+.doc-preview__paper {
+  overflow: auto;
+  padding: clamp(16px, 3vw, 28px);
+  overscroll-behavior: contain;
+}
+
+/* 预览窗只有半屏高，正文按阅读页那套间距会显得太散，收一收 */
+.doc-preview__paper.md > *:first-child {
+  margin-top: 0;
+}
+
+.doc-preview__paper.md h2 {
+  margin-top: 1.6em;
+  font-size: 21px;
+}
+
+.doc-preview__paper.md h3 {
+  margin-top: 1.5em;
+}
+
+.doc-preview__paper.md ul,
+.doc-preview__paper.md ol {
+  margin: 0.9em 0 0;
+}
+
+/* 批阅面板只有半屏宽且和表单挤在一张卡里，预览窗矮一些 */
+.doc-preview--compact iframe,
+.doc-preview--compact .doc-preview__paper {
+  height: min(52vh, 460px);
+}
+
+.doc-preview--compact .eyebrow {
+  margin-bottom: 12px;
+}
+
+.doc-preview__msg,
+.doc-preview__hint {
+  margin: 12px 0 0;
+  padding: 22px 18px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink-2);
+  border: 1px dashed var(--line-2);
+  border-radius: var(--radius-sm);
+}
+
+.doc-preview__note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--ink-3);
 }
 
 /* —————— 提交表单 —————— */
@@ -508,14 +601,6 @@
 .work-review__files a {
   color: var(--plum);
   overflow-wrap: anywhere;
-}
-
-.work-review__preview {
-  width: 100%;
-  height: min(60vh, 520px);
-  border: 1px solid var(--line-2);
-  border-radius: var(--radius-sm);
-  background: var(--paper-2);
 }
 
 .work-review__form {
