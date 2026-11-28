@@ -4,13 +4,13 @@
 >
 > 与既有文档的分工：`CLAUDE.md` = 工程约定（必须遵守）、`DESIGN.md` = 视觉体系、`PLAN.md` = 架构与选型理由、`HANDOFF.md` = 运行手册 + 踩过的坑（25KB，最详细）、`CHANGELOG.md` = 版本迭代脉络与清理记录。本文件是给新接管者的一页式状态快照与结构地图，**不重复 HANDOFF 的运行细节，只标出该去看哪一节**。
 >
-> 快照时间：2026-11-26 · 对应提交 `7cdc36d`
+> 快照时间：2026-11-26 · 对应提交 `753b015`
 
 ---
 
 ## 1. 三句话结论
 
-1. **代码、线上、文档三者一致，可以直接开工。** HEAD `7cdc36d`，工作区干净，`npm run build` 通过；线上 `index.html` 引用的 `assets/index-B3rtXov7.js` 与本地刚构建产物同名，最近一次 Actions（`45806852616`）success，24 秒完成。
+1. **代码、线上、文档三者一致，可以直接开工。** HEAD `753b015`，工作区干净，`npm run build` 通过；线上 `index.html` 引用的 `assets/index-B3rtXov7.js` 与本地构建产物同名，最近一次 Actions（`45806852616`）success，24 秒完成。`753b015` 只删调试脚本、加两份文档，运行时代码与线上那次部署完全相同。
 2. **最大的未验证面是 AI 三条链路**（`/api/chat` 对话、`lib/review.js` 案例质检、`/api/readings/:id/mindmap` 脉络图）。本地没有 `DEEPSEEK_API_KEY`，调用一律 503；生产环境里这个密钥是有的（见 §5.3），所以线上大概率是可用的，但**没有任何一次真实跑通的记录**。接手第一件事就是把它验掉。
 3. **所有不可逆动作都卡在用户手上**：schema 迁移、`git push`、生产部署、改 CI/密钥、删文件、装全局依赖。单 main 分支，push 即上线，没有 PR 与测试流水线兜底。
 
@@ -138,7 +138,7 @@ MPA课程AI辅学项目开发/
 ### 5.1 仓库本体
 
 - 远程：`https://github.com/hengdaoye50/Innovation-in-Local-Government.git`
-- 分支：单 `main`，129 个提交，139 个追踪文件。**没有 PR 流程、没有测试流水线、没有 develop/staging**。
+- 分支：单 `main`，139 个追踪文件，约 130 个提交（2026-10-22 起）。**没有 PR 流程、没有测试流水线、没有 develop/staging**。
 - 追踪文件分布：`src` 45、`functions` 30、`public` 14、`scripts` 13、`migrations` 12、`examples` 11，其余是根目录文档、配置与 `index.html`。
 - `.gitignore` 排除：`node_modules/`、`dist/`、`.wrangler/`、`.dev.vars`、`.env*`、`screenshots/`、`scripts/.cache/`、`migrations/0002_seed_admin.sql`、`*.log`、`.playwright-mcp/`、编辑器配置。
 - 文件换行：仓库内是 LF，Windows checkout 转 CRLF，`git diff` 会警告，属正常现象。
@@ -238,7 +238,7 @@ checkout → npm ci → npm run build → Sync Pages secrets → wrangler pages 
 ## 8. 上手清单（照做即可）
 
 1. 读 `CLAUDE.md` → `DESIGN.md` → `PLAN.md` → `HANDOFF.md` → 本文件；想知道「每一轮改了什么」再读 `CHANGELOG.md`。
-2. `git status` 应干净，`git log -1` 应为交接清理提交（`7cdc36d` 或其后的 `chore:` / `docs:` 提交）。
+2. `git status` 应干净，`git log -1` 不应早于交接清理提交 `753b015`。
 3. `npm install && npm run build`；起全栈：`npx wrangler pages dev dist --port 8790 --ip 127.0.0.1`。
 4. 造 admin + student（`HANDOFF.md` §4.2；注意 `cases.lng/lat` 必须赋值，否则地图上不出光点），六模块各点一遍。
 5. 核对线上：`gh run list --limit 1` 应为 success；比对 `dist/assets/index-*.js` 与线上引用；`npx wrangler pages secret list --project-name innovation-localgov` 应至少看到 `DEEPSEEK_API_KEY`。
