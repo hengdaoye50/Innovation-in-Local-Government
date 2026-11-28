@@ -176,7 +176,7 @@ async function decideHandler(request, env, id) {
 
   /* —— 教师婉拒 —— */
   if (status === "declined") {
-    if (item.status === "cancelled" || item.status === "declined") {
+    if (["cancelled", "declined", "done"].includes(item.status)) {
       return fail("这条预约已经结束", 409);
     }
     await decideOfficeHour(env, id, {
@@ -215,7 +215,7 @@ async function decideHandler(request, env, id) {
   if (!day.ok) return fail(day.message);
   if (!isSlot(slot)) return fail("请选择一个时段");
 
-  if (item.status === "cancelled" || item.status === "declined") {
+  if (item.status === "cancelled" || item.status === "declined" || item.status === "done") {
     return fail("这条预约已经结束，不能再确认", 409);
   }
 
