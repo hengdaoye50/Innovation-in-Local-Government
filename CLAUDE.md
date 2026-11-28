@@ -56,6 +56,8 @@ MPA课程AI辅学项目开发/
 ├── DESIGN.md                 # 视觉与交互设计规范
 ├── PLAN.md                   # 架构方案与实施阶段
 ├── HANDOFF.md                # 交接文件：当前状态、运行手册、验证范围、踩过的坑、下一步
+├── HANDOFF-DEEPSEEK.md       # 给接管的 harness 看的一页式快照：进度、本地与远端结构、文档出入
+├── CHANGELOG.md              # 版本迭代记录：阶段脉络、迁移对照、清理与恢复方式
 ├── README.md                 # 仓库说明与部署步骤
 ├── package.json
 ├── vite.config.js
