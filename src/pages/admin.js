@@ -4,6 +4,7 @@ import { admin as adminApi, cases as casesApi, api, works as worksApi, workFiles
 import { getState, ROLE_LABEL } from "../lib/store.js";
 import { COURSES, TERMS, WORK_KINDS } from "../lib/courses.js";
 import { mountDocPreview } from "../components/doc-preview.js";
+import { createCalendar, createSlotPicker } from "../components/calendar.js";
 
 const STATUS_LABEL = {
   pending: { text: "待质检", cls: "tag--warn" },
@@ -1781,7 +1782,7 @@ async function renderConnectPanel(panel) {
       return;
     }
     ohList.innerHTML = items.map(ohRow).join("");
-    qsa("[data-decide-form]", ohList).forEach(syncTakenSlots);
+    qsa("[data-decide-form]", ohList).forEach(mountDecideForm);
   }
 
   function renderBooked() {
@@ -1848,34 +1849,15 @@ async function renderConnectPanel(panel) {
 
   function decideForm(item) {
     return `
-      <form class="connect-decide" data-decide-form="${esc(item.id)}" data-id="${esc(item.id)}">
-        <div class="connect__row">
-          <label class="field">
-            <span class="field__label">确认日期</span>
-            <select class="select" name="date" data-date required>
-              ${connectDays
-                .map(
-                  (day) =>
-                    `<option value="${esc(day.value)}"${
-                      day.value === item.preferDate ? " selected" : ""
-                    }>${esc(day.label)}</option>`
-                )
-                .join("")}
-            </select>
-          </label>
-          <label class="field">
-            <span class="field__label">确认时段</span>
-            <select class="select" name="slot" data-slot required>
-              ${connectSlots
-                .map(
-                  (slot) =>
-                    `<option value="${esc(slot)}"${
-                      slot === item.preferSlot ? " selected" : ""
-                    }>${esc(slotText(slot))}</option>`
-                )
-                .join("")}
-            </select>
-          </label>
+      <form class="connect-decide" data-decide-form="${esc(item.id)}" data-id="${esc(item.id)}"
+        data-prefer-date="${esc(item.preferDate)}" data-prefer-slot="${esc(item.preferSlot)}">
+        <div class="field">
+          <span class="field__label">确认日期</span>
+          <div data-decide-date></div>
+        </div>
+        <div class="field">
+          <span class="field__label">确认时段</span>
+          <div data-decide-slot></div>
         </div>
         <label class="field">
           <span class="field__label">地点</span>
@@ -1896,43 +1878,81 @@ async function renderConnectPanel(panel) {
     `;
   }
 
-  /** 已占用的时段在下拉里标出来并禁用；选中组合被占用时按住确认键 */
-  function syncTakenSlots(form) {
+  /** 每张批复表单各自的月历与时段按钮（WeakMap 存，重渲染时自然丢弃） */
+  const decidePickers = new WeakMap();
+
+  function mountDecideForm(form) {
+    if (decidePickers.has(form)) return;
     const id = form.dataset.id;
-    const date = qs("[data-date]", form).value;
-    const slotSelect = qs("[data-slot]", form);
+    const dateHost = qs("[data-decide-date]", form);
+    const slotHost = qs("[data-decide-slot]", form);
+    if (!dateHost || !slotHost) return;
+
     const hint = qs("[data-hint]", form);
     const confirm = qs("[data-confirm]", form);
 
-    [...slotSelect.options].forEach((option) => {
-      const taken = connectBooked.find(
-        (item) => item.date === date && item.slot === option.value && item.id !== id
+    function refreshHint() {
+      const date = cal.getValue();
+      const value = slot.getValue();
+      const conflict = connectBooked.find(
+        (item) => item.date === date && item.slot === value && item.id !== id
       );
-      option.disabled = Boolean(taken);
-      const base = slotText(option.value);
-      option.textContent = taken ? `${base}（已约给 ${taken.studentName}）` : base;
-    });
-
-    const selected = slotSelect.value;
-    const conflict = connectBooked.find(
-      (item) => item.date === date && item.slot === selected && item.id !== id
-    );
-    if (conflict) {
-      hint.classList.add("is-warn");
-      hint.textContent = `这个时段已经约给 ${conflict.studentName}，换一个`;
-      confirm.disabled = true;
-    } else {
+      if (!date || !value) {
+        hint.classList.remove("is-warn");
+        hint.textContent = !date ? "先在月历里选日期" : "再选一个时段";
+        confirm.disabled = true;
+        return;
+      }
+      if (conflict) {
+        hint.classList.add("is-warn");
+        hint.textContent = `这个时段已经约给 ${conflict.studentName}，换一个`;
+        confirm.disabled = true;
+        return;
+      }
       hint.classList.remove("is-warn");
       hint.textContent = "";
       confirm.disabled = false;
     }
+
+    /** 日期一变就重算可用档位：已占用的直接禁用并标出是谁 */
+    function applySlots(wanted) {
+      const date = cal.getValue();
+      const booked = connectBooked.filter((item) => item.date === date && item.id !== id);
+      const options = connectSlots.map((value) => {
+        const taken = booked.find((item) => item.slot === value);
+        return {
+          value,
+          label: slotText(value),
+          disabled: Boolean(taken),
+          note: taken ? `已约给 ${taken.studentName}` : "",
+        };
+      });
+      slot.setOptions(options);
+      const preferred = wanted || form.dataset.preferSlot || "";
+      const usable = options.some((option) => option.value === preferred && !option.disabled);
+      slot.setValue(usable ? preferred : "");
+      refreshHint();
+    }
+
+    const cal = createCalendar({
+      days: connectDays,
+      value: form.dataset.preferDate || "",
+      onChange: () => applySlots(""),
+    });
+    const slot = createSlotPicker({ options: [], onChange: () => refreshHint() });
+    dateHost.append(cal.el);
+    slotHost.append(slot.el);
+    decidePickers.set(form, { cal, slot });
+
+    applySlots(form.dataset.preferSlot || "");
   }
 
   function readDecideForm(form) {
     const data = new FormData(form);
+    const picked = decidePickers.get(form);
     return {
-      date: String(data.get("date") || ""),
-      slot: String(data.get("slot") || ""),
+      date: picked?.cal.getValue() || "",
+      slot: picked?.slot.getValue() || "",
       location: String(data.get("location") || "").trim(),
       reply: String(data.get("reply") || "").trim(),
     };
@@ -1947,12 +1967,7 @@ async function renderConnectPanel(panel) {
       openBtn.textContent = body.hidden ? "批复时间" : "收起";
       if (!body.hidden) {
         const form = qs("[data-decide-form]", body);
-        if (form) {
-          qsa("select, input", form).forEach((node) =>
-            node.addEventListener("change", () => syncTakenSlots(form))
-          );
-          syncTakenSlots(form);
-        }
+        if (form) mountDecideForm(form);
       }
       return;
     }

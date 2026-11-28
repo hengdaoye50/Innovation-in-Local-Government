@@ -86,12 +86,12 @@ MPA课程AI辅学项目开发/
 ├── wrangler.toml         1.3K  Pages 项目名、D1/KV/R2 绑定、[vars] 里 LLM_MODEL 与 SEARCH_PROVIDER
 ├── .gitignore            316
 ├── .github/workflows/deploy.yml   2.2K  push main 即部署的完整流水线
-├── src/                  47 个文件
+├── src/                  48 个文件
 │   ├── main.js           路由表、页面挂载、访问埋点、强制改密分流
 │   ├── pages/            16 个页面：atlas / case / detail / studio / slides / blog / reading /
 │   │                     field / survey / survey-editor / works / work-editor / me / login /
 │   │                     password / admin，外加 connect（师生互联）
-│   ├── components/       5 个：map（44.7K，SVG 浮雕地图）/ chrome（顶栏页脚）/ comments /
+│   ├── components/       6 个：map（44.7K，SVG 浮雕地图）/ chrome（顶栏页脚）/ comments /
 │   │                     doc-preview（PDF iframe + mammoth 转网页）/ dust（首屏尘粒，CLAUDE.md 未记录）
 │   ├── lib/              9 个：api / router / store / dom / markdown / docx / image /
 │   │                     avatar / courses（后两个 CLAUDE.md 未记录）

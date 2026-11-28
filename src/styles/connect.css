@@ -264,6 +264,180 @@
   flex: none;
 }
 
+/* —— 月历与时段 —— */
+
+/* 日历靠左、时段靠右：桌面上一行占满，窄屏改回上下 */
+.connect__book-grid {
+  display: grid;
+  grid-template-columns: 380px minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.connect__book-grid .slots {
+  gap: 8px;
+}
+
+.cal {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--paper-raised);
+  padding: 12px 12px 10px;
+  width: 100%;
+  max-width: 380px;
+}
+
+.cal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.cal__month {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.cal__nav {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-xs);
+  border: 1px solid transparent;
+  background: none;
+  color: var(--ink-2);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.cal__nav:hover:not(:disabled) {
+  border-color: var(--line-gold);
+  color: var(--plum);
+}
+
+.cal__nav:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.cal__week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.cal__week span {
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+}
+
+.cal__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.cal__day {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
+  background: none;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+  cursor: default;
+}
+
+.cal__day.is-off,
+.cal__day.is-blank {
+  color: var(--ink-3);
+  opacity: 0.5;
+}
+
+button.cal__day {
+  color: var(--plum);
+  border-color: var(--line);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+
+button.cal__day:hover {
+  border-color: var(--gold);
+  background: rgba(196, 162, 101, 0.1);
+}
+
+.cal__day.is-today {
+  box-shadow: inset 0 0 0 1px var(--line-gold);
+}
+
+.cal__day.is-on {
+  background: var(--plum);
+  border-color: var(--plum);
+  color: var(--paper);
+  font-weight: 600;
+}
+
+.cal__note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.slot-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  background: var(--paper-raised);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+
+.slot-chip:hover:not(:disabled) {
+  border-color: var(--gold);
+  background: rgba(196, 162, 101, 0.08);
+}
+
+.slot-chip.is-on {
+  border-color: var(--plum);
+  background: var(--plum);
+  color: var(--paper);
+}
+
+.slot-chip i {
+  font-style: normal;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.slot-chip:disabled {
+  color: var(--ink-3);
+  border-style: dashed;
+  border-color: var(--line);
+  cursor: not-allowed;
+  background: var(--paper-2);
+}
+
 /* —— 教师后台里的两个队列 —— */
 
 .connect-admin + .connect-admin {
@@ -433,6 +607,21 @@
 
   .connect__row {
     grid-template-columns: 1fr;
+  }
+
+  .connect__book-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  /* 窄屏把卡片留白收一点，日历格才能方到 40px 出头 */
+  .connect__form {
+    padding: 16px;
+  }
+
+  .cal {
+    max-width: none;
+    padding: 10px;
   }
 
   .connect__form-foot {

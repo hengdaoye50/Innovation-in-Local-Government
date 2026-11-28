@@ -7,6 +7,7 @@
  */
 import { esc, qs, qsa, toast, confirmDialog, timeAgo, mountReveal } from "../lib/dom.js";
 import { questions as qaApi, officeHours as ohApi } from "../lib/api.js";
+import { createCalendar, createSlotPicker } from "../components/calendar.js";
 import { getState } from "../lib/store.js";
 
 const THREAD_TAG = {
@@ -60,7 +61,6 @@ export function mountConnect(root) {
           <div class="connect__block-head">
             <div>
               <h2 class="h3">向老师提问</h2>
-              <p class="field__hint">一对一私信：只有你和任课老师看得到，不进公开留言。</p>
             </div>
             <span class="meta mono" data-thread-count></span>
           </div>
@@ -109,19 +109,15 @@ export function mountConnect(root) {
                      <input class="input" name="topic" maxlength="80" required
                        placeholder="例如：案例选题是否站得住、材料提交的格式问题" />
                    </label>
-                   <div class="connect__row">
-                     <label class="field">
+                   <div class="connect__book-grid">
+                     <div class="field">
                        <span class="field__label">期望日期</span>
-                       <select class="select" name="preferDate" required data-day-select>
-                         <option value="">选择日期</option>
-                       </select>
-                     </label>
-                     <label class="field">
+                       <div data-day-cal></div>
+                     </div>
+                     <div class="field">
                        <span class="field__label">期望时段</span>
-                       <select class="select" name="preferSlot" required data-slot-select>
-                         <option value="">选择时段</option>
-                       </select>
-                     </label>
+                       <div data-slot-pick></div>
+                     </div>
                    </div>
                    <label class="field">
                      <span class="field__label">补充说明（可选）</span>
@@ -147,10 +143,13 @@ export function mountConnect(root) {
   const requestListEl = qs("[data-request-list]", root);
   const threadCountEl = qs("[data-thread-count]", root);
   const requestCountEl = qs("[data-request-count]", root);
-  const daySelect = qs("[data-day-select]", root);
-  const slotSelect = qs("[data-slot-select]", root);
+  const dayCalHost = qs("[data-day-cal]", root);
+  const slotPickHost = qs("[data-slot-pick]", root);
 
   let days = [];
+  let slots = [];
+  let dateCal = null;
+  let slotPick = null;
   let openThread = "";
 
   /* —————————————— 提问 —————————————— */
@@ -289,28 +288,24 @@ export function mountConnect(root) {
 
   /* —————————————— office hour —————————————— */
 
-  function fillSlots(slots) {
-    if (!daySelect || !slotSelect) return;
-    if (!Array.isArray(slots) || !slots.length) return;
-    slotSelect.innerHTML = `<option value="">选择时段</option>${slots
-      .map((slot) => `<option value="${esc(slot)}">${esc(slotLabel(slot))}</option>`)
-      .join("")}`;
-  }
-
-  function fillDays(list) {
-    days = Array.isArray(list) ? list : [];
-    if (!daySelect) return;
-    daySelect.innerHTML = `<option value="">选择日期</option>${days
-      .map((day) => `<option value="${esc(day.value)}">${esc(day.label)}</option>`)
-      .join("")}`;
+  /** 日期与时段用月历 + 按钮组，服务端下发的可约日期就是唯一可点的格子 */
+  function mountPickers() {
+    if (dateCal || !dayCalHost || !slotPickHost) return;
+    dateCal = createCalendar({ days });
+    slotPick = createSlotPicker({
+      options: slots.map((slot) => ({ value: slot, label: slotLabel(slot) })),
+    });
+    dayCalHost.append(dateCal.el);
+    slotPickHost.append(slotPick.el);
   }
 
   async function loadRequests() {
     try {
       const res = await ohApi.mine();
       const items = Array.isArray(res?.items) ? res.items : [];
-      fillDays(res?.days);
-      fillSlots(res?.slots);
+      days = Array.isArray(res?.days) ? res.days : [];
+      slots = Array.isArray(res?.slots) ? res.slots : [];
+      mountPickers();
       requestCountEl.textContent = items.length ? `${items.length} 条` : "";
       if (!items.length) {
         requestListEl.innerHTML = `<div class="empty">还没有提交过预约。</div>`;
@@ -395,16 +390,26 @@ export function mountConnect(root) {
     const data = new FormData(form);
     const payload = {
       topic: String(data.get("topic") || "").trim(),
-      preferDate: String(data.get("preferDate") || ""),
-      preferSlot: String(data.get("preferSlot") || ""),
+      preferDate: dateCal?.getValue() || "",
+      preferSlot: slotPick?.getValue() || "",
       note: String(data.get("note") || "").trim(),
     };
-    if (!payload.topic || !payload.preferDate || !payload.preferSlot) return;
+    if (!payload.topic) return;
+    if (!payload.preferDate) {
+      toast("先在月历里选一个周三或周四", { type: "warn" });
+      return;
+    }
+    if (!payload.preferSlot) {
+      toast("再选一个期望时段", { type: "warn" });
+      return;
+    }
     const btn = qs("button[type=submit]", form);
     btn.disabled = true;
     try {
       await ohApi.create(payload);
       form.reset();
+      dateCal?.setValue("");
+      slotPick?.setValue("");
       toast("预约申请已提交，等老师批复");
       await loadRequests();
     } catch (err) {

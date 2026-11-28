@@ -71,7 +71,8 @@ MPA课程AI辅学项目开发/
 │   │                         # connect（师生互联：提问与 office hour 预约）/
 │   │                         # case / detail / reading / me / login / password（强制改密）/ admin
 │   ├── components/           # map（SVG 浮雕地图）、chrome（顶栏页脚）、comments、
-│   │                         # doc-preview（附件预览：PDF 内嵌 / Word 转网页排版）
+│   │                         # doc-preview（附件预览：PDF 内嵌 / Word 转网页排版）、
+│   │                         # calendar（月历与时段选择：师生互联的学生页与后台批复共用）
 │   └── lib/                  # api / router / store / dom / markdown / image（压图）/ docx（Word 转换）/ demo
 ├── public/
 │   ├── data/china.json       # 中国省级 GeoJSON（已修正环绕向，见 scripts/fix-geojson.mjs）
@@ -182,6 +183,8 @@ MPA课程AI辅学项目开发/
   （按 UTC 取星期，3 = 周三、4 = 周四），过去的日子与 8 周以外的日子一并拒掉。
 - **时段是固定档位**（`09:00`、`10:00`、`11:00`、`14:00`、`15:00`、`16:00`、`17:00`，每档一小时），
   学生选期望档、老师批复时选同一套档位，两边才对得上。
+- **选日期用月历**（`src/components/calendar.js`）：只把可约的周三 / 周四画成可点格子，
+  其它日子在位但不可点；学生页与后台批复共用同一个组件，可选范围与选中态不会走样。
 - **同一时段防撞**：`office_hours.slot_key` 只在 `confirmed` 时写入（`YYYY-MM-DD HH:MM`），
   库上以 partial unique index 兜底；老师确认前再查一次，撞了返回 409 并说明该时段已被谁占用。
   `declined` / `cancelled` 必须把 `slot_key` 清空，否则作废的预约会永久占住一个时段。
