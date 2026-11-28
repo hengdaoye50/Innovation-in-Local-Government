@@ -1,6 +1,6 @@
 /** 教师后台 —— 案例审核、展位管理、文章发布、邀请码 */
 import { esc, qs, qsa, toast, timeAgo, formatDate, zhWords, mountReveal, confirmDialog } from "../lib/dom.js";
-import { admin as adminApi, cases as casesApi, api, works as worksApi, workFiles } from "../lib/api.js";
+import { admin as adminApi, cases as casesApi, api, works as worksApi, workFiles, questions as qaApi, officeHours as ohApi } from "../lib/api.js";
 import { getState, ROLE_LABEL } from "../lib/store.js";
 import { COURSES, TERMS, WORK_KINDS } from "../lib/courses.js";
 import { mountDocPreview } from "../components/doc-preview.js";
@@ -49,6 +49,9 @@ export function mountAdmin(root) {
         <button class="admin__tab" data-tab="works" role="tab">材料批阅</button>
         <button class="admin__tab" data-tab="slides" role="tab">展位管理</button>
         <button class="admin__tab" data-tab="posts" role="tab">拓展材料</button>
+        <button class="admin__tab" data-tab="connect" role="tab">
+          师生互联<b class="admin__tab-badge" data-connect-badge hidden></b>
+        </button>
         <button class="admin__tab" data-tab="invites" role="tab">邀请码</button>
         ${user.role === "admin" ? `<button class="admin__tab" data-tab="users" role="tab">用户管理</button>` : ""}
       </div>
@@ -58,6 +61,7 @@ export function mountAdmin(root) {
       <section class="admin__panel" data-panel="works" hidden></section>
       <section class="admin__panel" data-panel="slides" hidden></section>
       <section class="admin__panel" data-panel="posts" hidden></section>
+      <section class="admin__panel" data-panel="connect" hidden></section>
       <section class="admin__panel" data-panel="invites" hidden></section>
       ${user.role === "admin" ? `<section class="admin__panel" data-panel="users" hidden></section>` : ""}
     </div>
@@ -69,6 +73,7 @@ export function mountAdmin(root) {
     works: qs('[data-panel="works"]', root),
     slides: qs('[data-panel="slides"]', root),
     posts: qs('[data-panel="posts"]', root),
+    connect: qs('[data-panel="connect"]', root),
     invites: qs('[data-panel="invites"]', root),
   };
   if (user.role === "admin") panels.users = qs('[data-panel="users"]', root);
@@ -79,6 +84,7 @@ export function mountAdmin(root) {
     works: () => renderWorksQueue(panels.works),
     slides: () => renderSlides(panels.slides),
     posts: () => renderPosts(panels.posts),
+    connect: () => renderConnectPanel(panels.connect),
     invites: () => renderInvites(panels.invites, user),
   };
   if (panels.users) loaders.users = () => renderUsers(panels.users);
@@ -97,6 +103,23 @@ export function mountAdmin(root) {
   // 默认停在「数据」这一栏，先把它加载出来
   loaders.stats();
   mountReveal(root);
+  refreshConnectBadge(root);
+}
+
+/** 师生互联的待办角标：一进后台就要看见，不必先点开页签 */
+function refreshConnectBadge(root) {
+  ohApi
+    .summary()
+    .then((res) => {
+      const badge = qs("[data-connect-badge]", root);
+      if (!badge) return;
+      const total = (Number(res?.questionsAwaiting) || 0) + (Number(res?.requestsPending) || 0);
+      badge.textContent = String(total);
+      badge.hidden = total <= 0;
+    })
+    .catch(() => {
+      /* 角标失败不该影响后台其它部分 */
+    });
 }
 
 /** 列表读取失败：给错误色标 + 一个重试入口，别让人只能刷新整页 */
@@ -1528,4 +1551,469 @@ async function renderWorksQueue(panel) {
   );
 
   load();
+}
+
+/* ————————— 师生互联 ————————— */
+
+const QA_TAG = {
+  open: { text: "待回复", cls: "tag--warn" },
+  replied: { text: "已回复", cls: "tag--ok" },
+};
+
+const OH_TAG = {
+  pending: { text: "待批复", cls: "tag--warn" },
+  confirmed: { text: "已确认", cls: "tag--ok" },
+  declined: { text: "已婉拒", cls: "tag--quiet" },
+  cancelled: { text: "已撤回", cls: "tag--quiet" },
+  done: { text: "已完成", cls: "tag--quiet" },
+};
+
+function slotText(slot) {
+  const hour = Number(String(slot || "").slice(0, 2));
+  if (!Number.isFinite(hour)) return String(slot || "");
+  return `${String(hour).padStart(2, "0")}:00–${String(hour + 1).padStart(2, "0")}:00`;
+}
+
+function dayText(days, value) {
+  const hit = (days || []).find((d) => d.value === value);
+  return hit ? hit.label : value;
+}
+
+let connectDays = [];
+let connectSlots = [];
+let connectBooked = [];
+
+async function renderConnectPanel(panel) {
+  panel.innerHTML = `
+    <div class="card connect-admin" data-qa-block>
+      <div class="connect-admin__head">
+        <div>
+          <h3 class="h3">提问</h3>
+          <p class="field__hint">一对一私信：只有提问的同学与老师看得到，不进公开留言。</p>
+        </div>
+        <div class="connect-admin__filters">
+          <select class="select" data-qa-filter>
+            <option value="staff" selected>待我回复</option>
+            <option value="student">已回复</option>
+            <option value="">全部</option>
+          </select>
+        </div>
+      </div>
+      <div class="connect-admin__list" data-qa-list>
+        <div class="skeleton" style="height:100px"></div>
+      </div>
+    </div>
+
+    <div class="card connect-admin" data-oh-block>
+      <div class="connect-admin__head">
+        <div>
+          <h3 class="h3">office hour 预约</h3>
+          <p class="field__hint">
+            同学只提交期望日期与时段，具体时间由这里批复。同一时段只能确认一条，已占用会标出来。
+          </p>
+        </div>
+        <div class="connect-admin__filters">
+          <select class="select" data-oh-filter>
+            <option value="pending" selected>待批复</option>
+            <option value="confirmed">已确认</option>
+            <option value="declined">已婉拒</option>
+            <option value="">全部</option>
+          </select>
+        </div>
+      </div>
+      <div class="connect-admin__list" data-oh-list>
+        <div class="skeleton" style="height:100px"></div>
+      </div>
+      <div class="connect-booking">
+        <h4 class="connect-booking__title">已经排上的时段</h4>
+        <div class="connect-booking__list" data-booked-list></div>
+      </div>
+    </div>
+  `;
+
+  const qaList = qs("[data-qa-list]", panel);
+  const ohList = qs("[data-oh-list]", panel);
+  const bookedList = qs("[data-booked-list]", panel);
+  const qaFilter = qs("[data-qa-filter]", panel);
+  const ohFilter = qs("[data-oh-filter]", panel);
+  let openQa = "";
+
+  /* —— 提问 —— */
+
+  async function loadQa() {
+    qaList.innerHTML = `<div class="skeleton" style="height:96px"></div>`;
+    let items = [];
+    try {
+      const res = await qaApi.queue(qaFilter.value);
+      items = Array.isArray(res?.items) ? res.items : [];
+    } catch (err) {
+      errorBlock(qaList, err, loadQa);
+      return;
+    }
+    if (!items.length) {
+      qaList.innerHTML = `<div class="empty">这个筛选下没有提问。</div>`;
+      return;
+    }
+    qaList.innerHTML = items.map(qaRow).join("");
+    if (openQa) await openQaThread(openQa);
+  }
+
+  function qaRow(thread) {
+    const tag = QA_TAG[thread.status] || QA_TAG.open;
+    return `
+      <article class="connect-admin__row" data-qa="${esc(thread.id)}">
+        <div class="connect-admin__meta">
+          <span class="tag ${tag.cls}">${tag.text}</span>
+          <span class="meta">${esc(thread.studentName)}</span>
+          <span class="meta mono">${esc(timeAgo(thread.updatedAt))}</span>
+          <span class="meta mono">${thread.messageCount} 条</span>
+        </div>
+        <p class="connect-admin__subject">${esc(thread.subject)}</p>
+        <p class="connect-admin__last">${esc(thread.lastBody)}</p>
+        <div class="connect-admin__aside">
+          <button class="btn btn--quiet btn--sm" type="button" data-open-qa="${esc(thread.id)}">
+            展开并回复
+          </button>
+        </div>
+        <div class="connect-admin__body" data-qa-body hidden></div>
+      </article>
+    `;
+  }
+
+  async function openQaThread(id) {
+    const row = qs(`[data-qa="${id}"]`, qaList);
+    if (!row) return;
+    const body = qs("[data-qa-body]", row);
+    const btn = qs("[data-open-qa]", row);
+    const isOpen = !body.hidden;
+    if (isOpen && openQa === id) {
+      body.hidden = true;
+      row.classList.remove("is-open");
+      btn.textContent = "展开并回复";
+      openQa = "";
+      return;
+    }
+    body.hidden = false;
+    row.classList.add("is-open");
+    btn.textContent = "收起";
+    openQa = id;
+    body.innerHTML = `<div class="skeleton" style="height:72px"></div>`;
+
+    try {
+      const data = await qaApi.detail(id);
+      const messages = Array.isArray(data?.messages) ? data.messages : [];
+      body.innerHTML = `
+        <div class="connect-msgs">
+          ${messages.map(qaMessage).join("")}
+        </div>
+        <form class="connect-reply" data-qa-reply="${esc(id)}">
+          <textarea class="textarea" name="body" rows="3" maxlength="2000"
+            placeholder="回复同学；发送后这一条会转成「已回复」" required></textarea>
+          <button class="btn btn--primary btn--sm" type="submit">发送回复</button>
+        </form>
+      `;
+      const form = qs("[data-qa-reply]", body);
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const text = String(new FormData(form).get("body") || "").trim();
+        if (!text) return;
+        const submit = qs("button[type=submit]", form);
+        submit.disabled = true;
+        try {
+          await qaApi.reply(id, text);
+          toast("已回复");
+          await loadQa();
+          refreshConnectBadge(document);
+        } catch (err) {
+          toast(err?.message || "回复失败", { type: "warn" });
+        } finally {
+          submit.disabled = false;
+        }
+      });
+    } catch (err) {
+      body.innerHTML = `<div class="empty" data-tone="err">${esc(err?.message || "读取失败")}</div>`;
+    }
+  }
+
+  function qaMessage(message) {
+    const staff = message.authorRole === "teacher" || message.authorRole === "admin";
+    return `
+      <div class="connect-msg${staff ? " connect-msg--staff" : ""}">
+        <div class="connect-msg__meta">
+          <span class="connect-msg__who">${esc(message.authorName)}</span>
+          ${staff ? `<span class="tag tag--quiet">老师</span>` : ""}
+          <span class="meta mono">${esc(timeAgo(message.createdAt))}</span>
+        </div>
+        <p class="connect-msg__body">${esc(message.body)}</p>
+      </div>
+    `;
+  }
+
+  qaList.addEventListener("click", (event) => {
+    const btn = event.target.closest("[data-open-qa]");
+    if (!btn) return;
+    openQaThread(btn.dataset.openQa);
+  });
+
+  qaFilter.addEventListener("change", () => {
+    openQa = "";
+    loadQa();
+  });
+
+  /* —— 预约 —— */
+
+  async function loadOh() {
+    ohList.innerHTML = `<div class="skeleton" style="height:96px"></div>`;
+    let items = [];
+    try {
+      const res = await ohApi.queue(ohFilter.value);
+      items = Array.isArray(res?.items) ? res.items : [];
+      connectDays = Array.isArray(res?.days) ? res.days : [];
+      connectSlots = Array.isArray(res?.slots) ? res.slots : [];
+      connectBooked = Array.isArray(res?.booked) ? res.booked : [];
+    } catch (err) {
+      errorBlock(ohList, err, loadOh);
+      return;
+    }
+    renderBooked();
+    if (!items.length) {
+      ohList.innerHTML = `<div class="empty">这个筛选下没有预约。</div>`;
+      return;
+    }
+    ohList.innerHTML = items.map(ohRow).join("");
+    qsa("[data-decide-form]", ohList).forEach(syncTakenSlots);
+  }
+
+  function renderBooked() {
+    if (!bookedList) return;
+    if (!connectBooked.length) {
+      bookedList.innerHTML = `<span class="meta">还没有已确认的时段。</span>`;
+      return;
+    }
+    bookedList.innerHTML = connectBooked
+      .map(
+        (item) =>
+          `<span class="connect-booking__item">${esc(dayText(connectDays, item.date))} · ${esc(
+            slotText(item.slot)
+          )} · ${esc(item.studentName)}</span>`
+      )
+      .join("");
+  }
+
+  function ohRow(item) {
+    const tag = OH_TAG[item.status] || OH_TAG.pending;
+    const decided = item.status === "confirmed" || item.status === "done";
+    return `
+      <article class="connect-admin__row" data-oh="${esc(item.id)}">
+        <div class="connect-admin__meta">
+          <span class="tag ${tag.cls}">${tag.text}</span>
+          <span class="meta">${esc(item.studentName)}</span>
+          <span class="meta">期望 ${esc(dayText(connectDays, item.preferDate))} · ${esc(
+            slotText(item.preferSlot)
+          )}</span>
+          <span class="meta mono">${esc(timeAgo(item.createdAt))}</span>
+        </div>
+        <p class="connect-admin__subject">${esc(item.topic)}</p>
+        ${item.note ? `<p class="connect-admin__last">${esc(item.note)}</p>` : ""}
+        ${
+          decided && item.scheduledDate
+            ? `<p class="connect-req__decided"><b>已定</b>${esc(
+                dayText(connectDays, item.scheduledDate)
+              )} · ${esc(slotText(item.scheduledSlot))}${
+                item.location ? ` · ${esc(item.location)}` : ""
+              }</p>`
+            : ""
+        }
+        ${item.reply ? `<p class="connect-req__reply"><b>给学生的话</b>${esc(item.reply)}</p>` : ""}
+        <div class="connect-admin__aside">
+          ${
+            item.status === "pending"
+              ? `<button class="btn btn--quiet btn--sm" type="button" data-open-oh="${esc(
+                  item.id
+                )}">批复时间</button>`
+              : ""
+          }
+          ${
+            item.status === "confirmed"
+              ? `<button class="btn btn--quiet btn--sm" type="button" data-done-oh="${esc(
+                  item.id
+                )}">标记完成</button>`
+              : ""
+          }
+        </div>
+        <div data-oh-body hidden>${item.status === "pending" ? decideForm(item) : ""}</div>
+      </article>
+    `;
+  }
+
+  function decideForm(item) {
+    return `
+      <form class="connect-decide" data-decide-form="${esc(item.id)}" data-id="${esc(item.id)}">
+        <div class="connect__row">
+          <label class="field">
+            <span class="field__label">确认日期</span>
+            <select class="select" name="date" data-date required>
+              ${connectDays
+                .map(
+                  (day) =>
+                    `<option value="${esc(day.value)}"${
+                      day.value === item.preferDate ? " selected" : ""
+                    }>${esc(day.label)}</option>`
+                )
+                .join("")}
+            </select>
+          </label>
+          <label class="field">
+            <span class="field__label">确认时段</span>
+            <select class="select" name="slot" data-slot required>
+              ${connectSlots
+                .map(
+                  (slot) =>
+                    `<option value="${esc(slot)}"${
+                      slot === item.preferSlot ? " selected" : ""
+                    }>${esc(slotText(slot))}</option>`
+                )
+                .join("")}
+            </select>
+          </label>
+        </div>
+        <label class="field">
+          <span class="field__label">地点</span>
+          <input class="input" name="location" maxlength="60"
+            placeholder="例如：学院楼 312" value="${esc(item.location || "")}" />
+        </label>
+        <label class="field">
+          <span class="field__label">给学生的话（可选）</span>
+          <textarea class="textarea" name="reply" rows="2" maxlength="600"
+            placeholder="例如：把选题说明带来，我们当面过一遍">${esc(item.reply || "")}</textarea>
+        </label>
+        <div class="connect-decide__foot">
+          <button class="btn btn--primary btn--sm" type="submit" data-confirm>确认时间</button>
+          <button class="btn btn--quiet btn--sm" type="button" data-decline>婉拒</button>
+          <span class="connect-decide__hint" data-hint></span>
+        </div>
+      </form>
+    `;
+  }
+
+  /** 已占用的时段在下拉里标出来并禁用；选中组合被占用时按住确认键 */
+  function syncTakenSlots(form) {
+    const id = form.dataset.id;
+    const date = qs("[data-date]", form).value;
+    const slotSelect = qs("[data-slot]", form);
+    const hint = qs("[data-hint]", form);
+    const confirm = qs("[data-confirm]", form);
+
+    [...slotSelect.options].forEach((option) => {
+      const taken = connectBooked.find(
+        (item) => item.date === date && item.slot === option.value && item.id !== id
+      );
+      option.disabled = Boolean(taken);
+      const base = slotText(option.value);
+      option.textContent = taken ? `${base}（已约给 ${taken.studentName}）` : base;
+    });
+
+    const selected = slotSelect.value;
+    const conflict = connectBooked.find(
+      (item) => item.date === date && item.slot === selected && item.id !== id
+    );
+    if (conflict) {
+      hint.classList.add("is-warn");
+      hint.textContent = `这个时段已经约给 ${conflict.studentName}，换一个`;
+      confirm.disabled = true;
+    } else {
+      hint.classList.remove("is-warn");
+      hint.textContent = "";
+      confirm.disabled = false;
+    }
+  }
+
+  function readDecideForm(form) {
+    const data = new FormData(form);
+    return {
+      date: String(data.get("date") || ""),
+      slot: String(data.get("slot") || ""),
+      location: String(data.get("location") || "").trim(),
+      reply: String(data.get("reply") || "").trim(),
+    };
+  }
+
+  ohList.addEventListener("click", async (event) => {
+    const openBtn = event.target.closest("[data-open-oh]");
+    if (openBtn) {
+      const row = openBtn.closest("[data-oh]");
+      const body = qs("[data-oh-body]", row);
+      body.hidden = !body.hidden;
+      openBtn.textContent = body.hidden ? "批复时间" : "收起";
+      if (!body.hidden) {
+        const form = qs("[data-decide-form]", body);
+        if (form) {
+          qsa("select, input", form).forEach((node) =>
+            node.addEventListener("change", () => syncTakenSlots(form))
+          );
+          syncTakenSlots(form);
+        }
+      }
+      return;
+    }
+
+    const doneBtn = event.target.closest("[data-done-oh]");
+    if (doneBtn) {
+      const okToDone = await confirmDialog({
+        title: "标记为已完成？",
+        html: "<p>标记后这条预约进入「已完成」，时段会继续保留在排期里。</p>",
+        confirmText: "标记完成",
+      });
+      if (!okToDone) return;
+      try {
+        await ohApi.decide(doneBtn.dataset.doneOh, { status: "done" });
+        toast("已标记完成");
+        await loadOh();
+        refreshConnectBadge(document);
+      } catch (err) {
+        toast(err?.message || "操作失败", { type: "warn" });
+      }
+      return;
+    }
+
+    const declineBtn = event.target.closest("[data-decline]");
+    if (declineBtn) {
+      const form = declineBtn.closest("[data-decide-form]");
+      const payload = readDecideForm(form);
+      try {
+        await ohApi.decide(form.dataset.id, { status: "declined", reply: payload.reply });
+        toast("已婉拒");
+        await loadOh();
+        refreshConnectBadge(document);
+      } catch (err) {
+        toast(err?.message || "操作失败", { type: "warn" });
+      }
+    }
+  });
+
+  ohList.addEventListener("submit", async (event) => {
+    const form = event.target.closest("[data-decide-form]");
+    if (!form) return;
+    event.preventDefault();
+    const payload = readDecideForm(form);
+    if (!payload.date || !payload.slot) return;
+    const confirm = qs("[data-confirm]", form);
+    confirm.disabled = true;
+    try {
+      await ohApi.decide(form.dataset.id, { status: "confirmed", ...payload });
+      toast("已确认，学生那边会看到时间与地点");
+      await loadOh();
+      refreshConnectBadge(document);
+    } catch (err) {
+      toast(err?.message || "确认失败", { type: "warn" });
+      confirm.disabled = false;
+      // 撞上别人刚确认的时段：重新拉一次，把占用标出来
+      if (err?.status === 409) loadOh();
+    }
+  });
+
+  ohFilter.addEventListener("change", loadOh);
+
+  loadQa();
+  loadOh();
 }

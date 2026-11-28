@@ -182,6 +182,33 @@ export const comments = {
     api.post("/api/comments", { target_type: targetType, target_id: targetId, body }),
 };
 
+/* —— 师生互联 —— */
+
+export const questions = {
+  // 学生：自己提过的全部（含老师已回复的）
+  mine: (limit = 50) => api.get(`/api/questions?mine=1&limit=${limit}`),
+  // 教师：全部提问，可按「等谁回」筛
+  queue: (awaiting = "", limit = 100) =>
+    api.get(`/api/questions?queue=1&limit=${limit}${awaiting ? `&awaiting=${awaiting}` : ""}`),
+  detail: (id) => api.get(`/api/questions/${encodeURIComponent(id)}`),
+  create: (subject, body) => api.post("/api/questions", { subject, body }),
+  reply: (id, body) => api.post(`/api/questions/${encodeURIComponent(id)}/messages`, { body }),
+};
+
+export const officeHours = {
+  mine: (limit = 50) => api.get(`/api/office-hours?mine=1&limit=${limit}`),
+  // 教师队列：额外带回已占用的时段（booked）与可约档位（days / slots）
+  queue: (status = "", limit = 200) =>
+    api.get(`/api/office-hours?queue=1&limit=${limit}${status ? `&status=${status}` : ""}`),
+  detail: (id) => api.get(`/api/office-hours/${encodeURIComponent(id)}`),
+  create: (payload) => api.post("/api/office-hours", payload),
+  decide: (id, payload) => api.patch(`/api/office-hours/${encodeURIComponent(id)}`, payload),
+  cancel: (id) =>
+    api.patch(`/api/office-hours/${encodeURIComponent(id)}`, { status: "cancelled" }),
+  // 后台页签角标
+  summary: () => api.get("/api/connect/summary"),
+};
+
 export const admin = {
   invites: () => api.get("/api/admin/invites"),
   createInvite: (role = "student", note = "", count = 1) =>

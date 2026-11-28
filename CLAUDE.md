@@ -65,9 +65,10 @@ MPA课程AI辅学项目开发/
 ├── index.html                # 单页入口
 ├── src/
 │   ├── main.js               # 路由与页面挂载
-│   ├── styles/               # tokens / base / map / studio / boards / detail / auth / touch
+│   ├── styles/               # tokens / base / map / studio / boards / detail / auth / connect / touch
 │   ├── pages/                # atlas / studio / slides / blog / field / survey（阅读）/
 │   │                         # survey-editor（编写与编辑）/ works / work-editor（材料提交）/
+│   │                         # connect（师生互联：提问与 office hour 预约）/
 │   │                         # case / detail / reading / me / login / password（强制改密）/ admin
 │   ├── components/           # map（SVG 浮雕地图）、chrome（顶栏页脚）、comments、
 │   │                         # doc-preview（附件预览：PDF 内嵌 / Word 转网页排版）
@@ -87,8 +88,10 @@ MPA课程AI辅学项目开发/
 ├── functions/
 │   ├── _middleware.js        # 全局闸口：强制改密未完成时只放行认证三件套
 │   ├── api/                  # Pages Functions（auth / cases / chat / slides / posts / surveys /
-│   │                         # survey-images / works / readings / comments / views / admin）
-│   └── lib/                  # 服务端共享模块（http / auth / db / works / blobstore / llm / search / review）
+│   │                         # survey-images / works / readings / comments / views / admin /
+│   │                         # questions / office-hours / connect）
+│   └── lib/                  # 服务端共享模块（http / auth / db / works / blobstore / llm / search /
+│                             # review / connect（师生互联的字段校验与时段防撞））
 ├── migrations/               # D1 schema 与种子数据
 └── .github/workflows/deploy.yml
 ```
@@ -117,7 +120,9 @@ MPA课程AI辅学项目开发/
 | 材料提交 | `/#/works` | 学生交案例分析报告、课件、读书报告、文献评析；站点不预处理 |
 | 材料详情 | `/#/works/:id` | 附件下载、PDF 内嵌预览与 Word 转网页排版预览、教师批阅结论与评语 |
 | 提交与改稿 | `/#/works/new`、`/#/works/:id/edit` | 类型、课程学期、组别、说明、附件、外链 |
-| 教师后台 | `/#/admin` | 邀请码、案例审核、材料批阅、展位管理 |
+| 师生互联 | `/#/connect` | 一对一提问（私信往返）+ office hour 预约申请；顶栏右上角入口 |
+| 师生互联（教师端） | `/#/admin` 的「师生互联」页签 | 回复提问、批复预约并给具体时间与地点 |
+| 教师后台 | `/#/admin` | 邀请码、案例审核、材料批阅、展位管理、拓展材料、师生互联 |
 
 ## 内容规则
 
@@ -166,6 +171,26 @@ MPA课程AI辅学项目开发/
 不写负面评价、不用「但是/然而/不足/欠缺」；**不打分**——分数会在班里排出高低，
 与这段评语的目的相冲（`ai_score` 对展位恒为 NULL，案例质检仍保留分数）。
 
+### 师生互联
+
+- **一对一私信**：提问只有提问的学生本人与教师 / 管理员可见，不进任何公开流，也不出现在案例留言里。
+- **提问是往返的**：一条提问是一串消息，学生与老师都能在同一串里继续。
+  `qa_threads.awaiting` 记「现在轮到谁」——`staff` 表示等老师回，`student` 表示已回复、等学生。
+- **预约不由学生定时间**：学生只交「想聊什么 + 期望日期 + 期望时段」，
+  具体时间由老师在后台批复时给出（可以改成他更方便的那一档）。
+- **期望日期只收周三、周四**：平台约定 office hour 排在周三与周四。前后端用同一套判据
+  （按 UTC 取星期，3 = 周三、4 = 周四），过去的日子与 8 周以外的日子一并拒掉。
+- **时段是固定档位**（`09:00`、`10:00`、`11:00`、`14:00`、`15:00`、`16:00`、`17:00`，每档一小时），
+  学生选期望档、老师批复时选同一套档位，两边才对得上。
+- **同一时段防撞**：`office_hours.slot_key` 只在 `confirmed` 时写入（`YYYY-MM-DD HH:MM`），
+  库上以 partial unique index 兜底；老师确认前再查一次，撞了返回 409 并说明该时段已被谁占用。
+  `declined` / `cancelled` 必须把 `slot_key` 清空，否则作废的预约会永久占住一个时段。
+- 状态机：`pending` →（老师）`confirmed` / `declined`；`confirmed` →（老师）`done`；
+  学生只能把自己的 `pending` / `confirmed` 改成 `cancelled`。`declined` 与 `cancelled` 是终态。
+- **同一个人最多两条待批复申请**，同一日期 + 同一时段不许重复提交；想换时间先撤回旧的。
+- 提问、回复、预约的限流都**按账号**计，不按 IP——教室与校园网同出口，按 IP 卡会把整班挡在门外。
+- 观察员（`observer`）只读：可以看自己的列表（通常为空），不能提问、不能预约。
+
 ## 数据模型（D1）
 
 ```text
@@ -186,6 +211,13 @@ works      id, kind, title, course, term, group_name, members, summary, links_js
            reviewer_id, reviewer_name, reviewed_at, featured, featured_at,
            created_at, updated_at
 work_files id, work_id, owner_id, file_name, mime, size, storage(r2|kv), created_at
+qa_threads id, student_id, student_name, subject, status(open|replied), awaiting(staff|student),
+           message_count, last_body, created_at, updated_at
+qa_messages id, thread_id, author_id, author_name, author_role, body, created_at
+office_hours id, student_id, student_name, topic, note, prefer_date, prefer_slot,
+           status(pending|confirmed|declined|cancelled|done), slot_key, scheduled_date,
+           scheduled_slot, location, reply, decided_by, decided_by_name, decided_at,
+           created_at, updated_at
 ```
 
 ### 调研足迹的配图

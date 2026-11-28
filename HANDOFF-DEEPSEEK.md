@@ -45,6 +45,8 @@
 
 登录与邀请码注册（限流按账号）、四角色权限、地图交互与键盘可达、案例详情、学生写作与提交全流程、教师批阅与展出、观察员 403、后台重置密码 + 强制改密闭环、附件 Word/PDF 在线预览、材料全链路（提交→批阅→上墙→学生看评语→归档后改稿 409）、Word 导入（表格还原成 Markdown、插图丢弃并报数）、全站 17 个地址连通性、导航落点、390px 移动端、R2 绑定已挂。
 
+2026-11-28 新增「师生互联」：学生端 `#/connect`（一对一提问 + office hour 预约申请），教师端并进 `#/admin` 的同一页签。接口 36 项与页面走查在本地全栈通过；迁移 `0014_connect.sql` 本地已跑，**线上要先生效必须先在远端执行这条迁移**。
+
 查验方式与逐项记录在 `HANDOFF.md` §5.1（表格，可直接复用）。
 
 ### 3.2 没验到的（接手优先做这几件）
@@ -84,21 +86,23 @@ MPA课程AI辅学项目开发/
 ├── wrangler.toml         1.3K  Pages 项目名、D1/KV/R2 绑定、[vars] 里 LLM_MODEL 与 SEARCH_PROVIDER
 ├── .gitignore            316
 ├── .github/workflows/deploy.yml   2.2K  push main 即部署的完整流水线
-├── src/                  45 个文件
+├── src/                  47 个文件
 │   ├── main.js           路由表、页面挂载、访问埋点、强制改密分流
 │   ├── pages/            16 个页面：atlas / case / detail / studio / slides / blog / reading /
 │   │                     field / survey / survey-editor / works / work-editor / me / login /
-│   │                     password / admin
+│   │                     password / admin，外加 connect（师生互联）
 │   ├── components/       5 个：map（44.7K，SVG 浮雕地图）/ chrome（顶栏页脚）/ comments /
 │   │                     doc-preview（PDF iframe + mammoth 转网页）/ dust（首屏尘粒，CLAUDE.md 未记录）
 │   ├── lib/              9 个：api / router / store / dom / markdown / docx / image /
 │   │                     avatar / courses（后两个 CLAUDE.md 未记录）
-│   └── styles/           13 个：tokens → base → 各模块；touch.css 必须最后加载
-├── functions/            30 个文件
+│   └── styles/           14 个：tokens → base → 各模块；connect.css 放师生互联与顶栏入口；touch.css 必须最后加载
+├── functions/            34 个文件
 │   ├── _middleware.js    全局闸口：强制改密未完成时只放行 me / password / logout
-│   ├── api/              22 个：auth / cases / chat / slides / surveys / survey-images / works /
-│   │                     readings / comments / views / posts / admin
-│   └── lib/              8 个：http / auth / db / works / blobstore / review / llm / search / purge
+│   ├── api/              24 个：auth / cases / chat / slides / surveys / survey-images / works /
+│   │                     readings / comments / views / posts / admin / questions / office-hours /
+│   │                     connect（后台角标）
+│   └── lib/              10 个：http / auth / db / works / blobstore / review / llm / search / purge /
+│                         connect（师生互联的字段校验与时段防撞）
 ├── migrations/           13 个文件（git 只追踪 12 个，见下）
 ├── public/               14 个
 │   ├── data/china.json   569K  省级 GeoJSON（DataV areas_v3，已修正环绕向）

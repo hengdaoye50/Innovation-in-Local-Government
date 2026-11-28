@@ -8,6 +8,7 @@ import "./styles/detail.css";
 import "./styles/reading.css";
 import "./styles/field.css";
 import "./styles/works.css";
+import "./styles/connect.css";
 import "./styles/layers.css";
 import "./styles/auth.css";
 // 触屏兜底必须最后加载：它覆盖的规则权重与自身相同，靠加载顺序取胜
@@ -37,6 +38,7 @@ import { mountSurveyDetail } from "./pages/survey.js";
 import { mountSurveyEditor } from "./pages/survey-editor.js";
 import { mountWorks, mountWorkDetail } from "./pages/works.js";
 import { mountWorkEditor } from "./pages/work-editor.js";
+import { mountConnect } from "./pages/connect.js";
 import { mountReading } from "./pages/reading.js";
 import { mountCaseDetail } from "./pages/case.js";
 import { mountSlideDetail, mountPostDetail } from "./pages/detail.js";
@@ -146,8 +148,12 @@ async function renderWorkEdit({ id }) {
   await mountWorkEditor(app.querySelector("#detail-root"), id);
 }
 
-async function renderLogin() {
-  document.body.classList.add("page-auth");
+async function renderConnect() {
+  app.innerHTML = `<div id="detail-root"></div>`;
+  mountConnect(app.querySelector("#detail-root"));
+}
+
+async function renderLogin() {  document.body.classList.add("page-auth");
   app.innerHTML = `<main id="detail-root"></main>`;
   mountAuth(app.querySelector("#detail-root"));
 }
@@ -189,6 +195,7 @@ route("/works", renderWorks);
 route("/works/new", renderWorkNew);
 route("/works/:id/edit", renderWorkEdit);
 route("/works/:id", renderWorkDetail);
+route("/connect", renderConnect);
 route("/login", renderLogin);
 route("/admin", renderAdmin);
 route("/me", renderMe);
@@ -219,6 +226,7 @@ const PAGE_TITLES = {
   "/field/new": "记录一次调研",
   "/works": "材料提交",
   "/works/new": "提交材料",
+  "/connect": "师生互联",
 };
 
 onRouteChange((path) => {

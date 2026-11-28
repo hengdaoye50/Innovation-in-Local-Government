@@ -28,6 +28,10 @@ async function emptyAccountClause(env) {
     ["annotations", "author_id"],
     // 交过材料的学生不能删：材料与批阅结论还挂在他名下，删了人这些记录就再也对不上
     ["works", "author_id"],
+    // 师生互联：提过问、约过 office hour 的同学同样不能删，老师还要按人名回看
+    ["qa_threads", "student_id"],
+    ["qa_messages", "author_id"],
+    ["office_hours", "student_id"],
   ];
   const clauses = [];
   for (const [table, column] of owners) {

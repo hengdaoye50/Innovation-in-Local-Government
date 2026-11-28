@@ -815,6 +815,16 @@
   border-left: 1px solid var(--line);
 }
 
+/* 账号槽位里的头像、管理、登出排成一行：靠 inline 排版时，宽度被挤两三个像素
+   就会折成两行，把顶栏撑高、压到首屏内容上。 */
+.nav__user-slot {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+  white-space: nowrap;
+}
+
 .nav__toggle {
   display: none;
   width: 36px;

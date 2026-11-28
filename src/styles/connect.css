@@ -1,0 +1,464 @@
+/* 师生互联：学生端的提问与 office hour 预约，以及教师后台里的同名队列 */
+
+/* —— 顶栏右上角的入口 —— */
+.nav__connect {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line-gold);
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--plum);
+  white-space: nowrap;
+  transition: border-color var(--dur-fast) var(--ease),
+    background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+
+.nav__connect:hover {
+  border-color: var(--gold);
+  background: rgba(196, 162, 101, 0.1);
+}
+
+.nav__connect.is-active {
+  border-color: var(--gold);
+  color: var(--plum-deep);
+  background: rgba(196, 162, 101, 0.14);
+}
+
+.nav.is-dark .nav__connect {
+  border-color: rgba(253, 248, 240, 0.32);
+  color: rgba(253, 248, 240, 0.88);
+}
+
+.nav.is-dark .nav__connect:hover,
+.nav.is-dark .nav__connect.is-active {
+  border-color: var(--gold);
+  color: var(--paper);
+  background: rgba(253, 248, 240, 0.08);
+}
+
+/* 窄屏走折叠菜单里的那条，顶栏右侧只留头像与菜单键 */
+@media (max-width: 1080px) {
+  .nav__connect {
+    display: none;
+  }
+}
+
+.connect {
+  /* 只覆盖上下留白：左右留白来自 .shell 的 gutter，写成 padding 简写会把它抹掉，
+     窄屏上文字就贴边了 */
+  padding-top: 104px;
+  padding-bottom: 120px;
+  max-width: 980px;
+}
+
+.connect__head {
+  margin-bottom: var(--space-8);
+}
+
+.connect__block {
+  margin-top: 56px;
+}
+
+.connect__block-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.connect__block-head .h3 {
+  margin: 0 0 6px;
+}
+
+.connect__notice {
+  margin-top: var(--space-6);
+  padding: 16px 20px;
+  color: var(--ink-2);
+}
+
+.connect__form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+}
+
+.connect__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.connect__form-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-top: 2px;
+}
+
+.connect__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+/* —— 提问串 —— */
+
+.connect-thread {
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-xs);
+  padding: 14px 16px;
+}
+
+.connect-thread__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.connect-thread__subject {
+  font-weight: 600;
+  color: var(--ink);
+  margin-right: auto;
+}
+
+.connect-thread__last {
+  margin: 6px 0 0;
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.connect-thread__body {
+  margin-top: 14px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
+.connect-msgs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.connect-msg {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--paper-2);
+}
+
+.connect-msg--staff {
+  background: rgba(196, 162, 101, 0.08);
+  border-left: 2px solid var(--gold);
+}
+
+.connect-msg__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.connect-msg__who {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.connect-msg__body {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.7;
+  font-size: 15px;
+}
+
+.connect-reply {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  margin-top: 12px;
+}
+
+.connect-reply .textarea {
+  flex: 1;
+}
+
+/* —— 预约 —— */
+
+.connect-req {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-xs);
+  padding: 14px 16px;
+}
+
+.connect-req__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.connect-req__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.connect-req__topic {
+  margin: 8px 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.connect-req__note {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.connect-req__decided,
+.connect-req__reply {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.connect-req__decided b,
+.connect-req__reply b {
+  margin-right: 8px;
+  color: var(--plum);
+  font-weight: 600;
+}
+
+.connect-req__side {
+  flex: none;
+}
+
+/* —— 教师后台里的两个队列 —— */
+
+.connect-admin + .connect-admin {
+  margin-top: var(--space-6);
+}
+
+.connect-admin {
+  padding: 20px;
+}
+
+.connect-admin__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.connect-admin__filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.connect-admin__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.connect-admin__row {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  background: var(--paper-raised);
+}
+
+.connect-admin__row.is-open {
+  border-color: var(--line-2);
+  box-shadow: var(--shadow-xs);
+}
+
+.connect-admin__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.connect-admin__subject {
+  margin: 8px 0 2px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.connect-admin__last {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.connect-admin__aside {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.connect-admin__body {
+  margin-top: 14px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
+.connect-decide {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: var(--radius-sm);
+  background: var(--paper-2);
+}
+
+.connect-decide__foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.connect-decide__hint {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.connect-decide__hint.is-warn {
+  color: var(--err);
+}
+
+.connect-booking {
+  margin-top: var(--space-6);
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-4);
+}
+
+.connect-booking__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink-2);
+}
+
+/* 页签上的待办数：只给数字，别做成红点，和图录气质不搭 */
+.admin__tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(196, 162, 101, 0.22);
+  border: 1px solid var(--line-gold);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--plum-deep);
+  vertical-align: 1px;
+}
+
+.admin__tab-badge[hidden] {
+  display: none;
+}
+
+.connect-booking__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.connect-booking__item {
+  font-size: 13px;
+  padding: 4px 10px;
+  border: 1px solid var(--line-gold);
+  border-radius: 999px;
+  color: var(--ink-2);
+}
+
+@media (max-width: 900px) {
+  .connect {
+    padding-top: 84px;
+    padding-bottom: 96px;
+  }
+
+  .connect__block-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .connect__row {
+    grid-template-columns: 1fr;
+  }
+
+  .connect__form-foot {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .connect__form-foot .btn {
+    width: 100%;
+  }
+
+  .connect-req {
+    flex-direction: column;
+  }
+
+  .connect-req__side {
+    width: 100%;
+  }
+
+  .connect-req__side .btn {
+    width: 100%;
+  }
+
+  .connect-reply {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

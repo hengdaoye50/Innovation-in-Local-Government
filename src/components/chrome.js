@@ -74,11 +74,13 @@ export function mountNav(actions = {}) {
             : `<a class="nav__link" href="#${item.target}" data-target="${item.target}">${item.label}</a>`
         ).join("")}
         <a class="nav__link nav__link--mobile" href="#/login">登录 / 注册</a>
+        <a class="nav__link nav__link--mobile" href="#/connect">师生互联</a>
         <a class="nav__link nav__link--mobile" href="#/me">个人页</a>
         <a class="nav__link nav__link--mobile" href="#/admin">教师后台</a>
         <button class="nav__link nav__link--mobile" type="button" data-action="logout">登出</button>
       </nav>
       <div class="nav__actions">
+        <a class="nav__connect" href="#/connect" data-route="/connect">师生互联</a>
         <span class="nav__user-slot"></span>
         <button class="nav__toggle" aria-label="展开菜单" aria-expanded="false">
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3">
@@ -169,7 +171,7 @@ export function mountNav(actions = {}) {
       if (section.getBoundingClientRect().top - probe <= 0) current = item.target;
     }
     const path = currentPath();
-    host.querySelectorAll(".nav__link").forEach((node) => {
+    host.querySelectorAll(".nav__link, .nav__connect").forEach((node) => {
       // 独立路由（材料提交）按路径判，首页区块按滚动位置判
       if (node.dataset.route) {
         node.classList.toggle("is-active", path.startsWith(node.dataset.route));
